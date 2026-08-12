@@ -1,0 +1,306 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@600;700;800;900&display=swap');
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background-color: #000000;
+    /* Quadriculado ajustado para um tom de azul mais escuro e sutil */
+    background-image: 
+        linear-gradient(to right, rgba(20, 50, 120, 0.10) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(20, 50, 120, 0.10) 1px, transparent 1px);
+    background-size: 20px 20px;
+    color: #ffffff;
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow-x: hidden;
+}
+
+/* =========================================================
+   HEADER / NAVEGAÇÃO
+   ========================================================= */
+.main-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 2.5rem 5rem 1rem 5rem;
+    background-color: transparent;
+    animation: fadeInDown 0.8s ease-out;
+}
+
+.logo-top {
+    font-family: 'Outfit', sans-serif;
+    font-size: 2.6rem;
+    font-weight: 800;
+    color: #7b52ff;
+    text-decoration: none;
+    display: inline-block;
+    letter-spacing: -0.5px;
+}
+
+.nav-right {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+}
+
+.nav-link {
+    font-family: 'Outfit', sans-serif;
+    color: #ffffff;
+    text-decoration: underline;
+    text-underline-offset: 4px;
+    font-size: 1.15rem;
+    font-weight: 700;
+    transition: color 0.3s ease, transform 0.2s ease;
+}
+
+.nav-link:hover {
+    color: #9d7bff;
+    transform: translateY(-2px);
+}
+
+/* Perfil e Dropdown */
+.profile-container {
+    position: relative;
+}
+
+.profile-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
+.user-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    object-fit: cover;
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.3s ease;
+}
+
+.profile-btn:hover .user-avatar {
+    transform: scale(1.1);
+    filter: drop-shadow(0 0 12px rgba(123, 82, 255, 0.9));
+}
+
+.profile-dropdown {
+    position: absolute;
+    top: 135%;
+    right: 0;
+    width: 200px;
+    background-color: #0b0c10;
+    border: 1px solid rgba(123, 82, 255, 0.35);
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.8);
+    display: flex;
+    flex-direction: column;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-12px) scale(0.96);
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    z-index: 100;
+    overflow: hidden;
+}
+
+.profile-dropdown.active {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0) scale(1);
+}
+
+.profile-dropdown a {
+    font-family: 'Inter', sans-serif;
+    color: #e0e0e0;
+    padding: 14px 18px;
+    text-decoration: none;
+    font-size: 0.95rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: background-color 0.25s ease, color 0.25s ease, padding-left 0.25s ease;
+}
+
+.profile-dropdown a:hover {
+    background-color: rgba(123, 82, 255, 0.15);
+    color: #9d7bff;
+    padding-left: 22px;
+}
+
+/* =========================================================
+   HERO / ÁREA PRINCIPAL
+   ========================================================= */
+.hero-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 2rem 5rem;
+    flex: 1;
+    gap: 4rem;
+}
+
+.hero-content {
+    max-width: 580px;
+    animation: fadeInUp 0.9s ease-out;
+}
+
+/* Container pai com posicionamento relativo */
+.title-wrapper {
+    position: relative;
+    display: inline-block;
+    margin-top: 1.5rem; /* Espaço superior para o subtítulo */
+    margin-bottom: 1.5rem;
+}
+
+/* Título principal Argus */
+.glow-title {
+    font-family: 'Outfit', sans-serif;
+    font-size: 6.8rem;
+    font-weight: 800;
+    color: #7b52ff;
+    line-height: 1;
+    letter-spacing: -1px;
+    margin: 0;
+}
+
+/* Subtítulo posicionado sobre a parte superior direita (rgus) */
+.subtitle {
+    position: absolute;
+    top: 5px; /* Ajusta a altura acima das letras 'rgus' */
+    right: 0;   /* Alinha à borda direita da palavra Argus */
+    font-family: 'Outfit', sans-serif;
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: #ffffff;
+    white-space: nowrap;
+    letter-spacing: -0.2px;
+}
+
+.description {
+    font-family: 'Inter', sans-serif;
+    font-size: 1.15rem;
+    line-height: 1.55;
+    color: #ffffff;
+    margin-bottom: 2.2rem;
+    font-weight: 500;
+}
+
+/* Botões interativos */
+.action-buttons {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+}
+
+.btn {
+    font-family: 'Outfit', sans-serif;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 1.15rem;
+    border-radius: 30px;
+    transition: all 0.35s cubic-bezier(0.25, 1, 0.5, 1);
+    display: inline-block;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-primary {
+    background-color: #174abf;
+    color: #ffffff;
+    padding: 0.75rem 2.5rem;
+    box-shadow: 0 0 15px rgba(23, 74, 191, 0.5);
+    animation: btnGlowPulse 4s infinite ease-in-out;
+}
+
+.btn-primary:hover {
+    background-color: #215be3;
+    box-shadow: 0 0 28px rgba(33, 91, 227, 0.9);
+    transform: translateY(-3px) scale(1.02);
+}
+
+.btn-secondary {
+    color: #ffffff;
+    padding: 0.75rem 1rem;
+}
+
+.btn-secondary:hover {
+    color: #9d7bff;
+    transform: translateY(-2px);
+}
+
+/* Carrossel de Imagens com Moldura Reativa */
+.hero-carousel {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    animation: fadeInRight 1s ease-out;
+}
+
+.carousel-frame {
+    width: 100%;
+    max-width: 620px;
+    height: 360px;
+    position: relative;
+    border-radius: 24px;
+    overflow: hidden;
+    box-shadow: 0 12px 35px rgba(0, 0, 0, 0.9);
+    transition: transform 0.5s ease, box-shadow 0.5s ease;
+}
+
+.carousel-frame:hover {
+    transform: translateY(-5px) scale(1.01);
+    box-shadow: 0 20px 45px rgba(123, 82, 255, 0.25);
+}
+
+.slide {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    position: absolute;
+    top: 0;
+    left: 0;
+    opacity: 0;
+    transform: scale(1.06);
+    transition: opacity 1.4s cubic-bezier(0.4, 0, 0.2, 1), transform 1.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.slide.active {
+    opacity: 1;
+    transform: scale(1);
+}
+
+@media (max-width: 1024px) {
+    .main-header, .hero-container {
+        padding-left: 2rem;
+        padding-right: 2rem;
+    }
+    
+    .hero-container {
+        flex-direction: column;
+        text-align: center;
+        gap: 3rem;
+    }
+
+    .action-buttons {
+        justify-content: center;
+    }
+
+    .glow-title {
+        font-size: 5rem;
+    }
+
+    .subtitle {
+        letter-spacing: 1px;
+        margin-left: 0;
+    }
+}

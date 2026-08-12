@@ -1,0 +1,81 @@
+/* =========================================================
+   ANIMAÇÕES E INTERAÇÕES DO PROJETO ARGUS
+   ========================================================= */
+
+/* 1. Argus do topo: Flutuação fluida e brilho */
+.float-glow-anim {
+    animation: floatGlow 4s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite alternate;
+    will-change: transform, text-shadow;
+}
+
+@keyframes floatGlow {
+    0% {
+        transform: translateY(0);
+        text-shadow: 0 0 6px rgba(123, 82, 255, 0.3), 0 0 12px rgba(123, 82, 255, 0.15);
+    }
+    100% {
+        transform: translateY(-8px);
+        text-shadow: 0 0 18px rgba(157, 123, 255, 0.9), 0 0 32px rgba(123, 82, 255, 0.6);
+    }
+}
+
+/* 2. Argus central principal: Pulsar dinâmico e suave */
+.title-pulse-anim {
+    animation: pulseGlow 3.5s cubic-bezier(0.4, 0, 0.2, 1) infinite alternate;
+    will-change: text-shadow, transform;
+}
+
+@keyframes pulseGlow {
+    0% {
+        transform: scale(1);
+        text-shadow: 0 0 12px rgba(123, 82, 255, 0.4), 0 0 24px rgba(123, 82, 255, 0.2);
+    }
+    100% {
+        transform: scale(1.015);
+        text-shadow: 0 0 28px rgba(157, 123, 255, 1), 0 0 50px rgba(123, 82, 255, 0.75);
+    }
+}
+
+/* 3. Animação suave para o botão principal */
+@keyframes btnGlowPulse {
+    0%, 100% {
+        box-shadow: 0 0 15px rgba(23, 74, 191, 0.5);
+    }
+    50% {
+        box-shadow: 0 0 24px rgba(33, 91, 227, 0.85);
+    }
+}
+
+/* 4. Animações de entrada da página (Fade-in suave) */
+@keyframes fadeInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(25px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeInRight {
+    from {
+        opacity: 0;
+        transform: translateX(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
