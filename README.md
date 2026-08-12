@@ -551,10 +551,10 @@ A documentação também tem como objetivo facilitar a compreensão do projeto p
 
 | Integrante   | Função          |
 | ------------ | --------------- |
-| **[NOME 1]** | Desenvolvimento |
-| **[NOME 2]** | Desenvolvimento |
-| **[NOME 3]** | Desenvolvimento |
-| **[NOME 4]** | Desenvolvimento |
+| **Haniel** | Frontend |
+| **Matheus** | Backend |
+| **Gabriel** | Api |
+(O restante do Grupo ficou responsável pela documentação de todo o projeto)
 
 > As funções da equipe podem ser atualizadas conforme a divisão de responsabilidades durante o desenvolvimento.
 
