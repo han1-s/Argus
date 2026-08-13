@@ -2,202 +2,228 @@
 
 > **Sistema de monitoramento e análise de utilização de computadores em ambientes corporativos.**
 
-O **Argus** é um projeto desenvolvido no contexto do curso técnico de **Informática para Internet do SENAI**, com o objetivo de apresentar uma solução voltada ao acompanhamento do uso de computadores em empresas.
+O **Argus** é uma plataforma corporativa em desenvolvimento, criada no contexto do curso técnico de **Informática para Internet do SENAI**, com o objetivo de auxiliar no monitoramento, organização e análise da utilização de computadores em ambientes empresariais.
 
-A proposta do sistema é possibilitar o monitoramento de atividades realizadas nos computadores, como utilização de sites e aplicações, transformando essas informações em dados que possam auxiliar na análise de produtividade, organização e gerenciamento do ambiente corporativo.
+A proposta do projeto é transformar dados relacionados à utilização de computadores, sites e aplicações em **informações organizadas e visualizações que possam auxiliar na análise de produtividade e no gerenciamento do ambiente de TI**.
 
-O projeto encontra-se atualmente em processo de **refatoração e reconstrução da interface**, buscando melhorar a identidade visual, organização do código, experiência do usuário e estrutura geral da aplicação.
-
----
-
-## 📌 Sobre o Projeto
-
-O Argus surgiu originalmente como uma proposta de sistema capaz de auxiliar empresas no acompanhamento da utilização de seus computadores.
-
-Em vez de simplesmente registrar informações, a ideia do projeto é transformar os dados coletados em informações úteis para gestores, permitindo uma visão mais organizada sobre a utilização dos equipamentos.
-
-Entre as possibilidades planejadas para o sistema estão:
-
-* 📊 Monitoramento da utilização dos computadores;
-* 🌐 Registro de sites utilizados;
-* 💻 Acompanhamento de aplicações utilizadas;
-* ⏱️ Análise do tempo de utilização;
-* 📈 Geração de informações relacionadas à produtividade;
-* 👥 Gerenciamento de usuários;
-* ⚙️ Configurações do sistema;
-* 🔐 Sistema de autenticação;
-* 🖥️ Dashboard administrativo;
-* 📋 Visualização organizada dos dados coletados.
-
-> **Observação:** algumas dessas funcionalidades fazem parte do planejamento geral do projeto e podem ainda não estar implementadas na versão atual.
+Atualmente, o projeto encontra-se em processo de **refatoração e reconstrução**, passando por melhorias na interface, identidade visual, organização do código e arquitetura da aplicação.
 
 ---
 
-# 🎯 Objetivo
+# 📌 Sobre o Projeto
 
-O principal objetivo do Argus é desenvolver uma solução capaz de auxiliar empresas no **gerenciamento e análise do uso de computadores**, oferecendo informações que possam contribuir para uma melhor organização do ambiente de trabalho.
+O Argus surgiu a partir da ideia de desenvolver uma solução capaz de oferecer maior visibilidade sobre a utilização dos recursos computacionais de uma organização.
 
-O sistema busca unir:
+Em ambientes corporativos, computadores são ferramentas essenciais para a execução das atividades profissionais. Entretanto, informações sobre sua utilização podem estar dispersas ou serem difíceis de analisar.
 
-* Desenvolvimento Web;
-* Interface intuitiva;
-* Organização de informações;
-* Monitoramento;
-* Análise de dados;
-* Administração de usuários;
-* Experiência do usuário.
+O Argus busca centralizar essas informações e apresentá-las de forma organizada através de uma plataforma web.
 
-A proposta também permite que os conhecimentos adquiridos durante o curso técnico sejam aplicados em um projeto prático e integrado.
+A solução foi planejada para trabalhar com informações como:
 
----
+* 🖥️ Computadores monitorados;
+* 🌐 Sites utilizados;
+* 💻 Aplicações utilizadas;
+* ⏱️ Tempo de utilização;
+* 📊 Indicadores de produtividade;
+* 👥 Usuários;
+* 📋 Relatórios;
+* 📈 Dashboards administrativos.
 
-# 💡 Justificativa
-
-Em ambientes empresariais, computadores são ferramentas fundamentais para a realização das atividades profissionais. Entretanto, sem mecanismos adequados de acompanhamento, pode ser difícil identificar como os recursos computacionais estão sendo utilizados.
-
-O Argus foi pensado como uma alternativa para centralizar essas informações e apresentá-las de maneira organizada.
-
-Através de uma interface web, o sistema pretende facilitar a visualização das informações e fornecer uma base para análises relacionadas à utilização dos equipamentos.
+> **Observação:** algumas funcionalidades apresentadas neste documento fazem parte do planejamento e da arquitetura futura do projeto e ainda podem não estar implementadas na versão atual.
 
 ---
 
-# 👥 Equipe
+# 🎯 Objetivos
 
-## Integrantes
+## Objetivo Geral
 
-* **Haniel Sousa e Souza**
-* **Matheus Pereira de Jesus**
-* **Gabriel Henrique Bispo Costa**
-* **Kaique de Souza Nunes da Silva**
-* **Rafaela Victoria do Rosário Portugal**
-* **Tais Millena Bispo Caldas**
+Desenvolver uma plataforma capaz de centralizar o monitoramento e a análise da utilização de computadores em ambientes corporativos, transformando dados operacionais em informações organizadas para auxiliar na tomada de decisões.
 
+## Objetivos Específicos
 
-## Orientador
-
-**Prof. Adalberto Teixeira Santana**
-
-Professor do **SENAI**, responsável pela orientação das atividades e acompanhamento do desenvolvimento do projeto no contexto acadêmico.
+* Monitorar computadores conectados à plataforma;
+* Registrar informações relacionadas à utilização dos dispositivos;
+* Organizar dados de sites e aplicações;
+* Analisar o tempo de utilização dos recursos;
+* Disponibilizar dashboards para visualização das informações;
+* Facilitar a geração de relatórios;
+* Implementar gerenciamento de usuários;
+* Desenvolver mecanismos de autenticação e controle de acesso;
+* Criar uma arquitetura preparada para futuras expansões;
+* Aplicar princípios de segurança, transparência e privacidade.
 
 ---
 
-# 🏗️ Estrutura Atual do Projeto
+# 💡 Problema
 
-Atualmente, a reconstrução do projeto possui a seguinte organização:
+Em ambientes empresariais, a utilização de computadores pode gerar uma grande quantidade de informações.
+
+Sem uma plataforma centralizada, esses dados podem se tornar difíceis de organizar, consultar e interpretar.
+
+Entre os principais desafios identificados estão:
+
+### 👁️ Falta de visibilidade
+
+Dificuldade para compreender como os recursos computacionais estão sendo utilizados.
+
+### 🗂️ Dados dispersos
+
+Informações relacionadas a diferentes computadores e usuários podem estar distribuídas em diferentes locais.
+
+### 📉 Dificuldade de análise
+
+Dados brutos, quando não são organizados adequadamente, possuem pouco valor para análises gerenciais.
+
+### 📊 Decisões sem dados
+
+A ausência de informações consolidadas pode dificultar a identificação de padrões e problemas relacionados à utilização dos recursos.
+
+---
+
+# 💡 Solução Proposta
+
+O Argus propõe uma plataforma centralizada capaz de coletar, organizar, processar e apresentar informações relacionadas aos computadores monitorados.
+
+O fluxo conceitual da plataforma pode ser representado por:
 
 ```text
-TCC/
-│
-└── Frontend/
-    │
-    ├── css/
-    │   ├── assets/
-    │   │   └── img/
-    │   │       ├── img1.jpg
-    │   │       ├── img2.jpg
-    │   │       ├── img3.jpg
-    │   │       └── user.png
-    │   │
-    │   ├── animation.css
-    │   └── style.css
-    │
-    ├── js/
-    │   └── script.js
-    │
-    └── index.html
+┌──────────────────────┐
+│     COMPUTADORES     │
+│      MONITORADOS     │
+└──────────┬───────────┘
+           │
+           ▼
+┌──────────────────────┐
+│     AGENTE ARGUS     │
+│       COLETA         │
+└──────────┬───────────┘
+           │
+           ▼
+┌──────────────────────┐
+│       SERVIDOR       │
+└──────────┬───────────┘
+           │
+           ▼
+┌──────────────────────┐
+│     PROCESSAMENTO    │
+│       DOS DADOS      │
+└──────────┬───────────┘
+           │
+           ▼
+┌──────────────────────┐
+│      DASHBOARD       │
+│     E RELATÓRIOS     │
+└──────────────────────┘
+```
+
+A ideia é que os dados coletados sejam transformados em informações mais fáceis de interpretar e utilizar.
+
+---
+
+# 🔄 Processo do Argus
+
+O funcionamento da plataforma pode ser dividido em quatro etapas principais:
+
+### 1. 🔗 Conecte
+
+Os computadores são conectados ao ambiente de monitoramento do Argus.
+
+### 2. 📥 Colete
+
+O sistema coleta informações relacionadas à utilização dos dispositivos.
+
+### 3. 🗂️ Organize
+
+Os dados coletados são enviados e organizados na infraestrutura da plataforma.
+
+### 4. 📊 Analise
+
+As informações processadas são disponibilizadas através de dashboards, indicadores e relatórios.
+
+```text
+CONECTE → COLETE → ORGANIZE → ANALISE
 ```
 
 ---
 
-# 🎨 Frontend
+# 🚀 Funcionalidades
 
-O frontend é responsável pela apresentação visual do sistema e pela interação do usuário com a aplicação.
+## 🖥️ Monitoramento de Computadores
 
-Atualmente, a estrutura utiliza tecnologias fundamentais do desenvolvimento web:
+Acompanhamento dos dispositivos conectados ao ambiente corporativo.
 
-### HTML5
+## 🌐 Sites
 
-Responsável pela estruturação das páginas e dos elementos presentes na interface.
+Registro e organização de informações relacionadas aos sites utilizados.
 
-Exemplos:
+## 💻 Aplicações
 
-* Estrutura das páginas;
-* Menus;
-* Botões;
-* Formulários;
-* Seções;
-* Elementos de navegação.
+Acompanhamento das aplicações utilizadas nos computadores monitorados.
 
-### CSS3
+## ⏱️ Tempo de Uso
 
-Responsável pela estilização e identidade visual do Argus.
+Organização de informações relacionadas ao tempo de utilização dos recursos.
 
-O projeto possui dois arquivos principais:
+## 📊 Dashboard
 
-```text
-style.css
-animation.css
-```
+Apresentação dos dados através de indicadores e visualizações.
 
-O `style.css` concentra as regras visuais gerais da aplicação, enquanto o `animation.css` é destinado às animações e transições utilizadas na interface.
+## 📋 Relatórios
 
-### JavaScript
+Possibilidade de gerar relatórios baseados nos dados coletados.
 
-O arquivo:
+## 👥 Usuários
 
-```text
-js/script.js
-```
+Gerenciamento dos usuários que possuem acesso à plataforma.
 
-é responsável pela implementação da lógica de interação da interface.
+## 🔐 Autenticação
 
-A utilização do JavaScript permite tornar a aplicação mais dinâmica, possibilitando posteriormente a implementação de recursos como:
+Sistema de login e controle de acesso.
 
-* Manipulação de elementos;
-* Eventos;
-* Menus interativos;
-* Validação de formulários;
-* Comunicação com APIs;
-* Atualização dinâmica de informações;
-* Controle de componentes da interface.
+## ⚙️ Configurações
+
+Área destinada ao gerenciamento das configurações da conta e da plataforma.
+
+> A implementação dessas funcionalidades ocorrerá de forma progressiva durante o desenvolvimento.
 
 ---
 
-# 🖼️ Assets
+# 🎨 Interface e Experiência do Usuário
 
-Os recursos visuais utilizados pelo frontend estão organizados em:
+O Argus está sendo desenvolvido com uma identidade visual baseada em uma estética:
 
-```text
-css/assets/img/
-```
+**Dark Mode + Cyber/Tech + Glassmorphism**
 
-Atualmente, a pasta contém imagens utilizadas pela interface:
+A interface utiliza elementos como:
 
-```text
-img1.jpg
-img2.jpg
-img3.jpg
-user.png
-```
+* Fundos escuros;
+* Brilhos e efeitos de `glow`;
+* Bordas sutis;
+* Cards;
+* Elementos translúcidos;
+* Animações;
+* Ícones;
+* Contraste elevado;
+* Layout responsivo.
 
-A separação dos arquivos de mídia em uma pasta específica facilita a manutenção e organização do projeto.
+A proposta visual busca transmitir características relacionadas a:
+
+**Tecnologia · Monitoramento · Dados · Segurança · Análise**
 
 ---
 
-# ✨ Identidade Visual
+# 👁️ Conceito da Identidade
 
-O nome **Argus** foi escolhido como referência a **Argos Panoptes**, figura da mitologia grega tradicionalmente representada como um ser com muitos olhos.
+O nome **Argus** faz referência a **Argos Panoptes**, figura da mitologia grega tradicionalmente associada a muitos olhos.
 
-A associação com o projeto está relacionada à ideia de:
+Essa referência foi utilizada como conceito para representar a capacidade de:
 
-> **observar, acompanhar e fornecer informações sobre o que está acontecendo.**
+> **observar, acompanhar e transformar informações em conhecimento.**
 
-Essa ideia foi utilizada como base conceitual para a identidade do sistema.
+O conceito do Argus está relacionado principalmente a:
 
-A identidade visual procura transmitir características como:
-
-* 👁️ Monitoramento;
-* 🔭 Observação;
+* 👁️ Observação;
+* 🔭 Monitoramento;
 * 📊 Análise;
 * 💻 Tecnologia;
 * 🔐 Segurança;
@@ -206,161 +232,279 @@ A identidade visual procura transmitir características como:
 
 ---
 
-# 🧩 Funcionalidades Planejadas
+# 🏗️ Arquitetura do Sistema
 
-O projeto possui uma estrutura planejada para futuramente comportar diferentes áreas do sistema.
+A arquitetura planejada para o Argus é dividida em diferentes camadas.
 
-## 🏠 Início
+```text
+┌─────────────────────────────┐
+│          FRONTEND           │
+│       Interface Web         │
+└──────────────┬──────────────┘
+               │
+               ▼
+┌─────────────────────────────┐
+│          BACKEND            │
+│      Node.js + Express      │
+└──────────────┬──────────────┘
+               │
+               ▼
+┌─────────────────────────────┐
+│          API REST           │
+│ Comunicação entre serviços  │
+└──────────────┬──────────────┘
+               │
+               ▼
+┌─────────────────────────────┐
+│          MYSQL              │
+│        Banco de Dados       │
+└─────────────────────────────┘
+```
 
-Página inicial responsável por apresentar o Argus e explicar de maneira resumida sua proposta.
-
-## ℹ️ Sobre
-
-Área destinada à apresentação do projeto, seus objetivos e sua finalidade.
-
-## ⬇️ Download
-
-Página destinada à disponibilização do software ou dos componentes necessários para utilização do sistema.
-
-## 🔐 Login
-
-Área de autenticação dos usuários.
-
-O sistema poderá utilizar diferentes níveis de acesso dependendo do perfil do usuário.
-
-## 📝 Cadastro
-
-Página destinada ao cadastro de novos usuários.
-
-## ⚙️ Configurações
-
-Área para gerenciamento das preferências e configurações relacionadas à conta ou ao sistema.
-
-## 📊 Dashboard Administrativo
-
-Área destinada aos responsáveis pela administração do sistema.
-
-Possíveis informações:
-
-* Computadores monitorados;
-* Usuários ativos;
-* Aplicações utilizadas;
-* Sites acessados;
-* Indicadores de produtividade;
-* Dados de utilização.
-
-## 👤 Gerenciamento de Usuários
-
-Área administrativa para visualização e gerenciamento dos usuários cadastrados.
+A separação das camadas permite uma maior organização do código e facilita futuras expansões.
 
 ---
 
-# 🔄 Funcionamento Proposto
+# 🎨 Frontend
 
-De maneira simplificada, o funcionamento planejado do Argus pode ser representado da seguinte forma:
+O frontend é responsável pela interface através da qual os usuários interagem com o Argus.
+
+Atualmente, a estrutura principal está organizada da seguinte maneira:
 
 ```text
-┌─────────────────────┐
-│      Computador     │
-│      monitorado     │
-└──────────┬──────────┘
-           │
-           ▼
-┌─────────────────────┐
-│ Coleta de informações│
-│ sobre utilização     │
-└──────────┬──────────┘
-           │
-           ▼
-┌─────────────────────┐
-│ Processamento dos   │
-│       dados         │
-└──────────┬──────────┘
-           │
-           ▼
-┌─────────────────────┐
-│     Armazenamento   │
-│       dos dados     │
-└──────────┬──────────┘
-           │
-           ▼
-┌─────────────────────┐
-│       Argus         │
-│ Dashboard Web       │
-└──────────┬──────────┘
-           │
-           ▼
-┌─────────────────────┐
-│ Visualização e      │
-│ análise dos dados   │
-└─────────────────────┘
+Frontend/
+│
+├── css/
+│   ├── assets/
+│   │   └── img/
+│   │       ├── img1.jpg
+│   │       ├── img2.jpg
+│   │       ├── img3.jpg
+│   │       └── user.png
+│   │
+│   ├── animation.css
+│   └── style.css
+│
+├── js/
+│   └── script.js
+│
+├── index.html
+└── sm.html
 ```
+
+### `index.html`
+
+Página principal do Argus.
+
+Atualmente possui foco na apresentação do produto, chamadas para ação e introdução à proposta da plataforma.
+
+### `sm.html`
+
+Página **"Saiba Mais"**, responsável pela apresentação institucional e técnica do Argus.
+
+A página apresenta:
+
+1. Hero com conceito de íris tecnológica;
+2. Desafios operacionais;
+3. Fluxo de funcionamento;
+4. Processo em quatro etapas;
+5. Recursos da plataforma;
+6. Ética e privacidade;
+7. Comparação entre abordagens;
+8. Arquitetura técnica;
+9. Roadmap de evolução.
+
+### `style.css`
+
+Arquivo responsável pelos estilos gerais da aplicação.
+
+Concentra:
+
+* Variáveis CSS;
+* Temas;
+* Layouts;
+* Componentes;
+* Cards;
+* Header;
+* Footer;
+* Responsividade;
+* Estilos globais.
+
+### `animation.css`
+
+Arquivo responsável pelas animações personalizadas e efeitos visuais utilizando `@keyframes`.
+
+### `script.js`
+
+Responsável pelas interações da interface, incluindo:
+
+* Dropdowns;
+* Menus;
+* Animações;
+* Eventos;
+* Interações dinâmicas.
+
+---
+
+# 🧩 Componentização da Interface
+
+Para manter uma identidade visual consistente, o frontend utiliza componentes e classes reutilizáveis.
+
+Entre os componentes visuais utilizados estão:
+
+```text
+.info-card.border-glow
+.feature-box
+.process-card
+.flow-container
+.profile-container
+.logo-top.float-glow-anim
+```
+
+O projeto também utiliza **Font Awesome 6.4.0** para iconografia.
+
+---
+
+# 🧭 Navegação
+
+O cabeçalho do Argus possui uma estrutura unificada entre as páginas.
+
+Entre os elementos planejados estão:
+
+* Identidade visual do Argus;
+* Navegação;
+* Menu de perfil;
+* Conta;
+* Configurações;
+* Saiba Mais.
+
+O rodapé também segue uma estrutura padronizada, contendo links institucionais e informações de copyright.
+
+---
+
+# 📖 Página "Saiba Mais"
+
+A página institucional foi desenvolvida para explicar o Argus de maneira mais completa.
+
+Sua estrutura atual inclui:
+
+### Hero
+
+Apresentação visual utilizando uma **íris tecnológica conectada a nós de dados**.
+
+### Desafios Operacionais
+
+Apresentação dos problemas que a plataforma busca solucionar.
+
+### Solução
+
+Diagrama mostrando o fluxo entre computadores, agente, servidor, processamento e dashboard.
+
+### Processo
+
+Representação das quatro etapas:
+
+```text
+CONECTE
+   ↓
+COLETE
+   ↓
+ORGANIZE
+   ↓
+ANALISE
+```
+
+### Recursos
+
+Apresentação dos principais recursos:
+
+* Computadores;
+* Sites;
+* Aplicativos;
+* Tempo de uso;
+* Relatórios;
+* Dashboard.
+
+### Ética e Privacidade
+
+Apresentação dos princípios de:
+
+* Transparência;
+* Controle de acesso;
+* Uso responsável;
+* Privacidade.
+
+### Matriz Comparativa
+
+Comparação entre soluções tradicionais e a proposta do Argus.
+
+### Arquitetura Técnica
+
+Apresentação das tecnologias utilizadas na construção do sistema.
+
+### Roadmap
+
+Apresentação das etapas planejadas para evolução da plataforma.
+
+---
+
+# 🔐 Ética, Segurança e Privacidade
+
+Por trabalhar com informações relacionadas à utilização de computadores, o Argus considera segurança e privacidade aspectos importantes da solução.
+
+A plataforma deverá considerar princípios como:
+
+* **Transparência** sobre a coleta de informações;
+* **Controle de acesso** aos dados;
+* **Uso responsável** das informações;
+* **Privacidade** dos usuários;
+* **Segurança** no armazenamento;
+* **Proteção** durante a comunicação entre sistemas.
+
+O monitoramento deve possuir uma finalidade legítima e estar de acordo com as políticas da organização e as regras aplicáveis.
 
 ---
 
 # 🛠️ Tecnologias
 
-As principais tecnologias utilizadas ou planejadas para o projeto incluem:
-
-| Tecnologia     | Utilização                               |
-| -------------- | ---------------------------------------- |
-| **HTML5**      | Estrutura das páginas                    |
-| **CSS3**       | Estilização da interface                 |
-| **JavaScript** | Interatividade e lógica do frontend      |
-| **Node.js**    | Backend planejado                        |
-| **Express**    | Construção da API                        |
-| **MySQL**      | Banco de dados planejado                 |
-| **Axios**      | Comunicação com APIs                     |
-| **Postman**    | Testes de API                            |
-| **Git**        | Controle de versão                       |
-| **GitHub**     | Hospedagem do código                     |
-| **Figma**      | Prototipação e planejamento da interface |
-
-> A utilização de cada tecnologia pode evoluir conforme o desenvolvimento das próximas etapas do projeto.
-
----
-
-# 📁 Organização do Código
-
-Uma das preocupações durante a reconstrução do Argus é manter uma estrutura organizada e de fácil manutenção.
-
-A separação entre:
-
-```text
-CSS
-JavaScript
-Imagens
-HTML
-```
-
-permite localizar rapidamente cada tipo de recurso.
-
-Essa organização também facilita a expansão futura do projeto para uma arquitetura mais completa contendo frontend, backend e banco de dados.
+| Tecnologia             | Utilização                   |
+| ---------------------- | ---------------------------- |
+| **HTML5**              | Estrutura das páginas        |
+| **CSS3**               | Estilização e responsividade |
+| **JavaScript**         | Interatividade do frontend   |
+| **Font Awesome 6.4.0** | Iconografia                  |
+| **Node.js**            | Backend                      |
+| **Express**            | Construção da API            |
+| **MySQL**              | Banco de dados               |
+| **Axios**              | Comunicação com APIs         |
+| **Postman**            | Testes de API                |
+| **Git**                | Controle de versão           |
+| **GitHub**             | Versionamento e colaboração  |
+| **Figma**              | Prototipação e UI/UX         |
 
 ---
 
 # 🧪 Testes
 
-Durante o desenvolvimento, o projeto deverá passar por diferentes etapas de testes.
+Durante o desenvolvimento, o Argus deverá passar por diferentes categorias de testes.
 
-### Testes de interface
-
-Verificação de:
+## Testes de Interface
 
 * Responsividade;
-* Funcionamento dos botões;
 * Navegação;
+* Botões;
+* Menus;
 * Animações;
 * Formulários;
-* Organização visual.
+* Componentes visuais.
 
-### Testes de funcionalidade
+## Testes de Funcionalidade
 
-Verificação das funcionalidades implementadas no sistema.
+Validação das funcionalidades implementadas em cada etapa do projeto.
 
-### Testes de API
+## Testes de API
 
-Quando o backend estiver integrado, serão realizados testes utilizando ferramentas como **Postman**, verificando requisições:
+Com a implementação do backend, serão utilizados testes através do **Postman**, incluindo requisições:
 
 ```text
 GET
@@ -371,42 +515,65 @@ DELETE
 
 ---
 
-# 🔒 Segurança e Privacidade
+# 📱 Responsividade e Acessibilidade
 
-Como o Argus trabalha com a ideia de monitoramento de computadores, questões relacionadas à segurança e privacidade são importantes para o desenvolvimento do projeto.
+O frontend possui como objetivo oferecer uma experiência adequada em diferentes dispositivos:
 
-O sistema deverá considerar:
+* 🖥️ Desktop;
+* 💻 Notebook;
+* 📱 Smartphone;
+* 📲 Tablet.
 
-* Controle de acesso;
-* Autenticação;
-* Gerenciamento de permissões;
-* Proteção das informações armazenadas;
-* Segurança das comunicações;
-* Armazenamento adequado dos dados;
-* Transparência sobre o funcionamento do monitoramento.
+Também são consideradas práticas básicas de acessibilidade, incluindo:
 
-O objetivo do projeto é utilizar as informações coletadas de maneira responsável e dentro das regras e políticas aplicáveis ao ambiente em que o sistema for utilizado.
+* Atributos `aria`;
+* Estrutura semântica;
+* Contraste adequado;
+* Legibilidade;
+* Navegação organizada.
+
+---
+
+# 👥 Equipe
+
+## Integrantes
+
+| Integrante                               | Responsabilidade |
+| ---------------------------------------- | ---------------- |
+| **Haniel Sousa e Souza**                 | Frontend         |
+| **Matheus Pereira de Jesus**             | Backend          |
+| **Gabriel Henrique Bispo Costa**         | API              |
+| **Kaique de Souza Nunes da Silva**       | Documentação     |
+| **Rafaela Victoria do Rosário Portugal** | Documentação     |
+| **Tais Millena Bispo Caldas**            | Documentação     |
+
+> A divisão de responsabilidades pode ser ajustada conforme as necessidades das próximas etapas do projeto.
+
+## Orientador
+
+**Prof. Adalberto Teixeira Santana**
+
+Professor do **SENAI**, responsável pela orientação das atividades e pelo acompanhamento do desenvolvimento do projeto.
 
 ---
 
 # 📚 Contexto Acadêmico
 
-O Argus está sendo desenvolvido como parte das atividades relacionadas ao **curso técnico de Informática para Internet do SENAI**.
+O Argus está sendo desenvolvido no contexto do curso técnico de **Informática para Internet do SENAI**.
 
-O desenvolvimento do projeto permite aplicar conhecimentos de diferentes áreas estudadas durante a formação, incluindo:
+O projeto reúne conhecimentos de diferentes áreas estudadas durante a formação, incluindo:
 
 * Desenvolvimento Frontend;
 * Desenvolvimento Backend;
-* Banco de Dados;
 * APIs REST;
-* Git e GitHub;
+* Banco de Dados;
 * UI/UX;
-* Prototipação;
+* Git e GitHub;
 * Testes;
-* Organização de projetos;
-* Documentação.
+* Documentação;
+* Arquitetura de software.
 
-O projeto também funciona como uma oportunidade para integrar diferentes conhecimentos em uma única aplicação.
+O desenvolvimento também proporciona à equipe a oportunidade de aplicar esses conhecimentos em uma solução integrada.
 
 ---
 
@@ -414,162 +581,181 @@ O projeto também funciona como uma oportunidade para integrar diferentes conhec
 
 **Em desenvolvimento 🚧**
 
-Atualmente, o projeto está passando por uma **reconstrução do frontend**, com foco em:
+O Argus encontra-se atualmente em processo de **refatoração e reconstrução**.
 
-* Nova identidade visual;
-* Organização dos arquivos;
-* Melhoria da interface;
-* Criação das animações;
-* Estruturação do JavaScript;
-* Preparação para futuras integrações com backend.
+### Progresso
 
-### Progresso atual
-
-* [x] Definição do nome Argus
-* [x] Definição do conceito do projeto
+* [x] Definição do conceito do Argus
+* [x] Definição da identidade conceitual
 * [x] Estrutura inicial do frontend
-* [x] Organização das pastas
-* [x] Criação da página inicial
-* [x] Arquivos CSS
-* [x] Arquivo JavaScript
+* [x] Página inicial
+* [x] Página "Saiba Mais"
+* [x] Estrutura de CSS
+* [x] Sistema de animações
+* [x] JavaScript para interações
 * [x] Organização dos assets
-* [ ] Finalização da identidade visual
-* [ ] Implementação completa das páginas
-* [ ] Desenvolvimento do backend
-* [ ] Criação do banco de dados
-* [ ] Integração frontend + backend
-* [ ] Implementação do sistema de autenticação
-* [ ] Implementação do dashboard
+* [x] Estrutura visual Dark/Cyber
+* [ ] Finalização do frontend
+* [ ] Implementação completa do backend
+* [ ] Estruturação do banco de dados
+* [ ] Desenvolvimento do agente Argus
+* [ ] Integração entre agente e servidor
+* [ ] Sistema de autenticação
+* [ ] Controle de usuários
+* [ ] Dashboard administrativo
+* [ ] Sistema de relatórios
 * [ ] Testes completos
 * [ ] Documentação final
 
 ---
 
-# 📈 Próximas Etapas
+# 🛣️ Roadmap
 
-As próximas etapas previstas para o desenvolvimento são:
+## 🟢 Fase 1 — Reconstrução
 
-### 1. Finalização do Frontend
+* Refatoração do frontend;
+* Nova identidade visual;
+* Organização do código;
+* Componentização;
+* Responsividade;
+* Melhorias de UX/UI.
 
-Concluir a interface visual e implementar as páginas planejadas.
+## 🟡 Fase 2 — Estrutura do Sistema
 
-### 2. Implementação da interatividade
+* Backend;
+* API REST;
+* Banco de dados;
+* Autenticação;
+* Gerenciamento de usuários.
 
-Adicionar funcionalidades utilizando JavaScript.
+## 🟠 Fase 3 — Monitoramento
 
-### 3. Desenvolvimento do Backend
+* Desenvolvimento do agente Argus;
+* Comunicação com o servidor;
+* Coleta de informações;
+* Armazenamento dos dados;
+* Processamento.
 
-Criar a API responsável pela comunicação entre o frontend e o banco de dados.
+## 🔵 Fase 4 — Análise
 
-### 4. Banco de Dados
+* Dashboard;
+* Indicadores;
+* Relatórios;
+* Análises de utilização;
+* Visualizações de dados.
 
-Estruturar o armazenamento das informações utilizadas pelo sistema.
+## 🟣 Fase 5 — Inovação
 
-### 5. Integração
-
-Conectar frontend, backend e banco de dados.
-
-### 6. Autenticação
-
-Implementar login, cadastro e controle de acesso.
-
-### 7. Dashboard
-
-Desenvolver a área administrativa e os indicadores do sistema.
-
-### 8. Testes
-
-Realizar testes de interface, funcionalidades e API.
-
-### 9. Documentação
-
-Finalizar a documentação técnica e acadêmica do projeto.
+* Inteligência Artificial;
+* Análise preditiva;
+* Identificação de padrões;
+* Insights automatizados;
+* Recomendações baseadas em dados.
 
 ---
 
 # 🌳 Fluxo de Desenvolvimento
 
-O projeto utiliza controle de versão para acompanhar a evolução do código.
+O projeto utiliza Git e GitHub para controle de versão e colaboração entre os integrantes.
 
 Fluxo básico:
 
 ```text
 Desenvolvimento
-      │
-      ▼
+       │
+       ▼
 Alteração do código
-      │
-      ▼
+       │
+       ▼
 Teste local
-      │
-      ▼
+       │
+       ▼
 Commit
-      │
-      ▼
+       │
+       ▼
 Push
-      │
-      ▼
+       │
+       ▼
 GitHub
 ```
 
-A utilização do Git permite acompanhar alterações, corrigir problemas e manter um histórico do desenvolvimento.
+A utilização do controle de versão permite acompanhar a evolução do projeto, registrar alterações e facilitar o trabalho colaborativo.
 
 ---
 
-# 📖 Documentação
+# 📂 Estrutura Futura
 
-A documentação do projeto será utilizada para registrar:
+Com a evolução do projeto, a estrutura deverá ser expandida para separar as diferentes camadas da aplicação:
 
-* Objetivos;
-* Requisitos;
-* Estrutura do sistema;
-* Tecnologias;
-* Funcionalidades;
-* Banco de dados;
-* API;
-* Testes;
-* Decisões de desenvolvimento;
-* Evolução do projeto.
+```text
+Argus/
+│
+├── Frontend/
+│   ├── css/
+│   ├── js/
+│   ├── assets/
+│   ├── index.html
+│   └── sm.html
+│
+├── Backend/
+│   ├── controllers/
+│   ├── routes/
+│   ├── models/
+│   ├── database/
+│   └── server.js
+│
+├── Database/
+│   └── ...
+│
+├── README.md
+└── ...
+```
 
-A documentação também tem como objetivo facilitar a compreensão do projeto por outros integrantes da equipe, professores e futuros desenvolvedores.
+Essa organização permitirá separar claramente a interface, a lógica de negócio e o armazenamento dos dados.
 
 ---
 
-# 🎓 Instituição
+# 📈 Visão de Futuro
 
-**SENAI — Serviço Nacional de Aprendizagem Industrial**
+O Argus não foi pensado apenas como uma página ou sistema de monitoramento.
 
-**Curso:** Informática para Internet
+A visão de longo prazo é transformar a plataforma em um **ecossistema de gestão inteligente de ativos e utilização de recursos de TI**.
+
+A partir da coleta e organização dos dados, o sistema poderá evoluir para oferecer:
+
+* Análises avançadas;
+* Indicadores personalizados;
+* Relatórios automatizados;
+* Identificação de padrões;
+* Análise preditiva;
+* Inteligência Artificial;
+* Recomendações baseadas em dados.
+
+Dessa forma, o Argus poderá evoluir de uma ferramenta de **monitoramento** para uma plataforma de **análise e apoio à tomada de decisões**.
+
+---
+
+# 🦅 Argus
+
+> **Observe. Organize. Analise. Decida.**
+
+O **Argus** busca transformar dados de utilização em informações úteis, unindo desenvolvimento web, monitoramento, análise de dados e uma interface moderna para criar uma solução tecnológica voltada a ambientes corporativos.
+
+---
+
+## 🎓 Informações do Projeto
 
 **Projeto:** Argus
-
+**Curso:** Informática para Internet
+**Instituição:** SENAI
 **Orientador:** Prof. Adalberto Teixeira Santana
+**Status:** Em desenvolvimento 🚧
 
----
+**Equipe:**
 
-# 👨‍💻 Equipe de Desenvolvimento
-
-| Integrante   | Função          |
-| ------------ | --------------- |
-| **Haniel** | Frontend |
-| **Matheus** | Backend |
-| **Gabriel** | Api |
-(O restante do Grupo ficou responsável pela documentação de todo o projeto)
-
-> As funções da equipe podem ser atualizadas conforme a divisão de responsabilidades durante o desenvolvimento.
-
----
-
-# 📜 Licença
-
-Este projeto foi desenvolvido para fins **acadêmicos e educacionais**, dentro do contexto do curso técnico de Informática para Internet do SENAI.
-
-Caso o projeto seja posteriormente disponibilizado publicamente, uma licença específica poderá ser definida pela equipe.
-
----
-
-# 🔭 Argus
-
-**Observe. Analise. Organize.**
-
-O Argus busca transformar dados de utilização em informações úteis, unindo tecnologia, desenvolvimento web e análise para criar uma solução de monitoramento moderna e organizada.
+* Haniel Sousa e Souza — Frontend
+* Matheus Pereira de Jesus — Backend
+* Gabriel Henrique Bispo Costa — API
+* Kaique de Souza Nunes da Silva — Documentação
+* Rafaela Victoria do Rosário Portugal — Documentação
+* Tais Millena Bispo Caldas — Documentação
