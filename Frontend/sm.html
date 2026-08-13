@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Argus - Saiba Mais</title>
+
+    <!-- CSS de Animações -->
+    <link rel="stylesheet" href="css/animation.css">
+    <!-- CSS Principal -->
+    <link rel="stylesheet" href="css/style.css">
+    <!-- FontAwesome para ícones -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+    <!-- Header Principal (Idêntico ao index.html) -->
+    <header class="main-header">
+        <a href="index.html" class="logo-top float-glow-anim">Argus</a>
+        
+        <nav class="nav-right">
+            <a href="index.html" class="nav-link">Inicio</a>
+            
+            <div class="profile-container" id="profileContainer">
+                <button class="profile-btn" id="profileBtn" aria-label="Menu de perfil">
+                    <img src="css/assets/img/user.png" alt="Ícone de Perfil" class="user-avatar">
+                </button>
+                <div class="profile-dropdown" id="profileDropdown">
+                    <a href="conta.html"><i class="fa-solid fa-user"></i> Conta</a>
+                    <a href="configuracoes.html"><i class="fa-solid fa-gear"></i> Configurações</a>
+                    <a href="sm.html"><i class="fa-solid fa-circle-info"></i> Saiba mais</a>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main class="page-wrapper">
+
+        <!-- 1. HERO — Apresentação -->
+        <section class="hero-section">
+            <div class="hero-left">
+                <h1 class="hero-title">Tenha uma visão mais clara da sua operação.</h1>
+                <p class="hero-desc">
+                    O Argus é uma plataforma de monitoramento e análise que ajuda empresas a compreender como seus computadores são utilizados, transformando dados de uso em informações para apoiar decisões.
+                </p>
+                <div class="hero-actions">
+                    <a href="#solucao" class="btn btn-primary">Conheça o Argus <i class="fa-solid fa-arrow-down"></i></a>
+                    <a href="dowload.html" class="btn btn-secondary"><i class="fa-solid fa-download"></i> Baixar Agente</a>
+                </div>
+            </div>
+
+            <!-- Composição Visual Abstrata (Íris Tecnológica e Rede de Dados) -->
+            <div class="hero-visual">
+                <div class="tech-iris-container">
+                    <div class="iris-ring ring-outer"></div>
+                    <div class="iris-ring ring-mid"></div>
+                    <div class="iris-core"></div>
+                    <div class="data-node node-1"></div>
+                    <div class="data-node node-2"></div>
+                    <div class="data-node node-3"></div>
+                    <div class="data-node node-4"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 2. O PROBLEMA -->
+        <section id="problema" class="section-block">
+            <div class="section-header">
+                <span class="section-label">Desafios Operacionais</span>
+                <h2>Você sabe realmente como os recursos da sua empresa estão sendo utilizados?</h2>
+            </div>
+
+            <div class="cards-grid grid-3">
+                <div class="info-card border-glow">
+                    <div class="card-icon-wrapper"><i class="fa-solid fa-eye-slash"></i></div>
+                    <h3>Falta de visibilidade</h3>
+                    <p>É difícil acompanhar o uso de diversos computadores individualmente e saber se a infraestrutura está adequada.</p>
+                </div>
+                <div class="info-card border-glow">
+                    <div class="card-icon-wrapper"><i class="fa-solid fa-diagram-project"></i></div>
+                    <h3>Informações dispersas</h3>
+                    <p>Os dados de utilização ficam espalhados, desorganizados e são extremamente difíceis de analisar de forma consistente.</p>
+                </div>
+                <div class="info-card border-glow">
+                    <div class="card-icon-wrapper"><i class="fa-solid fa-chart-line-down"></i></div>
+                    <h3>Decisões sem dados</h3>
+                    <p>Sem informações organizadas, identificar gargalos, desperdícios e oportunidades de melhoria se torna um desafio.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. A SOLUÇÃO -->
+        <section id="solucao" class="section-block dark-bg-box">
+            <div class="section-header">
+                <span class="section-label">A Resposta Tecnológica</span>
+                <h2>Uma visão centralizada da sua operação.</h2>
+                <p class="section-desc">
+                    O Argus reúne informações de utilização dos computadores cadastrados e apresenta os dados de maneira organizada em um painel centralizado e intuitivo.
+                </p>
+            </div>
+
+            <!-- Diagrama de Fluxo Dinâmico -->
+            <div class="flow-container">
+                <div class="flow-step">
+                    <div class="flow-icon"><i class="fa-solid fa-desktop"></i></div>
+                    <span>Computadores</span>
+                </div>
+                <div class="flow-arrow"><i class="fa-solid fa-chevron-right"></i></div>
+                <div class="flow-step highlight-step">
+                    <div class="flow-icon"><i class="fa-solid fa-shield-cat"></i></div>
+                    <span>Agente Argus</span>
+                </div>
+                <div class="flow-arrow"><i class="fa-solid fa-chevron-right"></i></div>
+                <div class="flow-step">
+                    <div class="flow-icon"><i class="fa-solid fa-server"></i></div>
+                    <span>Servidor</span>
+                </div>
+                <div class="flow-arrow"><i class="fa-solid fa-chevron-right"></i></div>
+                <div class="flow-step">
+                    <div class="flow-icon"><i class="fa-solid fa-gears"></i></div>
+                    <span>Processamento</span>
+                </div>
+                <div class="flow-arrow"><i class="fa-solid fa-chevron-right"></i></div>
+                <div class="flow-step highlight-step">
+                    <div class="flow-icon"><i class="fa-solid fa-chart-pie"></i></div>
+                    <span>Dashboard</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- 4. COMO O ARGUS FUNCIONA -->
+        <section class="section-block">
+            <div class="section-header">
+                <span class="section-label">Etapa por Etapa</span>
+                <h2>Como o Argus funciona</h2>
+            </div>
+
+            <div class="process-grid">
+                <div class="process-card">
+                    <span class="step-num">01</span>
+                    <h3>Conecte</h3>
+                    <p>Instale o agente Argus nos computadores da organização com uma configuração rápida e simplificada.</p>
+                </div>
+                <div class="process-card">
+                    <span class="step-num">02</span>
+                    <h3>Colete</h3>
+                    <p>O sistema registra os dados essenciais de utilização definidos estritamente pela plataforma.</p>
+                </div>
+                <div class="process-card">
+                    <span class="step-num">03</span>
+                    <h3>Organize</h3>
+                    <p>As informações coletadas são enviadas com segurança ao servidor, onde são processadas e estruturadas.</p>
+                </div>
+                <div class="process-card">
+                    <span class="step-num">04</span>
+                    <h3>Analise</h3>
+                    <p>O administrador acompanha os resultados consolidados através de um dashboard completo e interativo.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 5. RECURSOS -->
+        <section id="recursos" class="section-block">
+            <div class="section-header">
+                <span class="section-label">Funcionalidades</span>
+                <h2>Tudo o que você precisa para entender sua operação.</h2>
+            </div>
+
+            <div class="cards-grid grid-3">
+                <div class="feature-box">
+                    <i class="fa-solid fa-display feature-icon"></i>
+                    <h3>Computadores</h3>
+                    <p>Visualização clara dos dispositivos cadastrados, verificando seu estado e identificando máquinas ativas.</p>
+                </div>
+                <div class="feature-box">
+                    <i class="fa-solid fa-globe feature-icon"></i>
+                    <h3>Sites</h3>
+                    <p>Acompanhamento dos domínios e sites mais acessados durante as jornadas de trabalho.</p>
+                </div>
+                <div class="feature-box">
+                    <i class="fa-solid fa-cubes feature-icon"></i>
+                    <h3>Aplicativos</h3>
+                    <p>Mapeamento e identificação dos softwares e programas mais utilizados pelas equipes.</p>
+                </div>
+                <div class="feature-box">
+                    <i class="fa-solid fa-clock feature-icon"></i>
+                    <h3>Tempo de utilização</h3>
+                    <p>Métricas precisas sobre a quantidade de horas e minutos de uso ativo dos recursos monitorados.</p>
+                </div>
+                <div class="feature-box">
+                    <i class="fa-solid fa-file-chart-column feature-icon"></i>
+                    <h3>Relatórios</h3>
+                    <p>Dados estruturados para exportação e análises estratégicas que facilitam avaliações gerenciais.</p>
+                </div>
+                <div class="feature-box">
+                    <i class="fa-solid fa-chart-line feature-icon"></i>
+                    <h3>Dashboard</h3>
+                    <p>Um painel centralizado com indicadores chave em tempo real para uma tomada de decisão ágil.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 6. MONITORAMENTO COM RESPONSABILIDADE -->
+        <section class="section-block ethics-block">
+            <div class="ethics-header">
+                <span class="section-label accent-label"><i class="fa-solid fa-user-shield"></i> Ética e Privacidade</span>
+                <h2>Monitoramento com responsabilidade.</h2>
+                <p>O Argus foi pensado para fornecer informações úteis às organizações sem transformar o monitoramento em uma ferramenta de vigilância indiscriminada.</p>
+            </div>
+
+            <div class="cards-grid grid-4">
+                <div class="ethics-card">
+                    <i class="fa-solid fa-eye"></i>
+                    <h4>Transparência</h4>
+                    <p>Os usuários estão cientes da utilização da ferramenta nas máquinas corporativas.</p>
+                </div>
+                <div class="ethics-card">
+                    <i class="fa-solid fa-lock"></i>
+                    <h4>Controle de acesso</h4>
+                    <p>Informações restritas disponíveis somente para perfis de usuários autorizados.</p>
+                </div>
+                <div class="ethics-card">
+                    <i class="fa-solid fa-handshake"></i>
+                    <h4>Uso responsável</h4>
+                    <p>Dados alinhados estritamente com as finalidades e diretrizes da organização.</p>
+                </div>
+                <div class="ethics-card">
+                    <i class="fa-solid fa-shield-halved"></i>
+                    <h4>Privacidade</h4>
+                    <p>Desenvolvimento focado em princípios de proteção e tratamento adequado de dados.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 7. DIFERENCIAL -->
+        <section class="section-block">
+            <div class="section-header">
+                <span class="section-label">Nossos Objetivos</span>
+                <h2>Por que Argus?</h2>
+            </div>
+
+            <div class="comparison-container">
+                <div class="comp-column traditional">
+                    <h3>Soluções Tradicionais</h3>
+                    <ul>
+                        <li><i class="fa-solid fa-xmark"></i> Informações espalhadas</li>
+                        <li><i class="fa-solid fa-xmark"></i> Interfaces complexas</li>
+                        <li><i class="fa-solid fa-xmark"></i> Análises difíceis</li>
+                        <li><i class="fa-solid fa-xmark"></i> Soluções com alto custo</li>
+                        <li><i class="fa-solid fa-xmark"></i> Foco apenas no monitoramento bruto</li>
+                    </ul>
+                </div>
+
+                <div class="comp-column argus-solution">
+                    <div class="argus-badge">Proposta Argus</div>
+                    <h3>Plataforma Argus</h3>
+                    <ul>
+                        <li><i class="fa-solid fa-check"></i> Visão centralizada</li>
+                        <li><i class="fa-solid fa-check"></i> Interface simples e moderna</li>
+                        <li><i class="fa-solid fa-check"></i> Dados organizados e intuitivos</li>
+                        <li><i class="fa-solid fa-check"></i> Proposta acessível e viável</li>
+                        <li><i class="fa-solid fa-check"></i> Foco em informação e produtividade</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- 8. TECNOLOGIA -->
+        <section id="tecnologia" class="section-block dark-bg-box">
+            <div class="section-header">
+                <span class="section-label">Arquitetura da Solução</span>
+                <h2>Construído para transformar dados em informação.</h2>
+            </div>
+
+            <div class="tech-stack-grid">
+                <div class="tech-card">
+                    <div class="tech-header">
+                        <i class="fa-solid fa-code"></i>
+                        <h4>Frontend</h4>
+                    </div>
+                    <p class="tech-desc">Interface intuitiva e responsiva desenvolvida para os administradores.</p>
+                    <div class="tech-tags">
+                        <span>HTML5</span>
+                        <span>CSS3</span>
+                        <span>JavaScript</span>
+                    </div>
+                </div>
+
+                <div class="tech-card">
+                    <div class="tech-header">
+                        <i class="fa-solid fa-gears"></i>
+                        <h4>Backend</h4>
+                    </div>
+                    <p class="tech-desc">Motor robusto para recebimento, tratamento e processamento das métricas.</p>
+                    <div class="tech-tags">
+                        <span>Node.js</span>
+                        <span>Express</span>
+                    </div>
+                </div>
+
+                <div class="tech-card">
+                    <div class="tech-header">
+                        <i class="fa-solid fa-database"></i>
+                        <h4>Banco de Dados</h4>
+                    </div>
+                    <p class="tech-desc">Armazenamento estruturado e otimizado para altas consultas.</p>
+                    <div class="tech-tags">
+                        <span>MySQL</span>
+                    </div>
+                </div>
+
+                <div class="tech-card">
+                    <div class="tech-header">
+                        <i class="fa-solid fa-network-wired"></i>
+                        <h4>API & Versionamento</h4>
+                    </div>
+                    <p class="tech-desc">Comunicação REST fluida entre os componentes e controle do código.</p>
+                    <div class="tech-tags">
+                        <span>REST API</span>
+                        <span>Git</span>
+                        <span>GitHub</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 9. FUTURO -->
+        <section class="section-block">
+            <div class="section-header">
+                <span class="section-label">Evolução do Projeto</span>
+                <h2>O Argus está apenas começando.</h2>
+            </div>
+
+            <div class="roadmap-timeline">
+                <div class="roadmap-item">
+                    <div class="roadmap-tag tag-now">AGORA</div>
+                    <h4>Fase Inicial</h4>
+                    <p>Monitoramento essencial, gerenciamento de máquinas e dashboard interativo.</p>
+                </div>
+                <div class="roadmap-item">
+                    <div class="roadmap-tag tag-next">PRÓXIMA VERSÃO</div>
+                    <h4>Expansão</h4>
+                    <p>Relatórios avançados, sistema de notificações personalizadas e métricas detalhadas.</p>
+                </div>
+                <div class="roadmap-item">
+                    <div class="roadmap-tag tag-future">FUTURO</div>
+                    <h4>Inovação</h4>
+                    <p>Integração de Inteligência Artificial, análises preditivas e aplicativo mobile dedicado.</p>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- FOOTER INSTITUCIONAL -->
+    <footer class="main-footer">
+        <div class="footer-container">
+            <div class="footer-brand">
+                <a href="index.html" class="logo-top">Argus</a>
+                <p>Transformando dados de utilização em informação.</p>
+            </div>
+
+            <div class="footer-links">
+                <a href="index.html">Início</a>
+                <a href="#problema">O Problema</a>
+                <a href="#solucao">A Solução</a>
+                <a href="#recursos">Recursos</a>
+                <a href="#tecnologia">Tecnologia</a>
+            </div>
+        </div>
+
+        <div class="footer-bottom">
+            <p>&copy; 2026 Argus. Todos os direitos reservados.</p>
+        </div>
+    </footer>
+
+    <script src="js/script.js"></script>
+</body>
+</html>
