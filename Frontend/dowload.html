@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Argus - Download & Atualizações</title>
+
+  <!-- CSS DO PROJETO -->
+  <link rel="stylesheet" href="css/animation.css">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+  <!-- HEADER PADRÃO ARGUS -->
+  <header class="main-header">
+    <a href="index.html" class="logo-top float-glow-anim">Argus</a>
+    
+    <nav class="nav-right">
+      <a href="monetizacao.html" class="btn-upgrade-nav">
+        <i class="fa-solid fa-bolt"></i> Upgrade
+      </a>
+      
+      <div class="profile-container" id="profileContainer">
+        <button class="profile-btn" id="profileBtn" aria-label="Menu de perfil">
+          <img src="css/assets/img/user.png" alt="Ícone de Perfil" class="user-avatar">
+        </button>
+        <div class="profile-dropdown" id="profileDropdown">
+          <a href="conta.html"><i class="fa-solid fa-user"></i> Conta</a>
+          <a href="configuracoes.html"><i class="fa-solid fa-gear"></i> Configurações</a>
+          <a href="sm.html"><i class="fa-solid fa-circle-info"></i> Saiba mais</a>
+        </div>
+      </div>
+    </nav>
+  </header>
+
+  <!-- CONTEÚDO PRINCIPAL -->
+  <main class="page-wrapper">
+    <div class="download-grid-layout">
+      
+      <!-- LADO ESQUERDO: CARD DE DOWNLOAD -->
+      <section class="download-box-card">
+        <div class="card-badge-header">
+          <span class="category-tag"><i class="fa-solid fa-download"></i> Download</span>
+          <span class="security-tag"><i class="fa-solid fa-shield-halved"></i> Verificado & Seguro</span>
+        </div>
+
+        <div class="download-main-content">
+          <h1 class="download-title">Baixar Argus</h1>
+          <p class="download-description">
+            Faça o download da versão mais recente do sistema e tenha acesso completo às funcionalidades de segurança e monitoramento digital em tempo real.
+          </p>
+
+          <!-- BOTÃO PRINCIPAL -->
+          <div class="download-action-area">
+            <button class="btn-download-pill" id="btnDownload">
+              <i class="fa-solid fa-arrow-down-to-line"></i> Baixar agora
+            </button>
+            <span class="download-meta-info">
+              <i class="fa-solid fa-circle-check"></i> Instalador direto sem propagandas
+            </span>
+          </div>
+
+          <!-- FICHA TÉCNICA -->
+          <div class="version-info-grid">
+            <div class="info-item">
+              <span class="info-label"><i class="fa-solid fa-code-branch"></i> Versão</span>
+              <span class="info-value">v2.4.0</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label"><i class="fa-solid fa-calendar-days"></i> Data</span>
+              <span class="info-value">14/08/2026</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label"><i class="fa-solid fa-desktop"></i> Compatibilidade</span>
+              <span class="info-value">Windows 10/11 & Linux</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label"><i class="fa-solid fa-hard-drive"></i> Tamanho</span>
+              <span class="info-value">45.2 MB</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- LADO DIREITO: ATUALIZAÇÕES -->
+      <section class="updates-box-card">
+        <div class="updates-header">
+          <h2>Atualizações</h2>
+          <p class="updates-subtitle">Histórico de melhorias, recursos e correções do sistema.</p>
+        </div>
+
+        <!-- TIMELINE DE VERSÕES -->
+        <div class="updates-timeline">
+          
+          <!-- ATUALIZAÇÃO 1 -->
+          <article class="timeline-entry">
+            <div class="timeline-dot"></div>
+            <div class="timeline-card-content">
+              <div class="version-header">
+                <span class="version-number major">v2.4.0 — Nova versão</span>
+                <span class="version-date">14/08/2026</span>
+              </div>
+              <h3 class="update-title">Monitoramento Preditivo com IA</h3>
+              <p class="update-text">
+                Melhorias no sistema de detecção de gargalos e novo painel de desempenho em tempo real.
+              </p>
+              <ul class="update-tags">
+                <li><i class="fa-solid fa-plus"></i> Alertas preditivos</li>
+                <li><i class="fa-solid fa-bolt"></i> Otimização de memória RAM</li>
+              </ul>
+            </div>
+          </article>
+
+          <!-- ATUALIZAÇÃO 2 -->
+          <article class="timeline-entry">
+            <div class="timeline-dot"></div>
+            <div class="timeline-card-content">
+              <div class="version-header">
+                <span class="version-number patch">v2.3.1 — Correções</span>
+                <span class="version-date">28/07/2026</span>
+              </div>
+              <h3 class="update-title">Estabilidade e Conectividade</h3>
+              <p class="update-text">
+                Correções de bugs no serviço de reconexão automática em redes instáveis.
+              </p>
+              <ul class="update-tags">
+                <li><i class="fa-solid fa-wrench"></i> Correção de logs duplicados</li>
+                <li><i class="fa-solid fa-shield"></i> Patch de segurança</li>
+              </ul>
+            </div>
+          </article>
+
+          <!-- ATUALIZAÇÃO 3 -->
+          <article class="timeline-entry">
+            <div class="timeline-dot"></div>
+            <div class="timeline-card-content">
+              <div class="version-header">
+                <span class="version-number feature">v2.3.0 — Novos recursos</span>
+                <span class="version-date">10/07/2026</span>
+              </div>
+              <h3 class="update-title">Suporte Multiplataforma</h3>
+              <p class="update-text">
+                Adicionada compatibilidade oficial com distribuições Linux baseadas em Debian e suporte a ARM64.
+              </p>
+            </div>
+          </article>
+
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="main-footer">
+    <div class="footer-container">
+      <div class="footer-brand">
+        <a href="index.html" class="logo-top">Argus</a>
+        <p>Sistema Avançado de Monitoramento Inteligente</p>
+      </div>
+      <div class="footer-links">
+        <a href="index.html">Início</a>
+        <a href="sm.html">Saiba Mais</a>
+        <a href="monetizacao.html">Planos</a>
+        <a href="download.html">Download</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>&copy; 2026 Argus Inc. Todos os direitos reservados.</p>
+    </div>
+  </footer>
+
+  <!-- JS DO PROJETO -->
+  <script src="js/script.js"></script>
+</body>
+</html>
