@@ -1,295 +1,459 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <title>Argus - Planos e Monetização</title>
+
+    <!-- Animações -->
     <link rel="stylesheet" href="css/animation.css">
 
-/* CSS Principal */
+    <!-- CSS Principal -->
     <link rel="stylesheet" href="css/style.css">
 
-/* FontAwesome para ícones do dropdown */
+    <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
+
 <body>
 
-<header class="main-header">
-    <a href="index.html" class="logo-top float-glow-anim">Argus</a>
-    
-    <nav class="nav-right">
-        <a href="monetizacao.html" class="btn-upgrade-nav">
-            <i class="fa-solid fa-bolt"></i> Upgrade
-        </a>
-        
-        <div class="profile-container" id="profileContainer">
-            <button class="profile-btn" id="profileBtn" aria-label="Menu de perfil">
-                <img src="css/assets/img/user.png" alt="Ícone de Perfil" class="user-avatar">
+    <!-- Header -->
+    <header class="main-header">
+
+        <!-- Logo -->
+        <a href="index.html" class="logo-top float-glow-anim">Argus</a>
+
+        <!-- Navegação -->
+        <nav class="nav-right">
+
+            <!-- Botão de Upgrade -->
+            <a href="monetizacao.html" class="btn-upgrade-nav">
+                <i class="fa-solid fa-bolt"></i> Upgrade
+            </a>
+
+            <!-- Perfil -->
+            <div class="profile-container" id="profileContainer">
+
+                <!-- Botão do perfil -->
+                <button class="profile-btn" id="profileBtn" aria-label="Menu de perfil">
+                    <img src="css/assets/img/user.png" alt="Ícone de Perfil" class="user-avatar">
+                </button>
+
+                <!-- Menu dropdown -->
+                <div class="profile-dropdown" id="profileDropdown">
+                    <a href="conta.html">
+                        <i class="fa-solid fa-user"></i> Conta
+                    </a>
+
+                    <a href="configuracoes.html">
+                        <i class="fa-solid fa-gear"></i> Configurações
+                    </a>
+
+                    <a href="sm.html">
+                        <i class="fa-solid fa-circle-info"></i> Saiba mais
+                    </a>
+                </div>
+
+            </div>
+
+        </nav>
+    </header>
+
+    <!-- Área principal -->
+    <main class="page-wrapper">
+
+        <!-- Status do plano atual -->
+        <section class="usage-banner">
+
+            <!-- Informações do plano -->
+            <div class="usage-info">
+                <span class="badge-tag">
+                    <i class="fa-solid fa-circle-check"></i> Plano Atual: <strong>Gratuito</strong>
+                </span>
+
+                <h2>Uso do Período Atual</h2>
+
+                <p>
+                    Você utilizou <strong>8 de 10</strong> computadores monitorados no seu limite gratuito.
+                </p>
+            </div>
+
+            <!-- Barra de progresso -->
+            <div class="usage-progress-container">
+                <div class="progress-bar-bg">
+                    <div class="progress-bar-fill" style="width: 80%;"></div>
+                </div>
+
+                <span class="progress-text">80% da capacidade utilizada</span>
+            </div>
+
+        </section>
+
+        <!-- Seção de planos -->
+        <section class="section-block">
+
+            <!-- Cabeçalho da seção -->
+            <div class="section-header">
+                <span class="section-label">Evolua seu Monitoramento</span>
+
+                <h2>Escolha o Plano Ideal para seu Negócio</h2>
+
+                <p class="section-desc">
+                    Desbloqueie poder computacional em nuvem, IA preditiva e suporte prioritário 24/7.
+                </p>
+
+                <!-- Alternador de cobrança -->
+                <div class="pricing-toggle-container">
+                    <span class="toggle-label active" id="labelMonthly">Mensal</span>
+
+                    <button class="pricing-toggle-btn" id="pricingToggle" aria-label="Alternar faturamento"></button>
+
+                    <span class="toggle-label" id="labelAnnual">
+                        Anual <span class="discount-badge">-20% OFF</span>
+                    </span>
+                </div>
+            </div>
+
+            <!-- Cards dos planos -->
+            <div class="cards-grid grid-3">
+
+                <!-- Plano Free -->
+                <div class="pricing-card">
+
+                    <div class="plan-header">
+                        <h3>Free</h3>
+
+                        <p>Para estudantes e pequenos testes locais.</p>
+
+                        <div class="plan-price">
+                            <span class="currency">R$</span>
+                            <span class="amount">0</span>
+                            <span class="period">/mês</span>
+                        </div>
+                    </div>
+
+                    <ul class="plan-features">
+                        <li><i class="fa-solid fa-check"></i> Até 10 computadores</li>
+                        <li><i class="fa-solid fa-check"></i> Métricas básicas de hardware</li>
+                        <li><i class="fa-solid fa-check"></i> Retenção de dados por 7 dias</li>
+                        <li class="disabled"><i class="fa-solid fa-xmark"></i> Alertas por IA preditiva</li>
+                        <li class="disabled"><i class="fa-solid fa-xmark"></i> Suporte prioritário 24/7</li>
+                    </ul>
+
+                    <button class="btn btn-plan btn-current" disabled>Plano Atual</button>
+
+                </div>
+
+                <!-- Plano Pro -->
+                <div class="pricing-card featured">
+
+                    <div class="popular-badge">
+                        <i class="fa-solid fa-star"></i> MAIS POPULAR
+                    </div>
+
+                    <div class="plan-header">
+                        <h3>Pro</h3>
+
+                        <p>Ideal para startups e infraestruturas em crescimento.</p>
+
+                        <div class="plan-price">
+                            <span class="currency">R$</span>
+                            <span class="amount" id="pricePro">49</span>
+                            <span class="period" id="periodPro">/mês</span>
+                        </div>
+                    </div>
+
+                    <ul class="plan-features">
+                        <li><i class="fa-solid fa-check"></i> Até 50 computadores</li>
+                        <li><i class="fa-solid fa-check"></i> Métricas completas em tempo real</li>
+                        <li><i class="fa-solid fa-check"></i> Retenção de dados por 90 dias</li>
+                        <li><i class="fa-solid fa-check"></i> Alertas por IA preditiva (3 modelos)</li>
+                        <li><i class="fa-solid fa-check"></i> Suporte via Chat & e-mail</li>
+                    </ul>
+
+                    <button class="btn btn-primary btn-plan" onclick="openUpgradeModal('Pro')">
+                        Fazer Upgrade
+                    </button>
+
+                </div>
+
+                <!-- Plano Business -->
+                <div class="pricing-card">
+
+                    <div class="plan-header">
+                        <h3>Business</h3>
+
+                        <p>Escala ilimitada com máxima segurança e controle.</p>
+
+                        <div class="plan-price">
+                            <span class="currency">R$</span>
+                            <span class="amount" id="priceBusiness">149</span>
+                            <span class="period" id="periodBusiness">/mês</span>
+                        </div>
+                    </div>
+
+                    <ul class="plan-features">
+                        <li><i class="fa-solid fa-check"></i> Computadores Ilimitados</li>
+                        <li><i class="fa-solid fa-check"></i> Histórico ilimitado de logs</li>
+                        <li><i class="fa-solid fa-check"></i> Modelos IA customizados</li>
+                        <li><i class="fa-solid fa-check"></i> Integração via API dedicada</li>
+                        <li><i class="fa-solid fa-check"></i> Gerente de conta + Suporte 24/7</li>
+                    </ul>
+
+                    <button class="btn btn-primary btn-plan" onclick="openUpgradeModal('Business')">
+                        Assinar Business
+                    </button>
+
+                </div>
+
+            </div>
+
+        </section>
+
+        <!-- Tabela comparativa -->
+        <section class="section-block">
+
+            <!-- Cabeçalho da seção -->
+            <div class="section-header">
+                <span class="section-label">Comparativo Detalhado</span>
+                <h2>Matriz de Recursos</h2>
+            </div>
+
+            <!-- Tabela -->
+            <div class="table-responsive">
+                <table class="comparison-table">
+
+                    <thead>
+                        <tr>
+                            <th>Recurso</th>
+                            <th>Free</th>
+                            <th>Pro</th>
+                            <th>Business</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        <tr>
+                            <td>Máquinas Monitoradas</td>
+                            <td>Até 10</td>
+                            <td>Até 50</td>
+                            <td>Ilimitado</td>
+                        </tr>
+
+                        <tr>
+                            <td>Frequência de Atualização</td>
+                            <td>30s</td>
+                            <td>5s</td>
+                            <td>1s (Tempo Real)</td>
+                        </tr>
+
+                        <tr>
+                            <td>Detecção de Anomalias com IA</td>
+                            <td>—</td>
+                            <td><i class="fa-solid fa-check check-icon"></i></td>
+                            <td><i class="fa-solid fa-check check-icon"></i> (Avançado)</td>
+                        </tr>
+
+                        <tr>
+                            <td>Relatórios Exportáveis (PDF/CSV)</td>
+                            <td>—</td>
+                            <td><i class="fa-solid fa-check check-icon"></i></td>
+                            <td><i class="fa-solid fa-check check-icon"></i></td>
+                        </tr>
+
+                        <tr>
+                            <td>Suporte Técnico</td>
+                            <td>Comunitário</td>
+                            <td>Prioritário (Horário Comercial)</td>
+                            <td>Dedicado 24/7</td>
+                        </tr>
+                    </tbody>
+
+                </table>
+            </div>
+
+        </section>
+
+        <!-- Perguntas frequentes -->
+        <section class="section-block dark-bg-box">
+
+            <!-- Cabeçalho da seção -->
+            <div class="section-header">
+                <span class="section-label">Dúvidas Frequentes</span>
+                <h2>Perguntas sobre Planos e Cobrança</h2>
+            </div>
+
+            <!-- FAQ -->
+            <div class="faq-accordion">
+
+                <!-- Pergunta 01 -->
+                <div class="faq-item">
+                    <button class="faq-question">
+                        <span>Posso cancelar minha assinatura a qualquer momento?</span>
+                        <i class="fa-solid fa-chevron-down"></i>
+                    </button>
+
+                    <div class="faq-answer">
+                        <p>
+                            Sim, você pode cancelar ou alterar seu plano quando desejar diretamente pelo seu painel sem taxas de fidelidade adicionais.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Pergunta 02 -->
+                <div class="faq-item">
+                    <button class="faq-question">
+                        <span>Como funciona o faturamento anual?</span>
+                        <i class="fa-solid fa-chevron-down"></i>
+                    </button>
+
+                    <div class="faq-answer">
+                        <p>
+                            No plano anual você recebe 20% de desconto no valor total da anuidade cobrado em uma única parcela ou parcelado no cartão.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Pergunta 03 -->
+                <div class="faq-item">
+                    <button class="faq-question">
+                        <span>Quais meios de pagamento são aceitos?</span>
+                        <i class="fa-solid fa-chevron-down"></i>
+                    </button>
+
+                    <div class="faq-answer">
+                        <p>
+                            Aceitamos Cartões de Crédito (Visa, Mastercard, Elo, Amex) e PIX com aprovação instantânea.
+                        </p>
+                    </div>
+                </div>
+
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- Modal de Checkout -->
+    <div class="modal-overlay" id="checkoutModal">
+
+        <div class="modal-card">
+
+            <!-- Botão de fechar -->
+            <button class="modal-close" onclick="closeModal()">
+                <i class="fa-solid fa-xmark"></i>
             </button>
-            <div class="profile-dropdown" id="profileDropdown">
-                <a href="conta.html"><i class="fa-solid fa-user"></i> Conta</a>
-                <a href="configuracoes.html"><i class="fa-solid fa-gear"></i> Configurações</a>
-                <a href="sm.html"><i class="fa-solid fa-circle-info"></i> Saiba mais</a>
-            </div>
-        </div>
-    </nav>
-</header>
 
-<main class="page-wrapper">
-    
-/* Status do Plano Atual */
-    <section class="usage-banner">
-        <div class="usage-info">
-            <span class="badge-tag"><i class="fa-solid fa-circle-check"></i> Plano Atual: <strong>Gratuito</strong></span>
-            <h2>Uso do Período Atual</h2>
-            <p>Você utilizou <strong>8 de 10</strong> computadores monitorados no seu limite gratuito.</p>
-        </div>
-        <div class="usage-progress-container">
-            <div class="progress-bar-bg">
-                <div class="progress-bar-fill" style="width: 80%;"></div>
-            </div>
-            <span class="progress-text">80% da capacidade utilizada</span>
-        </div>
-    </section>
+            <!-- Cabeçalho do modal -->
+            <div class="modal-header">
+                <span class="badge-tag">Checkout Seguro</span>
 
-/* Seção de Planos */
-    <section class="section-block">
-        <div class="section-header">
-            <span class="section-label">Evolua seu Monitoramento</span>
-            <h2>Escolha o Plano Ideal para seu Negócio</h2>
-            <p class="section-desc">Desbloqueie poder computacional em nuvem, IA preditiva e suporte prioritário 24/7.</p>
-            
-            <div class="pricing-toggle-container">
-                <span class="toggle-label active" id="labelMonthly">Mensal</span>
-                <button class="pricing-toggle-btn" id="pricingToggle" aria-label="Alternar faturamento"></button>
-                <span class="toggle-label" id="labelAnnual">Anual <span class="discount-badge">-20% OFF</span></span>
-            </div>
-        </div>
-
-        <div class="cards-grid grid-3">
-            
-            <!-- Card Free -->
-            <div class="pricing-card">
-                <div class="plan-header">
-                    <h3>Free</h3>
-                    <p>Para estudantes e pequenos testes locais.</p>
-                    <div class="plan-price">
-                        <span class="currency">R$</span>
-                        <span class="amount">0</span>
-                        <span class="period">/mês</span>
-                    </div>
-                </div>
-                <ul class="plan-features">
-                    <li><i class="fa-solid fa-check"></i> Até 10 computadores</li>
-                    <li><i class="fa-solid fa-check"></i> Métricas básicas de hardware</li>
-                    <li><i class="fa-solid fa-check"></i> Retenção de dados por 7 dias</li>
-                    <li class="disabled"><i class="fa-solid fa-xmark"></i> Alertas por IA preditiva</li>
-                    <li class="disabled"><i class="fa-solid fa-xmark"></i> Suporte prioritário 24/7</li>
-                </ul>
-                <button class="btn btn-plan btn-current" disabled>Plano Atual</button>
+                <h2>
+                    Confirmar Upgrade - <span id="modalPlanTitle">Pro</span>
+                </h2>
             </div>
 
-            <!-- Card Pro -->
-            <div class="pricing-card featured">
-                <div class="popular-badge"><i class="fa-solid fa-star"></i> MAIS POPULAR</div>
-                <div class="plan-header">
-                    <h3>Pro</h3>
-                    <p>Ideal para startups e infraestruturas em crescimento.</p>
-                    <div class="plan-price">
-                        <span class="currency">R$</span>
-                        <span class="amount" id="pricePro">49</span>
-                        <span class="period" id="periodPro">/mês</span>
-                    </div>
-                </div>
-                <ul class="plan-features">
-                    <li><i class="fa-solid fa-check"></i> Até 50 computadores</li>
-                    <li><i class="fa-solid fa-check"></i> Métricas completas em tempo real</li>
-                    <li><i class="fa-solid fa-check"></i> Retenção de dados por 90 dias</li>
-                    <li><i class="fa-solid fa-check"></i> Alertas por IA preditiva (3 modelos)</li>
-                    <li><i class="fa-solid fa-check"></i> Suporte via Chat & e-mail</li>
-                </ul>
-                <button class="btn btn-primary btn-plan" onclick="openUpgradeModal('Pro')">Fazer Upgrade</button>
-            </div>
+            <!-- Abas de pagamento -->
+            <div class="payment-tabs">
 
-            <!-- Card Business -->
-            <div class="pricing-card">
-                <div class="plan-header">
-                    <h3>Business</h3>
-                    <p>Escala ilimitada com máxima segurança e controle.</p>
-                    <div class="plan-price">
-                        <span class="currency">R$</span>
-                        <span class="amount" id="priceBusiness">149</span>
-                        <span class="period" id="periodBusiness">/mês</span>
-                    </div>
-                </div>
-                <ul class="plan-features">
-                    <li><i class="fa-solid fa-check"></i> Computadores Ilimitados</li>
-                    <li><i class="fa-solid fa-check"></i> Histórico ilimitado de logs</li>
-                    <li><i class="fa-solid fa-check"></i> Modelos IA customizados</li>
-                    <li><i class="fa-solid fa-check"></i> Integração via API dedicada</li>
-                    <li><i class="fa-solid fa-check"></i> Gerente de conta + Suporte 24/7</li>
-                </ul>
-                <button class="btn btn-primary btn-plan" onclick="openUpgradeModal('Business')">Assinar Business</button>
-            </div>
-
-        </div>
-    </section>
-
-/* Tabela Comparativa */
-    <section class="section-block">
-        <div class="section-header">
-            <span class="section-label">Comparativo Detalhado</span>
-            <h2>Matriz de Recursos</h2>
-        </div>
-        <div class="table-responsive">
-            <table class="comparison-table">
-                <thead>
-                    <tr>
-                        <th>Recurso</th>
-                        <th>Free</th>
-                        <th>Pro</th>
-                        <th>Business</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>Máquinas Monitoradas</td>
-                        <td>Até 10</td>
-                        <td>Até 50</td>
-                        <td>Ilimitado</td>
-                    </tr>
-                    <tr>
-                        <td>Frequência de Atualização</td>
-                        <td>30s</td>
-                        <td>5s</td>
-                        <td>1s (Tempo Real)</td>
-                    </tr>
-                    <tr>
-                        <td>Detecção de Anomalias com IA</td>
-                        <td>—</td>
-                        <td><i class="fa-solid fa-check check-icon"></i></td>
-                        <td><i class="fa-solid fa-check check-icon"></i> (Avançado)</td>
-                    </tr>
-                    <tr>
-                        <td>Relatórios Exportáveis (PDF/CSV)</td>
-                        <td>—</td>
-                        <td><i class="fa-solid fa-check check-icon"></i></td>
-                        <td><i class="fa-solid fa-check check-icon"></i></td>
-                    </tr>
-                    <tr>
-                        <td>Suporte Técnico</td>
-                        <td>Comunitário</td>
-                        <td>Prioritário (Horário Comercial)</td>
-                        <td>Dedicado 24/7</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-    </section>
-
-/* Perguntas Frequentes */
-    <section class="section-block dark-bg-box">
-        <div class="section-header">
-            <span class="section-label">Dúvidas Frequentes</span>
-            <h2>Perguntas sobre Planos e Cobrança</h2>
-        </div>
-        <div class="faq-accordion">
-            <div class="faq-item">
-                <button class="faq-question">
-                    <span>Posso cancelar minha assinatura a qualquer momento?</span>
-                    <i class="fa-solid fa-chevron-down"></i>
+                <button class="tab-btn active" onclick="switchTab('pix')">
+                    <i class="fa-brands fa-pix"></i> PIX
                 </button>
-                <div class="faq-answer">
-                    <p>Sim, você pode cancelar ou alterar seu plano quando desejar diretamente pelo seu painel sem taxas de fidelidade adicionais.</p>
-                </div>
-            </div>
-            <div class="faq-item">
-                <button class="faq-question">
-                    <span>Como funciona o faturamento anual?</span>
-                    <i class="fa-solid fa-chevron-down"></i>
+
+                <button class="tab-btn" onclick="switchTab('card')">
+                    <i class="fa-solid fa-credit-card"></i> Cartão de Crédito
                 </button>
-                <div class="faq-answer">
-                    <p>No plano anual você recebe 20% de desconto no valor total da anuidade cobrado em uma única parcela ou parcelado no cartão.</p>
-                </div>
+
             </div>
-            <div class="faq-item">
-                <button class="faq-question">
-                    <span>Quais meios de pagamento são aceitos?</span>
-                    <i class="fa-solid fa-chevron-down"></i>
-                </button>
-                <div class="faq-answer">
-                    <p>Aceitamos Cartões de Crédito (Visa, Mastercard, Elo, Amex) e PIX com aprovação instantânea.</p>
+
+            <!-- Pagamento via PIX -->
+            <div class="payment-panel active" id="panelPix">
+
+                <div class="pix-box">
+
+                    <div class="qr-placeholder">
+                        <i class="fa-solid fa-qrcode"></i>
+                    </div>
+
+                    <p>
+                        Escaneie o QR Code acima ou copie o código PIX para confirmar o pagamento instantâneo.
+                    </p>
+
+                    <button class="btn btn-primary" onclick="simularPagamento()">
+                        <i class="fa-solid fa-copy"></i> Copiar Chave PIX
+                    </button>
+
                 </div>
+
             </div>
-        </div>
-    </section>
 
-</main>
+            <!-- Pagamento via cartão -->
+            <div class="payment-panel" id="panelCard">
 
-/* Modal de Checkout */
-<div class="modal-overlay" id="checkoutModal">
-    <div class="modal-card">
-        <button class="modal-close" onclick="closeModal()"><i class="fa-solid fa-xmark"></i></button>
-        <div class="modal-header">
-            <span class="badge-tag">Checkout Seguro</span>
-            <h2>Confirmar Upgrade - <span id="modalPlanTitle">Pro</span></h2>
-        </div>
-        
-        <div class="payment-tabs">
-            <button class="tab-btn active" onclick="switchTab('pix')"><i class="fa-brands fa-pix"></i> PIX</button>
-            <button class="tab-btn" onclick="switchTab('card')"><i class="fa-solid fa-credit-card"></i> Cartão de Crédito</button>
-        </div>
+                <form class="card-form" onsubmit="event.preventDefault(); simularPagamento();">
 
-        <div class="payment-panel active" id="panelPix">
-            <div class="pix-box">
-                <div class="qr-placeholder">
-                    <i class="fa-solid fa-qrcode"></i>
-                </div>
-                <p>Escaneie o QR Code acima ou copie o código PIX para confirmar o pagamento instantâneo.</p>
-                <button class="btn btn-primary" onclick="simularPagamento()"><i class="fa-solid fa-copy"></i> Copiar Chave PIX</button>
-            </div>
-        </div>
-
-        <div class="payment-panel" id="panelCard">
-            <form class="card-form" onsubmit="event.preventDefault(); simularPagamento();">
-                <div class="form-group">
-                    <label>Número do Cartão</label>
-                    <input type="text" placeholder="0000 0000 0000 0000" required>
-                </div>
-                <div class="form-row">
                     <div class="form-group">
-                        <label>Validade</label>
-                        <input type="text" placeholder="MM/AA" required>
+                        <label>Número do Cartão</label>
+                        <input type="text" placeholder="0000 0000 0000 0000" required>
                     </div>
-                    <div class="form-group">
-                        <label>CVV</label>
-                        <input type="text" placeholder="123" required>
+
+                    <div class="form-row">
+
+                        <div class="form-group">
+                            <label>Validade</label>
+                            <input type="text" placeholder="MM/AA" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label>CVV</label>
+                            <input type="text" placeholder="123" required>
+                        </div>
+
                     </div>
-                </div>
-                <button type="submit" class="btn btn-primary btn-block">Finalizar Assinatura</button>
-            </form>
+
+                    <button type="submit" class="btn btn-primary btn-block">
+                        Finalizar Assinatura
+                    </button>
+
+                </form>
+
+            </div>
+
         </div>
 
     </div>
-</div>
 
-<footer class="main-footer">
-    <div class="footer-container">
-        <div class="footer-brand">
-            <a href="index.html" class="logo-top">Argus</a>
-            <p>Sistema Avançado de Monitoramento Inteligente</p>
-        </div>
-        <div class="footer-links">
-            <a href="index.html">Início</a>
-            <a href="sm.html">Saiba Mais</a>
-            <a href="monetizacao.html">Planos</a>
-        </div>
-    </div>
-    <div class="footer-bottom">
-        <p>&copy; 2026 Argus Inc. Todos os direitos reservados.</p>
-    </div>
-</footer>
+    <!-- Footer -->
+    <footer class="main-footer">
 
+        <div class="footer-container">
+
+            <!-- Identidade -->
+            <div class="footer-brand">
+                <a href="index.html" class="logo-top">Argus</a>
+                <p>Sistema Avançado de Monitoramento Inteligente</p>
+            </div>
+
+            <!-- Links -->
+            <div class="footer-links">
+                <a href="index.html">Início</a>
+                <a href="sm.html">Saiba Mais</a>
+                <a href="monetizacao.html">Planos</a>
+            </div>
+
+        </div>
+
+        <!-- Copyright -->
+        <div class="footer-bottom">
+            <p>&copy; 2026 Argus Inc. Todos os direitos reservados.</p>
+        </div>
+
+    </footer>
+
+<!-- JavaScript -->
+<script src="js/animations.js"></script>
 <script src="js/script.js"></script>
 
 </body>

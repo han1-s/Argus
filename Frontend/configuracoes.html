@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Argus - Configurações</title>
+
+    <!-- Animações -->
+    <link rel="stylesheet" href="css/animation.css">
+
+    <!-- CSS Principal -->
+    <link rel="stylesheet" href="css/style.css">
+
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body>
+
+    <!-- Header -->
+    <header class="main-header">
+
+        <!-- Logo -->
+        <a href="index.html" class="logo-top float-glow-anim">Argus</a>
+
+        <!-- Navegação -->
+        <nav class="nav-right">
+
+            <!-- Início -->
+            <a href="index.html" class="nav-link">Início</a>
+
+            <!-- Botão de Upgrade -->
+            <a href="monetizacao.html" class="btn-upgrade-nav">
+                <i class="fa-solid fa-bolt"></i> Upgrade
+            </a>
+
+            <!-- Perfil -->
+            <div class="profile-container" id="profileContainer">
+
+                <!-- Botão do perfil -->
+                <button class="profile-btn" id="profileBtn" aria-label="Menu de perfil">
+                    <img src="css/assets/img/user.png" alt="Ícone de Perfil" class="user-avatar global-user-avatar">
+                </button>
+
+                <!-- Menu dropdown -->
+                <div class="profile-dropdown" id="profileDropdown">
+                    <a href="conta.html">
+                        <i class="fa-solid fa-user"></i> Conta
+                    </a>
+
+                    <a href="configuracoes.html">
+                        <i class="fa-solid fa-gear"></i> Configurações
+                    </a>
+
+                    <a href="sm.html">
+                        <i class="fa-solid fa-circle-info"></i> Saiba mais
+                    </a>
+                </div>
+
+            </div>
+
+        </nav>
+    </header>
+
+    <!-- Área principal -->
+    <main class="page-wrapper settings-page-wrapper">
+
+        <div class="settings-container">
+
+            <!-- Menu lateral -->
+            <aside class="settings-sidebar">
+
+                <!-- Conta -->
+                <div class="sidebar-group">
+
+                    <span class="sidebar-group-title">CONTA</span>
+
+                    <button class="sidebar-nav-item active" data-tab="account">
+                        <i class="fa-solid fa-user-gear"></i>
+                        <span>Informações da conta</span>
+                    </button>
+
+                    <button class="sidebar-nav-item" data-tab="privacy">
+                        <i class="fa-solid fa-user-shield"></i>
+                        <span>Dados e Privacidade</span>
+                    </button>
+
+                    <button class="sidebar-nav-item" data-tab="notifications">
+                        <i class="fa-solid fa-bell"></i>
+                        <span>Notificações</span>
+                    </button>
+
+                </div>
+
+                <!-- Acessibilidade -->
+                <div class="sidebar-group">
+
+                    <span class="sidebar-group-title">ACESSIBILIDADE</span>
+
+                    <button class="sidebar-nav-item" data-tab="appearance">
+                        <i class="fa-solid fa-palette"></i>
+                        <span>Aparência</span>
+                    </button>
+
+                </div>
+
+                <!-- Sistema -->
+                <div class="sidebar-group">
+
+                    <span class="sidebar-group-title">SISTEMA</span>
+
+                    <button class="sidebar-nav-item" data-tab="system">
+                        <i class="fa-solid fa-globe"></i>
+                        <span>Idioma e Horário</span>
+                    </button>
+
+                </div>
+
+                <!-- Cobrança -->
+                <div class="sidebar-group">
+
+                    <span class="sidebar-group-title">COBRANÇA</span>
+
+                    <button class="sidebar-nav-item" data-tab="billing">
+                        <i class="fa-solid fa-credit-card"></i>
+                        <span>Planos</span>
+                    </button>
+
+                </div>
+
+            </aside>
+
+            <!-- Conteúdo das configurações -->
+            <section class="settings-content-card">
+
+                <!-- Informações da conta -->
+                <div class="tab-content active" id="tab-account">
+
+                    <h2 class="section-title">
+                        <i class="fa-solid fa-user-gear"></i>
+                        Informações da Conta
+                    </h2>
+
+                    <p class="section-desc">
+                        Gerencie sua foto de perfil, dados pessoais e credenciais de acesso.
+                    </p>
+
+                    <!-- Foto de perfil -->
+                    <div class="profile-upload-block">
+
+                        <div class="avatar-preview-wrapper">
+                            <img src="css/assets/img/user.png" alt="Foto do usuário" id="settingsAvatarPreview" class="global-user-avatar">
+                        </div>
+
+                        <div class="avatar-controls">
+
+                            <input type="file" id="avatarInput" accept="image/jpeg,image/png,image/webp" hidden>
+
+                            <button type="button" class="settings-btn settings-btn-secondary" id="btnUploadAvatar">
+                                <i class="fa-solid fa-upload"></i>
+                                Alterar foto
+                            </button>
+
+                            <button type="button" class="settings-btn settings-btn-outline-danger" id="btnRemoveAvatar">
+                                <i class="fa-solid fa-trash"></i>
+                                Remover foto
+                            </button>
+
+                        </div>
+
+                    </div>
+
+                    <!-- Informações pessoais -->
+                    <form id="formAccountInfo" class="settings-form">
+
+                        <div class="form-grid">
+
+                            <div class="form-group">
+                                <label for="userNameInput">Nome de Usuário</label>
+                                <input type="text" id="userNameInput" class="form-input" placeholder="Ex: Alex Argus" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="userEmailInput">E-mail</label>
+                                <input type="email" id="userEmailInput" class="form-input" placeholder="usuario@argus.io" required>
+                            </div>
+
+                        </div>
+
+                        <div class="form-grid">
+
+                            <div class="form-group">
+                                <label>Tipo de Conta</label>
+                                <input type="text" class="form-input" value="Desenvolvedor (Simulado)" disabled>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Data de Criação</label>
+                                <input type="text" class="form-input" value="14 de Agosto de 2026" disabled>
+                            </div>
+
+                        </div>
+
+                        <button type="submit" class="settings-btn settings-btn-primary">
+                            <i class="fa-solid fa-floppy-disk"></i>
+                            Salvar Alterações
+                        </button>
+
+                    </form>
+
+                    <hr class="settings-divider">
+
+                    <!-- Segurança -->
+                    <h3 class="subsection-title">
+                        <i class="fa-solid fa-lock"></i>
+                        Segurança e Senha
+                    </h3>
+
+                    <form id="formSecuritySimulated" class="settings-form">
+
+                        <div class="form-group">
+                            <label for="currentPass">Senha Atual</label>
+                            <input type="password" id="currentPass" class="form-input" placeholder="••••••••">
+                        </div>
+
+                        <div class="form-grid">
+
+                            <div class="form-group">
+                                <label for="newPass">Nova Senha</label>
+                                <input type="password" id="newPass" class="form-input" placeholder="••••••••">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="confirmPass">Confirmar Nova Senha</label>
+                                <input type="password" id="confirmPass" class="form-input" placeholder="••••••••">
+                            </div>
+
+                        </div>
+
+                        <button type="submit" class="settings-btn settings-btn-secondary">
+                            <i class="fa-solid fa-key"></i>
+                            Atualizar Senha
+                        </button>
+
+                    </form>
+
+                    <hr class="settings-divider">
+
+                    <!-- Zona de perigo -->
+                    <div class="danger-zone-box">
+
+                        <h3 class="danger-title">
+                            <i class="fa-solid fa-triangle-exclamation"></i>
+                            Zona de Perigo
+                        </h3>
+
+                        <p>
+                            A exclusão da conta removerá localmente todos os dados de preferência simulados do seu navegador.
+                        </p>
+
+                        <button type="button" class="settings-btn settings-btn-danger" id="btnDeleteAccountModal">
+                            <i class="fa-solid fa-user-xmark"></i>
+                            Excluir Conta
+                        </button>
+
+                    </div>
+
+                </div>
+
+                <!-- Dados e privacidade -->
+                <div class="tab-content" id="tab-privacy">
+
+                    <h2 class="section-title">
+                        <i class="fa-solid fa-user-shield"></i>
+                        Dados e Privacidade
+                    </h2>
+
+                    <p class="section-desc">
+                        Gerencie o armazenamento local do navegador e preferências de dados.
+                    </p>
+
+                    <div class="action-card-group">
+
+                        <!-- Exportar dados -->
+                        <div class="action-card">
+
+                            <div>
+                                <h4>Exportar Preferências</h4>
+
+                                <p>
+                                    Baixe um arquivo JSON contendo suas configurações locais salvas.
+                                </p>
+                            </div>
+
+                            <button type="button" class="settings-btn settings-btn-secondary" id="btnExportData">
+                                <i class="fa-solid fa-download"></i>
+                                Exportar
+                            </button>
+
+                        </div>
+
+                        <!-- Limpar dados -->
+                        <div class="action-card">
+
+                            <div>
+                                <h4>Limpar Armazenamento Local</h4>
+
+                                <p>
+                                    Restaure o tema, preferências de e-mail e configurações de fábrica.
+                                </p>
+                            </div>
+
+                            <button type="button" class="settings-btn settings-btn-outline-danger" id="btnClearLocalData">
+                                <i class="fa-solid fa-broom"></i>
+                                Limpar Dados
+                            </button>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- Notificações -->
+                <div class="tab-content" id="tab-notifications">
+
+                    <h2 class="section-title">
+                        <i class="fa-solid fa-bell"></i>
+                        Notificações
+                    </h2>
+
+                    <p class="section-desc">
+                        Configure quais alertas e avisos do sistema você deseja receber.
+                    </p>
+
+                    <div class="toggle-list">
+
+                        <!-- Notificações do sistema -->
+                        <div class="toggle-item">
+
+                            <div>
+                                <h4>Notificações do Sistema</h4>
+
+                                <p>
+                                    Alertas de desempenho e gargalos de hardware em tempo real.
+                                </p>
+                            </div>
+
+                            <label class="switch">
+                                <input type="checkbox" id="notifSystem" checked>
+                                <span class="slider"></span>
+                            </label>
+
+                        </div>
+
+                        <!-- Alertas de IA -->
+                        <div class="toggle-item">
+
+                            <div>
+                                <h4>Alertas Preditivos de IA</h4>
+
+                                <p>
+                                    Notificações sobre anomalias antes que afetem o sistema.
+                                </p>
+                            </div>
+
+                            <label class="switch">
+                                <input type="checkbox" id="notifAi" checked>
+                                <span class="slider"></span>
+                            </label>
+
+                        </div>
+
+                        <!-- Atualizações -->
+                        <div class="toggle-item">
+
+                            <div>
+                                <h4>Atualizações do Argus</h4>
+
+                                <p>
+                                    Avisos sobre novos releases, patches de segurança e recursos.
+                                </p>
+                            </div>
+
+                            <label class="switch">
+                                <input type="checkbox" id="notifUpdates" checked>
+                                <span class="slider"></span>
+                            </label>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- Aparência -->
+                <div class="tab-content" id="tab-appearance">
+
+                    <h2 class="section-title">
+                        <i class="fa-solid fa-palette"></i>
+                        Aparência
+                    </h2>
+
+                    <p class="section-desc">
+                        Personalize o tema visual, efeitos neon e animações da interface do Argus.
+                    </p>
+
+                    <h3 class="subsection-title">Tema do Sistema</h3>
+
+                    <div class="theme-selector-grid">
+
+                        <!-- Tema escuro -->
+                        <label class="theme-card-option" data-theme-val="dark">
+
+                            <input type="radio" name="themeSelect" value="dark" checked>
+
+                            <div class="theme-preview dark-preview">
+                                <div class="preview-header"></div>
+                                <div class="preview-body"></div>
+                            </div>
+
+                            <span class="theme-name">
+                                <i class="fa-solid fa-moon"></i>
+                                Escuro
+                            </span>
+
+                        </label>
+
+                        <!-- Tema cinza -->
+                        <label class="theme-card-option" data-theme-val="gray">
+
+                            <input type="radio" name="themeSelect" value="gray">
+
+                            <div class="theme-preview gray-preview">
+                                <div class="preview-header"></div>
+                                <div class="preview-body"></div>
+                            </div>
+
+                            <span class="theme-name">
+                                <i class="fa-solid fa-circle-half-stroke"></i>
+                                Cinza
+                            </span>
+
+                        </label>
+
+                        <!-- Tema claro -->
+                        <label class="theme-card-option" data-theme-val="light">
+
+                            <input type="radio" name="themeSelect" value="light">
+
+                            <div class="theme-preview light-preview">
+                                <div class="preview-header"></div>
+                                <div class="preview-body"></div>
+                            </div>
+
+                            <span class="theme-name">
+                                <i class="fa-solid fa-sun"></i>
+                                Claro
+                            </span>
+
+                        </label>
+
+                    </div>
+
+                    <hr class="settings-divider">
+
+                    <!-- Efeitos visuais -->
+                    <h3 class="subsection-title">Efeitos Visuais</h3>
+
+                    <div class="toggle-list">
+
+                        <!-- Animações -->
+                        <div class="toggle-item">
+
+                            <div>
+                                <h4>Animações da Interface</h4>
+
+                                <p>
+                                    Habilita transições suaves e efeitos de movimento nos menus.
+                                </p>
+                            </div>
+
+                            <label class="switch">
+                                <input type="checkbox" id="toggleAnimations" checked>
+                                <span class="slider"></span>
+                            </label>
+
+                        </div>
+
+                        <!-- Efeitos neon -->
+                        <div class="toggle-item">
+
+                            <div>
+                                <h4>Efeitos de Brilho & Neon</h4>
+
+                                <p>
+                                    Ativa feixes de iluminação e destaques de borda nos componentes.
+                                </p>
+                            </div>
+
+                            <label class="switch">
+                                <input type="checkbox" id="toggleGlow" checked>
+                                <span class="slider"></span>
+                            </label>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- Sistema -->
+                <div class="tab-content" id="tab-system">
+
+                    <h2 class="section-title">
+                        <i class="fa-solid fa-globe"></i>
+                        Idioma e Horário
+                    </h2>
+
+                    <p class="section-desc">
+                        Ajuste regionalização e formatos de exibição temporal.
+                    </p>
+
+                    <div class="form-grid">
+
+                        <div class="form-group">
+                            <label for="languageSelect">Idioma do Sistema</label>
+
+                            <select id="languageSelect" class="form-input">
+                                <option value="pt-BR">Português (Brasil)</option>
+                                <option value="en-US">English (United States)</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="timeFormatSelect">Formato de Horário</label>
+
+                            <select id="timeFormatSelect" class="form-input">
+                                <option value="24h">24 Horas (Ex: 21:40)</option>
+                                <option value="12h">12 Horas (Ex: 09:40 PM)</option>
+                            </select>
+                        </div>
+
+                    </div>
+
+                    <div class="form-group">
+
+                        <label>Fuso Horário</label>
+
+                        <input type="text" class="form-input" value="Horário Oficial de Brasília (UTC-03:00)" disabled>
+
+                    </div>
+
+                </div>
+
+                <!-- Planos e cobrança -->
+                <div class="tab-content" id="tab-billing">
+
+                    <h2 class="section-title">
+                        <i class="fa-solid fa-credit-card"></i>
+                        Planos e Cobrança
+                    </h2>
+
+                    <p class="section-desc">
+                        Consulte a assinatura atual e limites de máquinas monitoradas.
+                    </p>
+
+                    <div class="billing-current-card">
+
+                        <!-- Plano atual -->
+                        <div class="plan-badge-box">
+
+                            <span class="plan-tag">PLANO ATUAL</span>
+
+                            <h3 id="billingPlanName">Argus PRO</h3>
+
+                        </div>
+
+                        <!-- Informações do plano -->
+                        <div class="plan-specs">
+
+                            <p>
+                                <i class="fa-solid fa-desktop"></i>
+                                Até <strong>10 computadores</strong> simultâneos
+                            </p>
+
+                            <p>
+                                <i class="fa-solid fa-clock-rotate-left"></i>
+                                Histórico de métricas por 90 dias
+                            </p>
+
+                            <p>
+                                <i class="fa-solid fa-calendar-check"></i>
+                                Próxima renovação: <strong>14/09/2026</strong>
+                            </p>
+
+                        </div>
+
+                        <!-- Gerenciar assinatura -->
+                        <a href="monetizacao.html" class="settings-btn settings-btn-primary">
+                            <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                            Gerenciar Assinatura
+                        </a>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+        </div>
+
+    </main>
+
+    <!-- Modal -->
+    <div class="custom-modal-overlay" id="customModalOverlay">
+
+        <div class="custom-modal-box">
+
+            <h3 id="modalTitle" class="modal-title">Confirmar Ação</h3>
+
+            <p id="modalMessage" class="modal-message">
+                Tem certeza que deseja prosseguir com esta ação?
+            </p>
+
+            <div class="modal-actions">
+
+                <button type="button" class="settings-btn settings-btn-secondary" id="btnModalCancel">
+                    Cancelar
+                </button>
+
+                <button type="button" class="settings-btn settings-btn-danger" id="btnModalConfirm">
+                    Confirmar
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Toast -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Footer -->
+    <footer class="main-footer">
+
+        <div class="footer-container">
+
+            <!-- Identidade -->
+            <div class="footer-brand">
+                <a href="index.html" class="logo-top">Argus</a>
+                <p>Sistema Avançado de Monitoramento Inteligente</p>
+            </div>
+
+            <!-- Links -->
+            <div class="footer-links">
+                <a href="index.html">Início</a>
+                <a href="sm.html">Saiba Mais</a>
+                <a href="monetizacao.html">Planos</a>
+                <a href="dowload.html">Download</a>
+                <a href="configuracoes.html">Configurações</a>
+            </div>
+
+        </div>
+
+        <!-- Copyright -->
+        <div class="footer-bottom">
+            <p>&copy; 2026 Argus Inc. Todos os direitos reservados.</p>
+        </div>
+
+    </footer>
+
+<!-- JavaScript -->
+<script src="js/animations.js"></script>
+<script src="js/script.js"></script>
+<script src="js/settings.js"></script>
+
+</body>
+</html>
