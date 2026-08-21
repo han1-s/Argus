@@ -1,63 +1,106 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <title>Argus - Segurança Digital</title>
+
+    <!-- Animações -->
     <link rel="stylesheet" href="css/animation.css">
+
     <!-- CSS Principal -->
     <link rel="stylesheet" href="css/style.css">
-    <!-- FontAwesome para ícones do dropdown -->
+
+    <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
+
 <body>
 
+    <!-- Header -->
     <header class="main-header">
-    <a href="index.html" class="logo-top float-glow-anim">Argus</a>
-    
-    <nav class="nav-right">
-        <a href="monetizacao.html" class="btn-upgrade-nav">
-            <i class="fa-solid fa-bolt"></i> Upgrade
-        </a>
-        
-        <div class="profile-container" id="profileContainer">
-            <button class="profile-btn" id="profileBtn" aria-label="Menu de perfil">
-                <img src="css/assets/img/user.png" alt="Ícone de Perfil" class="user-avatar">
-            </button>
-            <div class="profile-dropdown" id="profileDropdown">
-                <a href="conta.html"><i class="fa-solid fa-user"></i> Conta</a>
-                <a href="configuracoes.html"><i class="fa-solid fa-gear"></i> Configurações</a>
-                <a href="sm.html"><i class="fa-solid fa-circle-info"></i> Saiba mais</a>
+
+        <!-- Logo -->
+        <a href="index.html" class="logo-top float-glow-anim">Argus</a>
+
+        <!-- Navegação -->
+        <nav class="nav-right">
+
+            <!-- Botão de Upgrade -->
+            <a href="monetizacao.html" class="btn-upgrade-nav">
+                <i class="fa-solid fa-bolt"></i> Upgrade
+            </a>
+
+            <!-- Perfil -->
+            <div class="profile-container" id="profileContainer">
+
+                <!-- Botão do perfil -->
+                <button class="profile-btn" id="profileBtn" aria-label="Menu de perfil">
+                    <img src="css/assets/img/user.png" alt="Ícone de Perfil" class="user-avatar">
+                </button>
+
+                <!-- Menu dropdown -->
+                <div class="profile-dropdown" id="profileDropdown">
+                    <a href="conta.html">
+                        <i class="fa-solid fa-user"></i> Conta
+                    </a>
+
+                    <a href="configuracoes.html">
+                        <i class="fa-solid fa-gear"></i> Configurações
+                    </a>
+
+                    <a href="sm.html">
+                        <i class="fa-solid fa-circle-info"></i> Saiba mais
+                    </a>
+                </div>
+
             </div>
-        </div>
-    </nav>
-</header>
 
+        </nav>
+    </header>
+
+    <!-- Área principal -->
     <main class="hero-container">
-        <section class="hero-content">
-            <div class="title-wrapper">
-    <h1 class="glow-title title-pulse-anim">Argus</h1>
-    <span class="subtitle">Segurança digital</span>
-</div>
 
+        <!-- Conteúdo principal -->
+        <section class="hero-content">
+
+            <!-- Título -->
+            <div class="title-wrapper">
+                <h1 class="glow-title title-pulse-anim">Argus</h1>
+                <span class="subtitle">Segurança digital</span>
+            </div>
+
+            <!-- Descrição -->
             <p class="description">
                 O Argus é uma solução inteligente para monitorar o uso de computadores em empresas, acompanhando sites e aplicativos utilizados e gerando dados e relatórios que auxiliam no controle e na análise da produtividade.
             </p>
+
+            <!-- Botões -->
             <div class="action-buttons">
                 <a href="dowload.html" class="btn btn-primary">Baixar</a>
                 <a href="sm.html" class="btn btn-secondary">Saiba mais</a>
             </div>
+
         </section>
 
+        <!-- Carrossel -->
         <section class="hero-carousel">
             <div class="carousel-frame">
+
                 <img src="css/assets/img/img1.jpg" class="slide active" alt="Segurança Digital 1">
                 <img src="css/assets/img/img2.jpg" class="slide" alt="Segurança Digital 2">
                 <img src="css/assets/img/img3.jpg" class="slide" alt="Segurança Digital 3">
+
             </div>
         </section>
+
     </main>
 
+    <!-- JavaScript -->
     <script src="js/script.js"></script>
+
 </body>
 </html>

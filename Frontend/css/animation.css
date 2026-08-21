@@ -1,8 +1,5 @@
-/* =========================================================
-   ANIMAÇÕES E INTERAÇÕES DO PROJETO ARGUS
-   ========================================================= */
+/* Animações e Keyframes */
 
-/* 1. Argus do topo: Flutuação fluida e brilho */
 .float-glow-anim {
     animation: floatGlow 4s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite alternate;
     will-change: transform, text-shadow;
@@ -19,10 +16,9 @@
     }
 }
 
-/* 2. Argus central principal: Pulsar dinâmico e suave */
 .title-pulse-anim {
     animation: pulseGlow 3.5s cubic-bezier(0.4, 0, 0.2, 1) infinite alternate;
-    will-change: text-shadow, transform;
+    will-change: transform, text-shadow;
 }
 
 @keyframes pulseGlow {
@@ -36,21 +32,19 @@
     }
 }
 
-/* 3. Animação suave para o botão principal */
 @keyframes btnGlowPulse {
     0%, 100% {
         box-shadow: 0 0 15px rgba(23, 74, 191, 0.5);
     }
     50% {
-        box-shadow: 0 0 24px rgba(33, 91, 227, 0.85);
+        box-shadow: 0 0 28px rgba(33, 91, 227, 0.85);
     }
 }
 
-/* 4. Animações de entrada da página (Fade-in suave) */
 @keyframes fadeInDown {
     from {
         opacity: 0;
-        transform: translateY(-20px);
+        transform: translateY(-25px);
     }
     to {
         opacity: 1;
@@ -72,10 +66,253 @@
 @keyframes fadeInRight {
     from {
         opacity: 0;
-        transform: translateX(30px);
+        transform: translateX(40px);
     }
     to {
         opacity: 1;
         transform: translateX(0);
+    }
+}
+
+@keyframes rotateRing {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes rotateRingRev {
+    from {
+        transform: rotate(360deg);
+    }
+    to {
+        transform: rotate(0deg);
+    }
+}
+
+.iris-ring {
+    animation: rotateRing 20s linear infinite;
+    will-change: transform;
+}
+
+.ring-mid {
+    animation: rotateRingRev 12s linear infinite;
+    will-change: transform;
+}
+
+
+/* Header */
+
+.main-header {
+    animation: fadeInDown 0.8s ease-out;
+    will-change: transform, opacity;
+}
+
+
+/* Hero */
+
+.hero-content {
+    animation: fadeInUp 0.9s ease-out;
+    will-change: transform, opacity;
+}
+
+.hero-carousel {
+    animation: fadeInRight 1s ease-out;
+    will-change: transform, opacity;
+}
+
+
+/* Navegação */
+
+.nav-link {
+    transition: color 0.3s ease, transform 0.2s ease;
+}
+
+.nav-link:hover {
+    color: #9d7bff;
+    transform: translateY(-2px);
+}
+
+
+/* Perfil */
+
+.user-avatar {
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.3s ease;
+}
+
+.profile-btn:hover .user-avatar {
+    transform: scale(1.1);
+    filter: drop-shadow(0 0 12px rgba(123, 82, 255, 0.9));
+}
+
+.profile-dropdown {
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.profile-dropdown a {
+    transition: background-color 0.25s ease, color 0.25s ease, padding-left 0.25s ease;
+}
+
+
+/* Botões */
+
+.btn {
+    transition: transform 0.35s cubic-bezier(0.25, 1, 0.5, 1), background-color 0.35s cubic-bezier(0.25, 1, 0.5, 1), box-shadow 0.35s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.btn-primary {
+    animation: btnGlowPulse 4s infinite ease-in-out;
+    will-change: box-shadow;
+}
+
+.btn-primary:hover {
+    background-color: #215be3;
+    box-shadow: 0 0 28px rgba(33, 91, 227, 0.9);
+    transform: translateY(-3px) scale(1.02);
+}
+
+.btn-secondary:hover {
+    color: #9d7bff;
+    transform: translateY(-2px);
+}
+
+.btn-link {
+    transition: color 0.3s ease, opacity 0.3s ease, transform 0.3s ease;
+}
+
+
+/* Carrossel */
+
+.carousel-frame {
+    transition: transform 0.5s ease, box-shadow 0.5s ease;
+}
+
+.carousel-frame:hover {
+    transform: translateY(-5px) scale(1.01);
+    box-shadow: 0 20px 45px rgba(123, 82, 255, 0.25);
+}
+
+.slide {
+    transition: opacity 1.4s cubic-bezier(0.4, 0, 0.2, 1), transform 1.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+
+/* Cards Institucionais */
+
+.info-card,
+.feature-box {
+    transition: transform 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease;
+}
+
+.info-card:hover,
+.feature-box:hover {
+    transform: translateY(-5px);
+}
+
+
+/* Monetização */
+
+.btn-upgrade-nav {
+    transition: transform 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease;
+}
+
+.btn-upgrade-nav:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0 20px rgba(123, 82, 255, 0.8);
+}
+
+
+/* Toggle de Planos */
+
+.pricing-toggle-btn {
+    transition: background-color 0.3s ease;
+}
+
+.pricing-toggle-btn::after {
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+
+/* Cards de Planos */
+
+.pricing-card {
+    transition: transform 0.35s ease, box-shadow 0.35s ease, border-color 0.35s ease;
+}
+
+.pricing-card:hover {
+    transform: translateY(-6px);
+}
+
+
+/* FAQ */
+
+.faq-question i {
+    transition: transform 0.3s ease;
+}
+
+.faq-answer {
+    transition: max-height 0.3s ease, padding 0.3s ease, opacity 0.3s ease;
+}
+
+.faq-item.active .faq-question i {
+    transform: rotate(180deg);
+}
+
+
+/* Modais */
+
+.modal-overlay {
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.modal-card {
+    transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+
+/* Download */
+
+.download-box-card,
+.updates-box-card {
+    transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.download-box-card:hover,
+.updates-box-card:hover {
+    transform: translateY(-3px);
+}
+
+.btn-download-pill {
+    transition: transform 0.3s ease, background-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.btn-download-pill:hover {
+    transform: translateY(-2px);
+}
+
+.btn-download-pill:active {
+    transform: translateY(0);
+}
+
+
+/* Footer */
+
+.footer-links a {
+    transition: color 0.3s ease;
+}
+
+
+/* Acessibilidade */
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
     }
 }
