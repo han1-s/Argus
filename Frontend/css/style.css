@@ -1,3 +1,741 @@
+/* =========================================================
+   ARGUS — POLIMENTO FINAL / DESIGN SYSTEM
+   ========================================================= */
+
+:root {
+    --argus-bg: #000000;
+    --argus-surface: #0B0714;
+    --argus-surface-2: #120B1F;
+    --argus-surface-3: #160D24;
+
+    --argus-purple: #8B5CF6;
+    --argus-purple-dark: #6D28D9;
+    --argus-purple-light: #A78BFA;
+    --argus-purple-soft: rgba(139, 92, 246, 0.14);
+    --argus-purple-border: rgba(139, 92, 246, 0.22);
+    --argus-purple-glow: rgba(139, 92, 246, 0.42);
+
+    --argus-text: #FFFFFF;
+    --argus-text-soft: #E5E7EB;
+    --argus-muted: #94A3B8;
+    --argus-muted-2: #64748B;
+
+    --argus-success: #10B981;
+    --argus-danger: #EF4444;
+    --argus-warning: #F59E0B;
+
+    --container-width: 1200px;
+    --page-gutter: clamp(1rem, 4vw, 5rem);
+    --section-gap: clamp(3rem, 7vw, 6rem);
+    --radius-sm: 10px;
+    --radius-md: 16px;
+    --radius-lg: 20px;
+    --radius-xl: 24px;
+    --transition-fast: 0.2s ease;
+    --transition-normal: 0.3s ease;
+}
+
+html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+}
+
+body {
+    min-width: 0;
+}
+
+img,
+svg,
+video,
+canvas {
+    max-width: 100%;
+}
+
+button,
+input,
+select,
+textarea {
+    font: inherit;
+}
+
+button,
+a {
+    -webkit-tap-highlight-color: transparent;
+}
+
+a,
+button,
+.info-card,
+.feature-box,
+.pricing-card,
+.tech-card,
+.roadmap-item,
+.team-card,
+.download-box-card,
+.updates-box-card,
+.btn-link,
+.flow-icon {
+    transition:
+        color var(--transition-fast),
+        background-color var(--transition-fast),
+        border-color var(--transition-fast),
+        box-shadow var(--transition-fast),
+        transform var(--transition-fast),
+        opacity var(--transition-fast);
+}
+
+:focus-visible {
+    outline: 2px solid var(--argus-purple-light);
+    outline-offset: 3px;
+}
+
+::selection {
+    background: rgba(139, 92, 246, 0.35);
+    color: #fff;
+}
+
+/* =========================================================
+   POLIMENTO — LAYOUT FLUIDO
+   ========================================================= */
+
+.main-header {
+    width: 100%;
+    max-width: var(--container-width);
+    margin: 0 auto;
+    padding: clamp(1.25rem, 3vw, 2.5rem) var(--page-gutter) 1rem;
+}
+
+.hero-container {
+    width: min(100%, 1400px);
+    margin: 0 auto;
+    padding: clamp(1.5rem, 4vw, 3rem) var(--page-gutter);
+}
+
+.hero-content {
+    width: min(100%, 580px);
+}
+
+.glow-title {
+    font-size: clamp(4rem, 8vw, 6.8rem);
+}
+
+.subtitle {
+    font-size: clamp(0.95rem, 1.8vw, 1.4rem);
+}
+
+.carousel-frame {
+    aspect-ratio: 16 / 9;
+    height: auto;
+    min-height: 220px;
+}
+
+.page-wrapper,
+.settings-page-wrapper {
+    width: min(100%, var(--container-width));
+}
+
+.page-wrapper {
+    padding-left: clamp(1rem, 4vw, 2rem);
+    padding-right: clamp(1rem, 4vw, 2rem);
+    gap: var(--section-gap);
+}
+
+.section-header h2 {
+    font-size: clamp(1.8rem, 4vw, 2.4rem);
+}
+
+.hero-title {
+    font-size: clamp(2.2rem, 5vw, 3.2rem);
+}
+
+.dark-bg-box,
+.ethics-block {
+    padding: clamp(1.5rem, 4vw, 3.5rem);
+}
+
+.comp-column {
+    padding: clamp(1.5rem, 4vw, 2.5rem);
+}
+
+/* =========================================================
+   POLIMENTO — PALETA ROXA
+   ========================================================= */
+
+body {
+    background-color: var(--argus-bg);
+    background-image:
+        linear-gradient(to right, rgba(139, 92, 246, 0.055) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(139, 92, 246, 0.055) 1px, transparent 1px);
+    background-size: 20px 20px;
+}
+
+.logo-top,
+.glow-title {
+    color: var(--argus-purple);
+    text-shadow: 0 0 24px rgba(139, 92, 246, 0.18);
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--argus-purple-dark), var(--argus-purple));
+    box-shadow: 0 0 18px rgba(139, 92, 246, 0.28);
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0 26px rgba(139, 92, 246, 0.48);
+}
+
+.btn-upgrade-nav,
+.btn-download-pill {
+    background: linear-gradient(135deg, var(--argus-purple-dark), var(--argus-purple));
+}
+
+.btn-download-pill:hover,
+.btn-upgrade-nav:hover {
+    background: linear-gradient(135deg, var(--argus-purple), var(--argus-purple-light));
+}
+
+.download-box-card,
+.updates-box-card {
+    background: var(--argus-surface);
+    border-color: var(--argus-purple-border);
+}
+
+.info-card,
+.feature-box,
+.tech-card,
+.roadmap-item,
+.team-card,
+.pricing-card,
+.usage-banner,
+.profile-dropdown,
+.modal-card {
+    background: rgba(11, 7, 20, 0.82);
+    border-color: var(--argus-purple-border);
+}
+
+.info-card:hover,
+.feature-box:hover,
+.tech-card:hover,
+.roadmap-item:hover,
+.team-card:hover,
+.pricing-card:hover {
+    border-color: rgba(139, 92, 246, 0.48);
+    box-shadow: 0 12px 30px rgba(139, 92, 246, 0.10);
+}
+
+.iris-core {
+    background: radial-gradient(
+        circle,
+        var(--argus-purple-light) 0%,
+        var(--argus-purple-dark) 70%,
+        transparent 100%
+    );
+}
+
+.progress-bar-fill {
+    background: linear-gradient(
+        90deg,
+        var(--argus-purple-dark),
+        var(--argus-purple-light)
+    );
+}
+
+/* =========================================================
+   POLIMENTO — COMPONENTES FLEXÍVEIS
+   ========================================================= */
+
+.action-buttons,
+.hero-actions,
+.project-links {
+    flex-wrap: wrap;
+}
+
+.grid-3,
+.grid-4,
+.process-grid,
+.tech-stack-grid,
+.roadmap-timeline {
+    width: 100%;
+}
+
+.team-card {
+    width: min(100%, 240px);
+}
+
+.download-grid-layout {
+    width: 100%;
+}
+
+.version-info-grid {
+    min-width: 0;
+}
+
+.info-value,
+.version-date,
+.update-title,
+.update-text {
+    overflow-wrap: anywhere;
+}
+
+.table-responsive {
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+}
+
+.comparison-table {
+    min-width: 620px;
+}
+
+.modal-card,
+.custom-modal-box {
+    max-height: min(90vh, 720px);
+    overflow-y: auto;
+}
+
+/* =========================================================
+   POLIMENTO — TELAS MÉDIAS
+   ========================================================= */
+
+@media (max-width: 1100px) {
+    .nav-right {
+        gap: 1rem;
+    }
+
+    .hero-container {
+        gap: 2.5rem;
+    }
+
+    .hero-content {
+        max-width: 540px;
+    }
+
+    .carousel-frame {
+        max-width: 560px;
+    }
+
+    .settings-container {
+        grid-template-columns: 220px minmax(0, 1fr);
+    }
+}
+
+/* =========================================================
+   POLIMENTO — TABLET
+   ========================================================= */
+
+@media (max-width: 900px) {
+    .main-header {
+        gap: 1rem;
+    }
+
+    .nav-right {
+        gap: 0.75rem;
+    }
+
+    .nav-link {
+        font-size: 1rem;
+    }
+
+    .hero-container {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .hero-content {
+        max-width: 720px;
+    }
+
+    .hero-carousel {
+        width: 100%;
+    }
+
+    .carousel-frame {
+        width: min(100%, 700px);
+    }
+
+    .hero-section {
+        grid-template-columns: 1fr;
+        min-height: auto;
+        padding-top: 2rem;
+        padding-bottom: 2rem;
+    }
+
+    .hero-actions,
+    .action-buttons {
+        justify-content: center;
+    }
+
+    .comparison-container {
+        grid-template-columns: 1fr;
+    }
+
+    .footer-container {
+        justify-content: center;
+        text-align: center;
+    }
+
+    .footer-brand,
+    .footer-links {
+        justify-content: center;
+        text-align: center;
+    }
+
+    .download-grid-layout {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* =========================================================
+   POLIMENTO — CELULAR
+   ========================================================= */
+
+@media (max-width: 650px) {
+    .main-header {
+        padding: 1rem 0.9rem;
+        flex-wrap: wrap;
+    }
+
+    .logo-top {
+        font-size: 2rem;
+    }
+
+    .nav-right {
+        width: 100%;
+        justify-content: flex-end;
+        gap: 0.65rem;
+    }
+
+    .nav-link {
+        font-size: 0.88rem;
+    }
+
+    .user-avatar {
+        width: 40px;
+        height: 40px;
+    }
+
+    .profile-dropdown {
+        width: min(200px, calc(100vw - 1.5rem));
+        right: 0;
+    }
+
+    .hero-container {
+        padding: 1.5rem 1rem 3rem;
+        gap: 2rem;
+    }
+
+    .title-wrapper {
+        max-width: 100%;
+        margin-top: 0.75rem;
+    }
+
+    .glow-title {
+        font-size: clamp(3.4rem, 20vw, 5rem);
+        letter-spacing: -2px;
+    }
+
+    .subtitle {
+        position: static;
+        display: block;
+        margin-top: 0.35rem;
+        white-space: normal;
+    }
+
+    .description,
+    .hero-desc {
+        font-size: 1rem;
+    }
+
+    .action-buttons,
+    .hero-actions {
+        width: 100%;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .action-buttons .btn,
+    .hero-actions .btn {
+        width: min(100%, 320px);
+        text-align: center;
+    }
+
+    .carousel-frame {
+        border-radius: 16px;
+        min-height: 190px;
+    }
+
+    .page-wrapper {
+        padding: 1rem 0.9rem 3.5rem;
+        gap: 4rem;
+    }
+
+    .section-block {
+        gap: 1.75rem;
+    }
+
+    .section-header h2 {
+        font-size: 1.85rem;
+    }
+
+    .section-desc {
+        font-size: 1rem;
+    }
+
+    .grid-3,
+    .grid-4,
+    .process-grid,
+    .tech-stack-grid,
+    .roadmap-timeline {
+        grid-template-columns: 1fr;
+    }
+
+    .info-card,
+    .feature-box,
+    .tech-card,
+    .roadmap-item {
+        padding: 1.35rem;
+    }
+
+    .dark-bg-box,
+    .ethics-block,
+    .comp-column {
+        padding: 1.35rem;
+        border-radius: 18px;
+    }
+
+    .flow-container {
+        justify-content: flex-start;
+        padding-bottom: 0.75rem;
+    }
+
+    .flow-step {
+        flex: 0 0 90px;
+        min-width: 90px;
+    }
+
+    .flow-arrow {
+        flex: 0 0 auto;
+    }
+
+    .team-cards-grid {
+        gap: 1rem;
+    }
+
+    .team-card {
+        width: min(100%, 300px);
+    }
+
+    .orientador-box {
+        width: 100%;
+        text-align: center;
+        padding: 0.9rem 1rem;
+    }
+
+    .footer-container {
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+
+    .footer-links {
+        gap: 0.8rem 1rem;
+    }
+
+    .usage-banner {
+        padding: 1.35rem;
+    }
+
+    .usage-progress-container {
+        max-width: none;
+    }
+
+    .pricing-toggle-container {
+        flex-wrap: wrap;
+        gap: 0.65rem;
+    }
+
+    .pricing-card {
+        padding: 1.75rem 1.35rem;
+    }
+
+    .plan-price .amount {
+        font-size: 2.7rem;
+    }
+
+    .comparison-table th,
+    .comparison-table td {
+        padding: 0.85rem 1rem;
+        font-size: 0.85rem;
+    }
+
+    .modal-overlay {
+        padding: 0.75rem;
+    }
+
+    .modal-card,
+    .custom-modal-box {
+        padding: 1.35rem;
+        border-radius: 18px;
+        max-height: 92vh;
+    }
+
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+
+    .payment-tabs {
+        overflow-x: auto;
+    }
+
+    .tab-btn {
+        flex: 1 0 auto;
+    }
+
+    .download-box-card,
+    .updates-box-card {
+        padding: 1.35rem;
+        border-radius: 18px;
+    }
+
+    .download-title {
+        font-size: clamp(1.8rem, 8vw, 2.2rem);
+    }
+
+    .version-info-grid {
+        grid-template-columns: 1fr;
+        gap: 0.9rem;
+    }
+
+    .version-header {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 0.35rem;
+    }
+
+    /* Configurações */
+    .settings-page-wrapper {
+        padding: 1rem 0.75rem 3rem;
+    }
+
+    .settings-container {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+
+    .settings-sidebar {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .settings-content-card {
+        padding: 1.15rem;
+    }
+
+    .form-grid,
+    .theme-selector-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .profile-upload-block {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .avatar-controls,
+    .action-card {
+        width: 100%;
+    }
+
+    .billing-current-card {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+
+    .modal-actions {
+        flex-direction: column-reverse;
+    }
+
+    .modal-actions .settings-btn {
+        width: 100%;
+    }
+
+    .toast-container {
+        left: 0.75rem;
+        right: 0.75rem;
+        bottom: 0.75rem;
+    }
+
+    .toast-message {
+        width: 100%;
+    }
+}
+
+/* =========================================================
+   POLIMENTO — TELAS MUITO PEQUENAS
+   ========================================================= */
+
+@media (max-width: 400px) {
+    .main-header {
+        align-items: flex-start;
+    }
+
+    .nav-right {
+        justify-content: space-between;
+    }
+
+    .logo-top {
+        font-size: 1.8rem;
+    }
+
+    .glow-title {
+        font-size: 3.1rem;
+    }
+
+    .subtitle {
+        font-size: 0.9rem;
+    }
+
+    .flow-step {
+        flex-basis: 82px;
+        min-width: 82px;
+    }
+
+    .flow-icon {
+        width: 56px;
+        height: 56px;
+        font-size: 1.2rem;
+    }
+
+    .ethics-block,
+    .dark-bg-box,
+    .comp-column {
+        padding: 1rem;
+    }
+
+    .download-action-area .btn-download-pill {
+        width: 100%;
+    }
+}
+
+/* =========================================================
+   ACESSIBILIDADE / PERFORMANCE
+   ========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+    html {
+        scroll-behavior: auto;
+    }
+
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@600;700;800;900&display=swap');
 
 * {
@@ -34,7 +772,7 @@ body {
     font-family: 'Outfit', sans-serif;
     font-size: 2.6rem;
     font-weight: 800;
-    color: #7b52ff;
+    color: #8B5CF6;
     text-decoration: none;
     display: inline-block;
     letter-spacing: -0.5px;
@@ -83,8 +821,8 @@ body {
     top: 135%;
     right: 0;
     width: 200px;
-    background-color: #0b0c10;
-    border: 1px solid rgba(123, 82, 255, 0.35);
+    background-color: #0D0A12;
+    border: 1px solid rgba(139, 92, 246, 0.35);
     border-radius: 12px;
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.8);
     display: flex;
@@ -115,8 +853,8 @@ body {
 }
 
 .profile-dropdown a:hover {
-    background-color: rgba(123, 82, 255, 0.15);
-    color: #9d7bff;
+    background-color: rgba(139, 92, 246, 0.15);
+    color: #A78BFA;
     padding-left: 22px;
 }
 
@@ -146,7 +884,7 @@ body {
     font-family: 'Outfit', sans-serif;
     font-size: 6.8rem;
     font-weight: 800;
-    color: #7b52ff;
+    color: #8B5CF6;
     line-height: 1;
     letter-spacing: -1px;
     margin: 0;
@@ -191,10 +929,10 @@ body {
 }
 
 .btn-primary {
-    background-color: #174abf;
+    background-color: #6D28D9;
     color: #ffffff;
     padding: 0.75rem 2.5rem;
-    box-shadow: 0 0 15px rgba(23, 74, 191, 0.5);
+    box-shadow: 0 0 15px rgba(109, 40, 217, 0.5);
 }
 
 .btn-secondary {
@@ -262,7 +1000,7 @@ body {
 
 .section-label {
     font-family: 'Outfit', sans-serif;
-    color: #9d7bff;
+    color: #A78BFA;
     font-size: 0.9rem;
     font-weight: 700;
     text-transform: uppercase;
@@ -290,9 +1028,9 @@ body {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    background: rgba(123, 82, 255, 0.15);
-    border: 1px solid rgba(123, 82, 255, 0.4);
-    color: #9d7bff;
+    background: rgba(139, 92, 246, 0.15);
+    border: 1px solid rgba(139, 92, 246, 0.4);
+    color: #A78BFA;
     padding: 6px 16px;
     border-radius: 20px;
     font-size: 0.85rem;
@@ -351,7 +1089,7 @@ body {
 .iris-ring {
     position: absolute;
     border-radius: 50%;
-    border: 2px dashed rgba(123, 82, 255, 0.4);
+    border: 2px dashed rgba(139, 92, 246, 0.4);
 }
 
 .ring-outer {
@@ -363,15 +1101,15 @@ body {
     width: 200px;
     height: 200px;
     border-style: solid;
-    border-color: rgba(33, 91, 227, 0.5) transparent rgba(123, 82, 255, 0.5) transparent;
+    border-color: rgba(139, 92, 246, 0.5) transparent rgba(139, 92, 246, 0.5) transparent;
 }
 
 .iris-core {
     width: 90px;
     height: 90px;
     border-radius: 50%;
-    background: radial-gradient(circle, #7b52ff 0%, #174abf 70%, transparent 100%);
-    box-shadow: 0 0 35px rgba(123, 82, 255, 0.8);
+    background: radial-gradient(circle, #8B5CF6 0%, #6D28D9 70%, transparent 100%);
+    box-shadow: 0 0 35px rgba(139, 92, 246, 0.8);
 }
 
 .data-node {
@@ -380,7 +1118,7 @@ body {
     height: 12px;
     background-color: #ffffff;
     border-radius: 50%;
-    box-shadow: 0 0 10px #7b52ff;
+    box-shadow: 0 0 10px #8B5CF6;
 }
 
 .node-1 {
@@ -421,7 +1159,7 @@ body {
 .info-card,
 .feature-box {
     background: rgba(11, 12, 16, 0.7);
-    border: 1px solid rgba(123, 82, 255, 0.2);
+    border: 1px solid rgba(139, 92, 246, 0.2);
     border-radius: 16px;
     padding: 2rem;
 }
@@ -429,14 +1167,14 @@ body {
 .info-card:hover,
 .feature-box:hover {
     transform: translateY(-5px);
-    border-color: rgba(123, 82, 255, 0.6);
-    box-shadow: 0 10px 25px rgba(123, 82, 255, 0.15);
+    border-color: rgba(139, 92, 246, 0.6);
+    box-shadow: 0 10px 25px rgba(139, 92, 246, 0.15);
 }
 
 .card-icon-wrapper,
 .feature-icon {
     font-size: 2rem;
-    color: #7b52ff;
+    color: #8B5CF6;
     margin-bottom: 1.2rem;
 }
 
@@ -457,7 +1195,7 @@ body {
 
 .dark-bg-box {
     background: rgba(11, 12, 16, 0.85);
-    border: 1px solid rgba(123, 82, 255, 0.25);
+    border: 1px solid rgba(139, 92, 246, 0.25);
     border-radius: 24px;
     padding: 3.5rem 2.5rem;
 }
@@ -485,7 +1223,7 @@ body {
     width: 65px;
     height: 65px;
     background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(123, 82, 255, 0.3);
+    border: 1px solid rgba(139, 92, 246, 0.3);
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -495,9 +1233,9 @@ body {
 }
 
 .highlight-step .flow-icon {
-    background: #174abf;
-    border-color: #7b52ff;
-    box-shadow: 0 0 15px rgba(123, 82, 255, 0.5);
+    background: #6D28D9;
+    border-color: #8B5CF6;
+    box-shadow: 0 0 15px rgba(139, 92, 246, 0.5);
     color: #ffffff;
 }
 
@@ -508,7 +1246,7 @@ body {
 }
 
 .flow-arrow {
-    color: #7b52ff;
+    color: #8B5CF6;
     font-size: 1.2rem;
     opacity: 0.6;
 }
@@ -523,7 +1261,7 @@ body {
 
 .process-card {
     background: rgba(255, 255, 255, 0.02);
-    border-left: 3px solid #7b52ff;
+    border-left: 3px solid #8B5CF6;
     padding: 1.8rem;
     border-radius: 0 16px 16px 0;
 }
@@ -532,7 +1270,7 @@ body {
     font-family: 'Outfit', sans-serif;
     font-size: 2rem;
     font-weight: 900;
-    color: rgba(123, 82, 255, 0.5);
+    color: rgba(139, 92, 246, 0.5);
     display: block;
     margin-bottom: 0.4rem;
 }
@@ -553,10 +1291,10 @@ body {
 .ethics-block {
     background: linear-gradient(
         135deg,
-        rgba(23, 74, 191, 0.12) 0%,
-        rgba(123, 82, 255, 0.12) 100%
+        rgba(109, 40, 217, 0.12) 0%,
+        rgba(139, 92, 246, 0.12) 100%
     );
-    border: 1px solid rgba(123, 82, 255, 0.3);
+    border: 1px solid rgba(139, 92, 246, 0.3);
     border-radius: 24px;
     padding: 3rem;
 }
@@ -587,7 +1325,7 @@ body {
 
 .ethics-card i {
     font-size: 1.8rem;
-    color: #9d7bff;
+    color: #A78BFA;
     margin-bottom: 0.8rem;
 }
 
@@ -623,16 +1361,16 @@ body {
 }
 
 .comp-column.argus-solution {
-    background: rgba(123, 82, 255, 0.08);
-    border: 2px solid #7b52ff;
-    box-shadow: 0 0 30px rgba(123, 82, 255, 0.15);
+    background: rgba(139, 92, 246, 0.08);
+    border: 2px solid #8B5CF6;
+    box-shadow: 0 0 30px rgba(139, 92, 246, 0.15);
 }
 
 .argus-badge {
     position: absolute;
     top: -14px;
     right: 25px;
-    background: #7b52ff;
+    background: #8B5CF6;
     color: #ffffff;
     font-family: 'Outfit', sans-serif;
     font-size: 0.8rem;
@@ -692,7 +1430,7 @@ body {
 }
 
 .tech-header i {
-    color: #7b52ff;
+    color: #8B5CF6;
     font-size: 1.2rem;
 }
 
@@ -715,8 +1453,8 @@ body {
 }
 
 .tech-tags span {
-    background: rgba(123, 82, 255, 0.15);
-    color: #9d7bff;
+    background: rgba(139, 92, 246, 0.15);
+    color: #A78BFA;
     font-size: 0.75rem;
     font-weight: 600;
     padding: 4px 10px;
@@ -734,7 +1472,7 @@ body {
 
 .roadmap-item {
     background: rgba(11, 12, 16, 0.7);
-    border: 1px solid rgba(123, 82, 255, 0.2);
+    border: 1px solid rgba(139, 92, 246, 0.2);
     border-radius: 16px;
     padding: 2rem;
 }
@@ -750,13 +1488,13 @@ body {
 }
 
 .tag-now {
-    background: #174abf;
+    background: #6D28D9;
     color: #fff;
 }
 
 .tag-next {
-    background: rgba(123, 82, 255, 0.3);
-    color: #9d7bff;
+    background: rgba(139, 92, 246, 0.3);
+    color: #A78BFA;
 }
 
 .tag-future {
@@ -795,7 +1533,7 @@ body {
 
 .team-card {
     background: rgba(11, 12, 16, 0.7);
-    border: 1px solid rgba(123, 82, 255, 0.2);
+    border: 1px solid rgba(139, 92, 246, 0.2);
     border-radius: 20px;
     padding: 2rem;
     width: 240px;
@@ -808,13 +1546,13 @@ body {
     width: 70px;
     height: 70px;
     border-radius: 50%;
-    background: rgba(123, 82, 255, 0.15);
-    border: 2px solid #7b52ff;
+    background: rgba(139, 92, 246, 0.15);
+    border: 2px solid #8B5CF6;
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 1.8rem;
-    color: #7b52ff;
+    color: #8B5CF6;
     margin-bottom: 1rem;
 }
 
@@ -831,7 +1569,7 @@ body {
 
 .orientador-box {
     background: rgba(255, 255, 255, 0.03);
-    border: 1px dashed rgba(123, 82, 255, 0.3);
+    border: 1px dashed rgba(139, 92, 246, 0.3);
     padding: 1rem 2rem;
     border-radius: 30px;
     font-size: 0.95rem;
@@ -859,15 +1597,15 @@ body {
 }
 
 .btn-link:hover {
-    background: rgba(123, 82, 255, 0.2);
-    color: #9d7bff;
+    background: rgba(139, 92, 246, 0.2);
+    color: #A78BFA;
 }
 
 /* Rodape */
 
 .main-footer {
-    background: #050508;
-    border-top: 1px solid rgba(123, 82, 255, 0.2);
+    background: #07050C;
+    border-top: 1px solid rgba(139, 92, 246, 0.2);
     padding: 4rem 2rem 2rem 2rem;
     margin-top: 4rem;
 }
@@ -902,7 +1640,7 @@ body {
 }
 
 .footer-links a:hover {
-    color: #7b52ff;
+    color: #8B5CF6;
 }
 
 .footer-bottom {
@@ -921,7 +1659,7 @@ body {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    background: linear-gradient(135deg, #7b52ff 0%, #174abf 100%);
+    background: linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%);
     color: #ffffff;
     text-decoration: none;
     font-family: 'Outfit', sans-serif;
@@ -929,18 +1667,18 @@ body {
     font-weight: 700;
     padding: 0.5rem 1.2rem;
     border-radius: 20px;
-    box-shadow: 0 0 12px rgba(123, 82, 255, 0.4);
+    box-shadow: 0 0 12px rgba(139, 92, 246, 0.4);
 }
 
 .btn-upgrade-nav:hover {
     transform: translateY(-2px);
-    box-shadow: 0 0 20px rgba(123, 82, 255, 0.8);
+    box-shadow: 0 0 20px rgba(139, 92, 246, 0.8);
     color: #ffffff;
 }
 
 .usage-banner {
     background: rgba(11, 12, 16, 0.85);
-    border: 1px solid rgba(123, 82, 255, 0.3);
+    border: 1px solid rgba(139, 92, 246, 0.3);
     border-radius: 20px;
     padding: 2rem 2.5rem;
     display: flex;
@@ -978,13 +1716,13 @@ body {
 
 .progress-bar-fill {
     height: 100%;
-    background: linear-gradient(90deg, #174abf, #7b52ff);
+    background: linear-gradient(90deg, #6D28D9, #8B5CF6);
     border-radius: 10px;
 }
 
 .progress-text {
     font-size: 0.8rem;
-    color: #9d7bff;
+    color: #A78BFA;
     font-weight: 600;
 }
 
@@ -1000,7 +1738,7 @@ body {
     width: 54px;
     height: 28px;
     background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(123, 82, 255, 0.4);
+    border: 1px solid rgba(139, 92, 246, 0.4);
     border-radius: 20px;
     position: relative;
     cursor: pointer;
@@ -1014,7 +1752,7 @@ body {
     width: 20px;
     height: 20px;
     border-radius: 50%;
-    background: #7b52ff;
+    background: #8B5CF6;
 }
 
 .pricing-toggle-btn.active::after {
@@ -1046,7 +1784,7 @@ body {
 
 .pricing-card {
     background: rgba(11, 12, 16, 0.75);
-    border: 1px solid rgba(123, 82, 255, 0.2);
+    border: 1px solid rgba(139, 92, 246, 0.2);
     border-radius: 20px;
     padding: 2.5rem 2rem;
     display: flex;
@@ -1055,14 +1793,14 @@ body {
 }
 
 .pricing-card:hover {
-    border-color: rgba(123, 82, 255, 0.6);
+    border-color: rgba(139, 92, 246, 0.6);
     transform: translateY(-6px);
 }
 
 .pricing-card.featured {
-    background: rgba(123, 82, 255, 0.08);
-    border: 2px solid #7b52ff;
-    box-shadow: 0 0 35px rgba(123, 82, 255, 0.25);
+    background: rgba(139, 92, 246, 0.08);
+    border: 2px solid #8B5CF6;
+    box-shadow: 0 0 35px rgba(139, 92, 246, 0.25);
 }
 
 .popular-badge {
@@ -1070,7 +1808,7 @@ body {
     top: -14px;
     left: 50%;
     transform: translateX(-50%);
-    background: #7b52ff;
+    background: #8B5CF6;
     color: #ffffff;
     font-family: 'Outfit', sans-serif;
     font-size: 0.75rem;
@@ -1100,7 +1838,7 @@ body {
 .plan-price .currency {
     font-size: 1.2rem;
     vertical-align: top;
-    color: #9d7bff;
+    color: #A78BFA;
 }
 
 .plan-price .amount {
@@ -1170,7 +1908,7 @@ body {
     background: rgba(11, 12, 16, 0.6);
     border-radius: 16px;
     overflow: hidden;
-    border: 1px solid rgba(123, 82, 255, 0.2);
+    border: 1px solid rgba(139, 92, 246, 0.2);
 }
 
 .comparison-table th,
@@ -1180,7 +1918,7 @@ body {
 }
 
 .comparison-table th {
-    background: rgba(123, 82, 255, 0.15);
+    background: rgba(139, 92, 246, 0.15);
     font-family: 'Outfit', sans-serif;
     font-size: 1.1rem;
     color: #ffffff;
@@ -1205,7 +1943,7 @@ body {
 }
 
 .faq-item {
-    border: 1px solid rgba(123, 82, 255, 0.2);
+    border: 1px solid rgba(139, 92, 246, 0.2);
     border-radius: 12px;
     overflow: hidden;
     background: rgba(0, 0, 0, 0.3);
@@ -1228,7 +1966,7 @@ body {
 }
 
 .faq-question i {
-    color: #7b52ff;
+    color: #8B5CF6;
 }
 
 .faq-answer {
@@ -1272,9 +2010,9 @@ body {
 }
 
 .modal-card {
-    background: #0b0c10;
-    border: 1px solid #7b52ff;
-    box-shadow: 0 0 40px rgba(123, 82, 255, 0.3);
+    background: #0D0A12;
+    border: 1px solid #8B5CF6;
+    box-shadow: 0 0 40px rgba(139, 92, 246, 0.3);
     border-radius: 24px;
     width: 100%;
     max-width: 480px;
@@ -1319,8 +2057,8 @@ body {
 }
 
 .tab-btn.active {
-    background: rgba(123, 82, 255, 0.2);
-    color: #9d7bff;
+    background: rgba(139, 92, 246, 0.2);
+    color: #A78BFA;
 }
 
 .payment-panel {
@@ -1336,13 +2074,13 @@ body {
     height: 160px;
     margin: 0 auto 1.2rem auto;
     background: rgba(255, 255, 255, 0.05);
-    border: 2px dashed #7b52ff;
+    border: 2px dashed #8B5CF6;
     border-radius: 16px;
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 5rem;
-    color: #7b52ff;
+    color: #8B5CF6;
 }
 
 .pix-box p {
@@ -1371,7 +2109,7 @@ body {
 
 .form-group input {
     background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(123, 82, 255, 0.3);
+    border: 1px solid rgba(139, 92, 246, 0.3);
     padding: 0.8rem 1rem;
     border-radius: 10px;
     color: #ffffff;
@@ -1380,8 +2118,8 @@ body {
 }
 
 .form-group input:focus {
-    border-color: #7b52ff;
-    box-shadow: 0 0 10px rgba(123, 82, 255, 0.4);
+    border-color: #8B5CF6;
+    box-shadow: 0 0 10px rgba(139, 92, 246, 0.4);
 }
 
 .form-row {
@@ -1408,8 +2146,8 @@ body {
 
 .download-box-card,
 .updates-box-card {
-    background: #021a2a;
-    border: 1px solid rgba(0, 162, 255, 0.15);
+    background: #0B0714;
+    border: 1px solid rgba(139, 92, 246, 0.15);
     border-radius: 20px;
     padding: 2.2rem;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
@@ -1419,10 +2157,10 @@ body {
 
 .download-box-card:hover,
 .updates-box-card:hover {
-    border-color: rgba(99, 102, 241, 0.5);
+    border-color: rgba(139, 92, 246, 0.5);
     box-shadow:
         0 12px 35px rgba(11, 23, 42, 0.6),
-        0 0 20px rgba(99, 102, 241, 0.15);
+        0 0 20px rgba(139, 92, 246, 0.15);
     transform: translateY(-3px);
 }
 
@@ -1434,7 +2172,7 @@ body {
 }
 
 .category-tag {
-    color: #8b5cf6;
+    color: #8B5CF6;
     font-weight: 700;
     font-size: 1.1rem;
     letter-spacing: 0.5px;
@@ -1473,7 +2211,7 @@ body {
 }
 
 .btn-download-pill {
-    background: #2500d0;
+    background: #6D28D9;
     color: #ffffff;
     border: none;
     padding: 0.95rem 2.2rem;
@@ -1490,7 +2228,7 @@ body {
 }
 
 .btn-download-pill:hover {
-    background: #3400f5;
+    background: #8B5CF6;
     box-shadow: 0 0 25px rgba(52, 0, 245, 0.8);
     transform: translateY(-2px);
 }
@@ -1585,8 +2323,8 @@ body {
     width: 10px;
     height: 10px;
     border-radius: 50%;
-    background: #8b5cf6;
-    box-shadow: 0 0 8px #8b5cf6;
+    background: #8B5CF6;
+    box-shadow: 0 0 8px #8B5CF6;
 }
 
 .version-header {
@@ -1616,9 +2354,9 @@ body {
 }
 
 .version-number.feature {
-    background: rgba(59, 130, 246, 0.15);
-    color: #60a5fa;
-    border: 1px solid rgba(59, 130, 246, 0.3);
+    background: rgba(139, 92, 246, 0.15);
+    color: #A78BFA;
+    border: 1px solid rgba(139, 92, 246, 0.3);
 }
 
 .version-date {
@@ -1723,19 +2461,19 @@ body {
 
 :root {
   --bg-main: #000000;
-  --bg-card: #021a2a;
-  --bg-card-hover: #03243b;
+  --bg-card: #0B0714;
+  --bg-card-hover: #160D24;
 
   --text-main: #ffffff;
   --text-muted: #94a3b8;
 
-  --border-color: rgba(0, 162, 255, 0.15);
+  --border-color: rgba(139, 92, 246, 0.18);
   --border-hover: rgba(139, 92, 246, 0.5);
 
-  --accent-purple: #2500d0;
-  --accent-purple-glow: rgba(37, 0, 208, 0.6);
+  --accent-purple: #8B5CF6;
+  --accent-purple-glow: rgba(139, 92, 246, 0.55);
 
-  --input-bg: #010d15;
+  --input-bg: #09060F;
 
   --danger: #ef4444;
   --danger-hover: #dc2626;
@@ -1749,19 +2487,19 @@ body {
 body[data-theme="dark"] {
 
   --bg-main: #000000;
-  --bg-card: #021a2a;
-  --bg-card-hover: #03243b;
+  --bg-card: #0B0714;
+  --bg-card-hover: #160D24;
 
   --text-main: #ffffff;
   --text-muted: #94a3b8;
 
-  --border-color: rgba(0, 162, 255, 0.15);
+  --border-color: rgba(139, 92, 246, 0.18);
   --border-hover: rgba(139, 92, 246, 0.5);
 
-  --accent-purple: #2500d0;
-  --accent-purple-glow: rgba(37, 0, 208, 0.6);
+  --accent-purple: #8B5CF6;
+  --accent-purple-glow: rgba(139, 92, 246, 0.55);
 
-  --input-bg: #010d15;
+  --input-bg: #09060F;
 }
 
 

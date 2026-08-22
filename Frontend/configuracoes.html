@@ -28,9 +28,6 @@
         <!-- Navegação -->
         <nav class="nav-right">
 
-            <!-- Início -->
-            <a href="index.html" class="nav-link">Início</a>
-
             <!-- Botão de Upgrade -->
             <a href="monetizacao.html" class="btn-upgrade-nav">
                 <i class="fa-solid fa-bolt"></i> Upgrade
@@ -72,17 +69,12 @@
             <!-- Menu lateral -->
             <aside class="settings-sidebar">
 
-                <!-- Conta -->
+                <!-- Privacidade -->
                 <div class="sidebar-group">
 
-                    <span class="sidebar-group-title">CONTA</span>
+                    <span class="sidebar-group-title">PRIVACIDADE</span>
 
-                    <button class="sidebar-nav-item active" data-tab="account">
-                        <i class="fa-solid fa-user-gear"></i>
-                        <span>Informações da conta</span>
-                    </button>
-
-                    <button class="sidebar-nav-item" data-tab="privacy">
+                    <button class="sidebar-nav-item active" data-tab="privacy">
                         <i class="fa-solid fa-user-shield"></i>
                         <span>Dados e Privacidade</span>
                     </button>
@@ -135,142 +127,8 @@
             <!-- Conteúdo das configurações -->
             <section class="settings-content-card">
 
-                <!-- Informações da conta -->
-                <div class="tab-content active" id="tab-account">
-
-                    <h2 class="section-title">
-                        <i class="fa-solid fa-user-gear"></i>
-                        Informações da Conta
-                    </h2>
-
-                    <p class="section-desc">
-                        Gerencie sua foto de perfil, dados pessoais e credenciais de acesso.
-                    </p>
-
-                    <!-- Foto de perfil -->
-                    <div class="profile-upload-block">
-
-                        <div class="avatar-preview-wrapper">
-                            <img src="css/assets/img/user.png" alt="Foto do usuário" id="settingsAvatarPreview" class="global-user-avatar">
-                        </div>
-
-                        <div class="avatar-controls">
-
-                            <input type="file" id="avatarInput" accept="image/jpeg,image/png,image/webp" hidden>
-
-                            <button type="button" class="settings-btn settings-btn-secondary" id="btnUploadAvatar">
-                                <i class="fa-solid fa-upload"></i>
-                                Alterar foto
-                            </button>
-
-                            <button type="button" class="settings-btn settings-btn-outline-danger" id="btnRemoveAvatar">
-                                <i class="fa-solid fa-trash"></i>
-                                Remover foto
-                            </button>
-
-                        </div>
-
-                    </div>
-
-                    <!-- Informações pessoais -->
-                    <form id="formAccountInfo" class="settings-form">
-
-                        <div class="form-grid">
-
-                            <div class="form-group">
-                                <label for="userNameInput">Nome de Usuário</label>
-                                <input type="text" id="userNameInput" class="form-input" placeholder="Ex: Alex Argus" required>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="userEmailInput">E-mail</label>
-                                <input type="email" id="userEmailInput" class="form-input" placeholder="usuario@argus.io" required>
-                            </div>
-
-                        </div>
-
-                        <div class="form-grid">
-
-                            <div class="form-group">
-                                <label>Tipo de Conta</label>
-                                <input type="text" class="form-input" value="Desenvolvedor (Simulado)" disabled>
-                            </div>
-
-                            <div class="form-group">
-                                <label>Data de Criação</label>
-                                <input type="text" class="form-input" value="14 de Agosto de 2026" disabled>
-                            </div>
-
-                        </div>
-
-                        <button type="submit" class="settings-btn settings-btn-primary">
-                            <i class="fa-solid fa-floppy-disk"></i>
-                            Salvar Alterações
-                        </button>
-
-                    </form>
-
-                    <hr class="settings-divider">
-
-                    <!-- Segurança -->
-                    <h3 class="subsection-title">
-                        <i class="fa-solid fa-lock"></i>
-                        Segurança e Senha
-                    </h3>
-
-                    <form id="formSecuritySimulated" class="settings-form">
-
-                        <div class="form-group">
-                            <label for="currentPass">Senha Atual</label>
-                            <input type="password" id="currentPass" class="form-input" placeholder="••••••••">
-                        </div>
-
-                        <div class="form-grid">
-
-                            <div class="form-group">
-                                <label for="newPass">Nova Senha</label>
-                                <input type="password" id="newPass" class="form-input" placeholder="••••••••">
-                            </div>
-
-                            <div class="form-group">
-                                <label for="confirmPass">Confirmar Nova Senha</label>
-                                <input type="password" id="confirmPass" class="form-input" placeholder="••••••••">
-                            </div>
-
-                        </div>
-
-                        <button type="submit" class="settings-btn settings-btn-secondary">
-                            <i class="fa-solid fa-key"></i>
-                            Atualizar Senha
-                        </button>
-
-                    </form>
-
-                    <hr class="settings-divider">
-
-                    <!-- Zona de perigo -->
-                    <div class="danger-zone-box">
-
-                        <h3 class="danger-title">
-                            <i class="fa-solid fa-triangle-exclamation"></i>
-                            Zona de Perigo
-                        </h3>
-
-                        <p>
-                            A exclusão da conta removerá localmente todos os dados de preferência simulados do seu navegador.
-                        </p>
-
-                        <button type="button" class="settings-btn settings-btn-danger" id="btnDeleteAccountModal">
-                            <i class="fa-solid fa-user-xmark"></i>
-                            Excluir Conta
-                        </button>
-
-                    </div>
-
-                </div>
-
                 <!-- Dados e privacidade -->
-                <div class="tab-content" id="tab-privacy">
+                <div class="tab-content active" id="tab-privacy">
 
                     <h2 class="section-title">
                         <i class="fa-solid fa-user-shield"></i>
@@ -657,7 +515,6 @@
 
             <!-- Links -->
             <div class="footer-links">
-                <a href="index.html">Início</a>
                 <a href="sm.html">Saiba Mais</a>
                 <a href="monetizacao.html">Planos</a>
                 <a href="dowload.html">Download</a>
