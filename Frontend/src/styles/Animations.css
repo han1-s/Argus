@@ -1,0 +1,110 @@
+@keyframes floatGlow {
+  0% { transform: translateY(0); text-shadow: 0 0 6px rgba(123, 82, 255, 0.3), 0 0 12px rgba(123, 82, 255, 0.15); }
+  100% { transform: translateY(-8px); text-shadow: 0 0 18px rgba(157, 123, 255, 0.9), 0 0 32px rgba(123, 82, 255, 0.6); }
+}
+
+@keyframes pulseGlow {
+  0% { transform: scale(1); text-shadow: 0 0 12px rgba(123, 82, 255, 0.4), 0 0 24px rgba(123, 82, 255, 0.2); }
+  100% { transform: scale(1.015); text-shadow: 0 0 28px rgba(157, 123, 255, 1), 0 0 50px rgba(123, 82, 255, 0.75); }
+}
+
+@keyframes btnGlowPulse {
+  0%, 100% { box-shadow: 0 0 15px rgba(23, 74, 191, 0.5); }
+  50% { box-shadow: 0 0 28px rgba(33, 91, 227, 0.85); }
+}
+
+@keyframes fadeInDown { from { opacity: 0; transform: translateY(-25px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeInUp { from { opacity: 0; transform: translateY(25px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeInRight { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes rotateRing { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@keyframes rotateRingRev { from { transform: rotate(360deg); } to { transform: rotate(0deg); } }
+@keyframes settingsSlideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+@keyframes spinSlow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes pulseCore {
+  0%, 100% { transform: scale(1); opacity: 0.8; }
+  50% { transform: scale(1.1); opacity: 1; }
+}
+
+.float-glow-anim {
+  animation: floatGlow 4s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite alternate;
+  will-change: transform, text-shadow;
+}
+
+.title-pulse-anim {
+  animation: pulseGlow 3.5s cubic-bezier(0.4, 0, 0.2, 1) infinite alternate;
+  will-change: transform, text-shadow;
+}
+
+.tech-iris-container {
+  position: relative;
+  width: 220px;
+  height: 220px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.1) 0%, transparent 70%);
+}
+
+.iris-core {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--accent-purple) 0%, var(--accent-blue) 100%);
+  box-shadow: 0 0 30px var(--accent-purple);
+  animation: pulseCore 2.5s ease-in-out infinite;
+} 
+
+.iris-ring { position: absolute; border-radius: 50%; border: 2px dashed rgba(139, 92, 246, 0.4); animation: rotateRing 20s linear infinite; will-change: transform; }
+.ring-outer { width: 280px; height: 280px; }
+.ring-mid { width: 200px; height: 200px; border-style: solid; border-color: rgba(139, 92, 246, 0.5) transparent rgba(139, 92, 246, 0.5) transparent; animation: rotateRingRev 12s linear infinite; }
+.data-node { position: absolute; width: 12px; height: 12px; border-radius: 50%; background: #fff; box-shadow: 0 0 10px #8b5cf6; }
+.node-1 { top: 20px; left: 40px; }
+.node-2 { right: 50px; bottom: 30px; }
+.node-3 { top: 50px; right: 20px; }
+.node-4 { bottom: 40px; left: 30px; }
+
+.main-header { animation: fadeInDown 0.8s ease-out; will-change: transform, opacity; }
+.hero-content { animation: fadeInUp 0.9s ease-out; will-change: transform, opacity; }
+.hero-carousel { animation: fadeInRight 1s ease-out; will-change: transform, opacity; }
+.nav-link { transition: color 0.3s ease, transform 0.2s ease; }
+.nav-link:hover { color: #9d7bff; transform: translateY(-2px); }
+.user-avatar { transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.3s ease; }
+.profile-btn:hover .user-avatar { transform: scale(1.1); filter: drop-shadow(0 0 12px rgba(123, 82, 255, 0.9)); }
+.profile-dropdown { transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+.profile-dropdown a { transition: background-color 0.25s ease, color 0.25s ease, padding-left 0.25s ease; }
+.btn { transition: transform 0.35s cubic-bezier(0.25, 1, 0.5, 1), background-color 0.35s cubic-bezier(0.25, 1, 0.5, 1), box-shadow 0.35s cubic-bezier(0.25, 1, 0.5, 1); }
+.btn-primary { animation: btnGlowPulse 4s infinite ease-in-out; will-change: box-shadow; }
+.btn-primary:hover { background-color: #215be3; box-shadow: 0 0 28px rgba(33, 91, 227, 0.9); transform: translateY(-3px) scale(1.02); }
+.btn-secondary:hover { color: #9d7bff; transform: translateY(-2px); }
+.carousel-frame { transition: transform 0.5s ease, box-shadow 0.5s ease; }
+.carousel-frame:hover { transform: translateY(-5px) scale(1.01); box-shadow: 0 20px 45px rgba(123, 82, 255, 0.25); }
+.slide { transition: opacity 1.4s cubic-bezier(0.4, 0, 0.2, 1), transform 1.4s cubic-bezier(0.4, 0, 0.2, 1); }
+.info-card, .feature-box { transition: transform 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease; }
+.info-card:hover, .feature-box:hover { transform: translateY(-5px); }
+.btn-upgrade-nav { transition: transform 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease; }
+.btn-upgrade-nav:hover { transform: translateY(-2px); box-shadow: 0 0 20px rgba(123, 82, 255, 0.8); }
+.pricing-toggle-btn { transition: background-color 0.3s ease; }
+.pricing-toggle-btn::after { transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.pricing-card { transition: transform 0.35s ease, box-shadow 0.35s ease, border-color 0.35s ease; }
+.pricing-card:hover { transform: translateY(-6px); }
+.faq-question svg { transition: transform 0.3s ease; }
+.faq-answer { transition: max-height 0.3s ease, padding 0.3s ease, opacity 0.3s ease; }
+.modal-overlay { transition: opacity 0.3s ease, visibility 0.3s ease; }
+.modal-card { transition: transform 0.3s ease, opacity 0.3s ease; }
+.download-box-card, .updates-box-card { transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); }
+.download-box-card:hover, .updates-box-card:hover { transform: translateY(-3px); }
+.btn-download-pill { transition: transform 0.3s ease, background-color 0.3s ease, box-shadow 0.3s ease; }
+.btn-download-pill:hover { transform: translateY(-2px); }
+.btn-download-pill:active { transform: translateY(0); }
+.footer-links a { transition: color 0.3s ease; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+}
