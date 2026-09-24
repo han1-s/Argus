@@ -12,6 +12,7 @@ const defaultSettings: UserSettings = {
   notifUpdates: true,
   theme: 'dark',
   language: 'pt-BR',
+  timezone: 'America/Sao_Paulo',
 };
 
 export const Configuracoes: React.FC = () => {
@@ -31,6 +32,8 @@ export const Configuracoes: React.FC = () => {
     useEffect(() => {
       localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
       setArgusTheme(settings.theme);
+      document.documentElement.lang = settings.language;
+      document.documentElement.dataset.timezone = settings.timezone;
     }, [settings]);
 
     const updateSetting = <Key extends keyof UserSettings>(key: Key, value: UserSettings[Key]) => {
@@ -191,7 +194,8 @@ export const Configuracoes: React.FC = () => {
                 <h2 className="section-title"><Globe size={22} /> Idioma e Horário</h2>
                 <p className="section-desc">Ajuste a regionalização e o formato de exibição temporal.</p>
                 <div className="form-group"><label htmlFor="language">Idioma do Sistema</label><select id="language" className="form-input" value={settings.language} onChange={(event) => updateSetting('language', event.target.value)}><option value="pt-BR">Português (Brasil)</option><option value="en-US">English (United States)</option></select></div>
-                <div className="form-group"><label htmlFor="timezone">Fuso Horário</label><input id="timezone" className="form-input" value="Horário Oficial de Brasília (UTC-03:00)" disabled /></div>
+                <div className="form-group"><label htmlFor="timezone">Fuso Horário</label><select id="timezone" className="form-input" value={settings.timezone} onChange={(event) => updateSetting('timezone', event.target.value)}><option value="America/Sao_Paulo">Brasília (UTC−03:00)</option><option value="America/Manaus">Manaus (UTC−04:00)</option><option value="America/Rio_Branco">Rio Branco (UTC−05:00)</option><option value="America/Noronha">Fernando de Noronha (UTC−02:00)</option><option value="America/New_York">New York</option><option value="Europe/Lisbon">Lisboa</option></select></div>
+                <p className="section-desc">Horário neste fuso: {new Date().toLocaleString(settings.language, { timeZone: settings.timezone, dateStyle: 'medium', timeStyle: 'short' })}</p>
               </div>
             )}
 

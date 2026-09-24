@@ -19,6 +19,9 @@
 @keyframes rotateRing { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 @keyframes rotateRingRev { from { transform: rotate(360deg); } to { transform: rotate(0deg); } }
 @keyframes settingsSlideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+@keyframes routeFadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes menuDropIn { from { opacity: 0; transform: translateY(-6px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes answerReveal { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
 
 @keyframes spinSlow {
   from { transform: rotate(0deg); }
@@ -104,6 +107,7 @@
 .btn-download-pill:hover { transform: translateY(-2px); }
 .btn-download-pill:active { transform: translateY(0); }
 .footer-links a { transition: color 0.3s ease; }
+.route-transition { animation: routeFadeUp 220ms ease-out both; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }

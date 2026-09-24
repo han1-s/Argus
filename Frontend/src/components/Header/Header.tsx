@@ -71,7 +71,7 @@ export const Header: React.FC = () => {
 
       <nav className="nav-right">
         <Link to="/monetizacao" className="btn-upgrade-nav">
-          <Zap size={16} /> Upgrade
+          <Zap size={16} aria-hidden="true" /> <span className="upgrade-label">Upgrade</span>
         </Link>
 
         <div className="profile-container" ref={profileRef}>

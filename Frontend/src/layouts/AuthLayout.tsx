@@ -1,13 +1,15 @@
 import React from 'react';
-import { Outlet, Link, useNavigate } from 'react-router-dom';
+import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { continueAsGuest } from '../services/argusAuth';
 
 export const AuthLayout: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleSkip = () => {
     continueAsGuest();
-    navigate('/dashboard');
+    const redirect = new URLSearchParams(location.search).get('redirect') || '/dashboard';
+    navigate(redirect);
   };
 
   return (

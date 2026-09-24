@@ -1,6 +1,6 @@
 export type PlanType = 'Free' | 'Pro' | 'Business';
 export type BillingCycle = 'monthly' | 'annual';
-export type PaymentMethod = 'pix' | 'card';
+export type PaymentMethod = 'pix' | 'card' | 'boleto';
 export type SettingsTab = 'privacy' | 'notifications' | 'appearance' | 'system' | 'billing';
 
 export interface PlanFeature {
@@ -29,6 +29,7 @@ export interface UserSettings {
   notifUpdates: boolean;
   theme: 'dark' | 'gray' | 'light';
   language: string;
+  timezone: string;
 }
 
 export interface ComputerDevice {
@@ -40,6 +41,12 @@ export interface ComputerDevice {
   cpuUsage: number;
   ramUsage: number;
   lastActive: string;
+  ipAddress: string;
+  location: string;
+  processor: string;
+  memory: string;
+  storage: string;
+  serialNumber: string;
 }
 
 export interface ActivityLog {
