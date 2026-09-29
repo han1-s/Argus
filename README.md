@@ -87,9 +87,3 @@ Web/Frontend/
     ├── pages/          # páginas do site
     └── services/       # preferências, autenticação demo e dados locais
 ```
-
-## Verificações executadas
-
-- Site: `npm run build` — concluído com sucesso.
-- Site: `npm run lint` — concluído com sucesso.
-- Protótipo: `npm test` — iniciou a API, mas falhou aguardando o agente publicar métricas (`Timeout esperando agente enviar métricas reais`). A limpeza final do diretório temporário também retornou `EPERM` no Windows. Portanto, o teste ponta a ponta do protótipo ainda precisa ser corrigido ou validado em outro ambiente antes de considerar esse fluxo aprovado.
