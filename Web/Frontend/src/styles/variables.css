@@ -1,0 +1,17 @@
+:root {
+  --bg-dark: #0b0d12;
+  --bg-surface: #111827;
+  --bg-surface-hover: #172033;
+  --text-main: #f3f4f6;
+  --text-muted: #a5b4cf;
+  --accent-purple: #8b5cf6;
+  --accent-purple-glow: rgba(139, 92, 246, 0.45);
+  --accent-blue: #5eead4;
+  --border-glow: 1px solid rgba(139, 92, 246, 0.24);
+  --status-success: #34d399;
+  --status-warning: #fbbf24;
+  --status-danger: #f87171;
+  --radius-sm: 12px;
+  --radius-md: 18px;
+  --radius-lg: 24px;
+}

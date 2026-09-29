@@ -1,0 +1,7 @@
+node_modules/
+database/data.json
+database/data.json.tmp
+agent/config.json
+.env
+*.log
+.tmp-mysql-test*/

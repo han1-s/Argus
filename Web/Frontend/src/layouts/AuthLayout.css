@@ -1,0 +1,68 @@
+.argus-auth-page { position: relative; isolation: isolate; gap: 1rem; padding: 2rem 1rem 2.2rem; overflow: hidden; background: radial-gradient(ellipse at 50% 12%, rgba(99,82,165,.11), transparent 38%), var(--bg-dark); }
+.argus-auth-page::before, .argus-auth-page::after { position: absolute; z-index: -1; width: min(48vw,520px); aspect-ratio: 1; border: 1px solid rgba(167,139,250,.055); border-radius: 50%; pointer-events: none; content: ''; }
+.argus-auth-page::before { top: -25vw; left: -20vw; box-shadow: 0 0 0 34px rgba(139,92,246,.018), 0 0 0 72px rgba(125,211,252,.012); }
+.argus-auth-page::after { right: -22vw; bottom: -32vw; border-color: rgba(125,211,252,.05); box-shadow: 0 0 0 38px rgba(125,211,252,.012), 0 0 0 78px rgba(139,92,246,.014); }
+.auth-brand-link { display: inline-flex; align-items: center; justify-content: center; margin-bottom: .2rem; }
+.auth-brand-link .argus-brand { gap: .68rem; }
+.auth-brand-link .argus-brand-mark { width: 48px; height: 48px; }
+.auth-brand-link .argus-brand-name { font-size: 1.15rem; }
+.auth-brand-link:focus-visible { outline: 2px solid #a78bfa; outline-offset: 5px; border-radius: 6px; }
+.argus-auth-box { max-width: 448px; animation: authCardEnter 380ms cubic-bezier(.2,.7,.3,1) both; }
+.argus-auth-card { gap: 1.05rem; padding: clamp(1.4rem,4vw,2rem); border: 1px solid rgba(167,139,250,.2); border-radius: 17px; background: linear-gradient(150deg,rgba(19,19,29,.97),rgba(12,13,20,.98)); box-shadow: 0 22px 60px rgba(0,0,0,.3),0 0 32px rgba(139,92,246,.045); }
+.auth-card-heading { margin-bottom: .15rem; }
+.auth-card-kicker { display: inline-flex; align-items: center; gap: .4rem; color: #b5a4df; font-size: .64rem; font-weight: 800; letter-spacing: .13em; }
+.auth-card-kicker svg { color: #a78bfa; }
+.argus-auth-card .auth-card-heading h1 { margin-top: .55rem; color: #f5f2f9; font: 700 clamp(1.55rem,5vw,1.9rem)/1.15 'Outfit',sans-serif; letter-spacing: -.035em; }
+.auth-card-heading > p { margin-top: .45rem; color: #a9a5b4; font-size: .82rem; line-height: 1.6; }
+.argus-auth-form { display: grid; gap: .9rem; }
+.argus-auth-field { display: grid; gap: .38rem; }
+.argus-auth-field > label { color: #d4d0dc; font-size: .76rem; font-weight: 600; }
+.argus-auth-input-wrap { display: flex; align-items: center; gap: .55rem; min-width: 0; min-height: 46px; padding: 0 .75rem; border: 1px solid rgba(160,145,205,.18); border-radius: 10px; color: #9893a5; background: rgba(6,7,12,.6); transition: border-color 170ms ease, box-shadow 170ms ease, background 170ms ease; }
+.argus-auth-input-wrap:focus-within { border-color: rgba(167,139,250,.63); background: rgba(8,8,15,.88); box-shadow: 0 0 0 3px rgba(139,92,246,.105); }
+.argus-auth-input-wrap.has-error { border-color: rgba(248,113,113,.65); }
+.argus-auth-input-wrap.has-error:focus-within { box-shadow: 0 0 0 3px rgba(248,113,113,.1); }
+.argus-auth-input-wrap > svg { flex: 0 0 auto; }
+.argus-auth-input-wrap input { width: 100%; min-width: 0; height: 44px; padding: 0; border: 0; outline: 0; color: #f2eff7; background: transparent; font: 400 .82rem Inter,system-ui,sans-serif; }
+.argus-auth-input-wrap input::placeholder { color: #777384; opacity: 1; }
+.argus-auth-input-wrap input:focus-visible { outline: 0; }
+.auth-password-toggle { display: grid; place-items: center; width: 34px; height: 34px; flex: 0 0 auto; border: 1px solid transparent; border-radius: 8px; color: #a7a2b2; background: transparent; cursor: pointer; transition: color 160ms ease,background 160ms ease,border-color 160ms ease; }
+.auth-password-toggle:hover { border-color: rgba(167,139,250,.16); color: #e6ddfa; background: rgba(139,92,246,.09); }
+.auth-password-toggle:focus-visible { outline: 2px solid #a78bfa; outline-offset: 2px; }
+.argus-auth-error { display: flex; align-items: flex-start; gap: .35rem; color: #fca5a5; font-size: .72rem; line-height: 1.45; }
+.argus-auth-error::before { content: '•'; font-size: 1rem; line-height: .95; }
+.argus-auth-submit { min-height: 44px; margin-top: .15rem; border: 1px solid rgba(167,139,250,.25); border-radius: 10px; background: linear-gradient(105deg,#7654c0,#57488f); box-shadow: 0 8px 22px rgba(61,39,116,.2); font-size: .84rem; transition: transform 170ms ease,filter 170ms ease,box-shadow 170ms ease,opacity 170ms ease; }
+.argus-auth-submit:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.08); box-shadow: 0 11px 26px rgba(61,39,116,.3); }
+.argus-auth-submit:active:not(:disabled) { transform: scale(.99); }
+.argus-auth-submit:focus-visible { outline: 2px solid #c4b5fd; outline-offset: 3px; }
+.argus-auth-submit:disabled { cursor: wait; opacity: .75; }
+.argus-auth-feedback { min-height: 0; margin-top: -.55rem; overflow: hidden; color: #b8c9d5; font-size: .72rem; line-height: 1.45; opacity: 0; transition: opacity 150ms ease,margin 150ms ease; }
+.argus-auth-feedback.is-visible { min-height: 1em; margin-top: -.25rem; opacity: 1; }
+.argus-auth-feedback.is-success { color: #a7f3d0; }
+.argus-auth-switch { padding-top: .85rem; border-top: 1px solid rgba(255,255,255,.065); color: #aaa5b3; font-size: .76rem; text-align: center; }
+.argus-auth-switch a { margin-left: .22rem; color: #c4b5fd; font-weight: 650; text-decoration: none; text-underline-offset: 3px; }
+.argus-auth-switch a:hover { color: #e0d5ff; text-decoration: underline; }
+.argus-auth-switch a:focus-visible, .argus-auth-home-link:focus-visible, .argus-auth-skip:focus-visible { outline: 2px solid #a78bfa; outline-offset: 3px; border-radius: 3px; }
+.auth-demo-disclosure { padding: .68rem .75rem; border: 1px solid rgba(125,211,252,.11); border-radius: 10px; background: rgba(14,116,144,.045); }
+.auth-demo-disclosure > span { color: #b6d4e5; font-size: .68rem; font-weight: 700; }
+.auth-demo-disclosure p { margin-top: .18rem; color: #9299a5; font-size: .68rem; line-height: 1.5; }
+.argus-auth-home-link { display: inline-flex; align-items: center; gap: .35rem; color: #a9a4b2; font-size: .75rem; text-decoration: none; text-underline-offset: 3px; }
+.argus-auth-home-link:hover { color: #e7e2ef; text-decoration: underline; }
+.auth-guest-option { display: flex; align-items: center; gap: .35rem; color: #827e8c; font-size: .7rem; }
+.argus-auth-skip { padding: .2rem .3rem; color: #aaa5b3; font-size: .72rem; font-weight: 600; text-decoration: none; }
+.argus-auth-skip:hover { color: #d4c9ee; }
+@keyframes authCardEnter { from { opacity: 0; transform: translateY(10px) scale(.99); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@media (max-width: 520px) {
+  .argus-auth-page { justify-content: center; gap: .85rem; padding: 1.2rem .85rem; }
+  .argus-auth-box { max-width: 440px; }
+  .argus-auth-card { padding: 1.25rem; }
+  .auth-brand-link .argus-brand-mark { width: 42px; height: 42px; }
+  .auth-brand-link .argus-brand-name { font-size: 1rem; }
+  .argus-auth-input-wrap { min-height: 48px; }
+  .argus-auth-input-wrap input { height: 46px; }
+  .auth-guest-option { flex-wrap: wrap; justify-content: center; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .argus-auth-box { animation: none; }
+  .argus-auth-input-wrap, .auth-password-toggle, .argus-auth-submit, .argus-auth-feedback { transition: none; }
+}
+body.reduce-animations .argus-auth-box { animation: none !important; }

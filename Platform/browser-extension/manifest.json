@@ -1,0 +1,10 @@
+{
+  "manifest_version": 3,
+  "name": "ARGUS Web Activity (authorized)",
+  "version": "1.0.0",
+  "description": "Sends active-tab domain and duration to the locally installed ARGUS agent, only when enabled.",
+  "permissions": ["tabs", "storage", "alarms", "idle"],
+  "host_permissions": ["http://127.0.0.1/*", "http://localhost/*"],
+  "background": { "service_worker": "background.js" },
+  "action": { "default_popup": "popup.html", "default_title": "ARGUS Web Activity" }
+}

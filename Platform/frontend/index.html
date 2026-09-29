@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#080c12"><title>ARGUS · Console de monitoramento</title>
+  <link rel="stylesheet" href="/styles.css"><script src="/socket.io/socket.io.js"></script><script defer src="/app.js"></script>
+</head>
+<body>
+  <section id="authView" class="auth-shell">
+    <div class="auth-brand"><div class="brand-mark">A</div><span>ARGUS</span><small>ENDPOINT INTELLIGENCE</small></div>
+    <div class="auth-card">
+      <div class="eyebrow">CONSOLE DE ADMINISTRAÇÃO</div><h1 id="authTitle">Acesso seguro</h1><p id="authSubtitle">Entre para monitorar os dispositivos da sua rede.</p>
+      <form id="authForm">
+        <label id="nameWrap" class="field hidden">Nome completo<input id="nameInput" autocomplete="name" placeholder="Seu nome"></label>
+        <label class="field">E-mail<input id="emailInput" type="email" autocomplete="email" placeholder="nome@empresa.com" required></label>
+        <label class="field">Senha<input id="passwordInput" type="password" autocomplete="current-password" placeholder="Mínimo 10 caracteres" required minlength="10"></label>
+        <label id="confirmWrap" class="field hidden">Confirmar senha<input id="confirmInput" type="password" placeholder="Repita sua senha"></label>
+        <label class="consent-check"><input id="termsAccepted" type="checkbox" required><span>Li e aceito os <a href="/terms.html" target="_blank" rel="noreferrer">Termos de Uso e Aviso de Privacidade</a>.</span></label>
+        <label id="webConsentWrap" class="consent-check optional"><input id="webConsent" type="checkbox"><span>Opcional: autorizo a coleta de <b>domínios de navegação</b> conforme descrito nos termos. Posso revogar depois.</span></label>
+        <div id="authError" class="form-error hidden"></div><button class="button primary wide" id="authSubmit">Entrar no console <span>→</span></button>
+      </form><div class="auth-switch"><span id="switchText">Ainda não tem acesso?</span> <button id="authSwitch" class="text-button">Criar conta</button></div>
+    </div><div class="auth-foot">MONITORAMENTO AUTORIZADO · REDE LOCAL</div>
+  </section>
+  <div id="appView" class="app-shell hidden">
+    <aside class="sidebar"><a class="brand" href="#dashboard"><span class="brand-mark">A</span><span>ARGUS<small>NETWORK CONSOLE</small></span></a>
+      <div class="nav-label">WORKSPACE</div><nav>
+        <button class="nav-item active" data-page="dashboard"><span>▦</span> Visão geral</button>
+        <button class="nav-item" data-page="computers"><span>▤</span> Computadores <i id="navComputerCount">0</i></button>
+        <button class="nav-item" data-page="activity"><span>◷</span> Atividades</button>
+        <button class="nav-item" data-page="applications"><span>▧</span> Aplicações</button>
+        <button class="nav-item" data-page="web"><span>◎</span> Navegação web</button>
+        <button class="nav-item" data-page="reports"><span>▥</span> Relatórios</button>
+        <button class="nav-item" data-page="alerts"><span>◇</span> Alertas <i id="navAlertCount" class="alert-count">0</i></button>
+        <button class="nav-item" data-page="settings"><span>⚙</span> Configurações</button>
+      </nav><div class="sidebar-bottom"><div class="network-card"><span class="pulse"></span><div><b>Servidor local ativo</b><small id="serverAddress">Aguardando conexão</small></div></div><button id="logoutButton" class="logout">↪ <span>Sair da conta</span></button></div>
+    </aside>
+    <main class="main-area"><header class="topbar"><div class="breadcrumb"><span>ARGUS</span><b>/</b><strong id="pageCrumb">Visão geral</strong></div><div class="top-actions"><span class="live-indicator"><i></i> SISTEMA OPERACIONAL</span><div class="avatar" id="avatar">A</div><div class="user-label"><b id="userName">Administrador</b><small>ADMINISTRADOR</small></div></div><button class="mobile-menu" id="mobileMenu">☰</button></header>
+      <div id="pageContent" class="page-content"></div>
+    </main>
+  </div>
+  <div id="toast" class="toast"></div>
+</body></html>

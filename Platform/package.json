@@ -1,0 +1,10 @@
+{
+  "name": "argus-monitor",
+  "version": "1.0.0",
+  "private": true,
+  "description": "ARGUS LAN computer monitoring prototype",
+  "engines": { "node": ">=18" },
+  "main": "backend/server.js",
+  "scripts": { "start": "node backend/server.js", "agent": "node agent/agent.js", "test": "node scripts/smoke-test.js" },
+  "dependencies": { "dotenv": "^16.4.7", "express": "^4.21.2", "mysql2": "^3.14.0", "socket.io": "^4.8.1" }
+}
