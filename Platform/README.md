@@ -59,13 +59,13 @@ Também é possível abrir `Platform/ARGUS.cmd` e escolher **Preparar servidor**
 Repita estes passos em cada endpoint autorizado:
 
 1. No painel ARGUS do servidor, clique em **Adicionar computador** e baixe o `ARGUS.cmd`.
-2. Leve esse arquivo ao computador que será monitorado e execute-o. Confirme a instalação quando o Windows solicitar.
-3. O assistente local abrirá no navegador. Informe:
+2. Copie o código exibido no painel. Ele expira em 15 minutos e só pode ser usado uma vez.
+3. Leve o arquivo ao computador que será monitorado e execute-o. Confirme a instalação quando o Windows solicitar.
+4. O assistente local abrirá no navegador. Informe:
    - o endereço LAN do servidor, por exemplo `http://192.168.1.10:3000`;
    - um nome para este computador;
-   - o e-mail e a senha da conta administradora ARGUS.
-4. Leia e aceite os termos para autenticar. O servidor cria e usa um código de pareamento de uso único; não é necessário copiar ou digitar esse código.
-5. Aguarde o painel indicar o computador como online.
+   - o código de conexão copiado do painel.
+5. Leia e aceite os termos e aguarde o painel indicar o computador como online. Não é necessário entrar com e-mail ou senha neste computador.
 
 O endereço `127.0.0.1` do assistente é local ao endpoint; ele **não** é o endereço do servidor. Use o IP LAN do computador que executa a Platform. O botão **Cancelar instalação** encerra o assistente sem conectar o PC.
 
