@@ -59,7 +59,7 @@ MySQL é a persistência principal. `schema.sql` define tabelas e relações; `m
 
 ### Agente (`agent/`)
 
-Processo Node.js instalado em cada computador monitorado. Coleta nome do computador e usuário, sistema operacional, arquitetura, tempo ligado, CPU, RAM, disco e uma lista limitada de processos. Também hospeda uma ponte HTTP apenas em loopback para a extensão opcional.
+Processo Node.js instalado em cada computador monitorado. Coleta nome do computador e usuário, sistema operacional, arquitetura, tempo ligado, CPU, RAM, disco e uma lista limitada de processos. No Windows, um watcher PowerShell usa as APIs locais de janela foreground e última entrada para acumular duração por processo em intervalos de 250 ms, excluindo períodos após 60 segundos sem teclado/mouse. Não lê título da janela, conteúdo, teclas, documentos ou credenciais e não exige modo desenvolvedor nem elevação administrativa. Em outros sistemas, o relatório informa que a medição foreground não está disponível, sem inventar uma duração. Também hospeda uma ponte HTTP apenas em loopback para a extensão opcional.
 
 ### Extensão (`browser-extension/`)
 
@@ -76,7 +76,7 @@ Extensão Manifest V3 compatível com Chrome e Edge. Desativada por padrão, est
 | Eventos e alertas | Conexões, desconexões e limites de recursos | CPU ≥ 85%, RAM ≥ 90% e ausência de heartbeat por 45 segundos |
 | Navegação opcional | Domínio e duração aproximada em aba ativa | Só com coleta web habilitada; histórico retido por até 90 dias |
 
-As métricas são instantâneos. Para aplicações, o painel também estima o tempo observado somando os intervalos entre heartbeats consecutivos; isso não confirma todo o tempo real de uso. Os intervalos do agente e os limites offline podem ser configurados por variáveis descritas abaixo.
+As métricas de CPU/RAM/disco são instantâneos. O tempo de aplicações no Windows vem de amostras da aplicação em primeiro plano enquanto há entrada recente, acumuladas localmente e enviadas com IDs de lote para evitar dupla contagem em retries. A resolução é limitada ao intervalo de amostragem e ao agendamento do Windows: é uma medida observada de foreground, não prova atividade humana ou atenção. Os intervalos do agente e os limites offline podem ser configurados por variáveis descritas abaixo.
 
 ## Requisitos
 
@@ -138,16 +138,16 @@ OFFLINE_CHECK_INTERVAL_MS=10000
 npm start
 ```
 
-No Windows, abra `ARGUS.cmd` e escolha **Iniciar servidor e abrir painel**. Acesse `http://localhost:3000` no computador administrador. No primeiro acesso, crie a conta e leia/aceite a versão atual dos termos. O endereço LAN do servidor também é exibido na configuração de pareamento.
+No Windows, abra `ARGUS.cmd` e escolha **Iniciar servidor e abrir painel**. Acesse `http://localhost:3000` no computador administrador. No primeiro acesso, crie a conta e leia/aceite a versão atual dos termos. O endereço LAN do servidor é exibido no painel e será informado no assistente do computador monitorado.
 
 ## Conectar um computador
 
 ### Instalação guiada (Windows)
 
-1. No painel, escolha **Adicionar computador** para gerar um código temporário. Ele expira em 15 minutos e pode parear um computador.
-2. Baixe o `ARGUS.cmd` personalizado e execute-o no endpoint autorizado.
-3. Escolha **1 — Instalar/conectar este computador**. O comando baixa o controlador e o agente, cria a configuração e inicia o pareamento. Node.js LTS é instalado via `winget` se ainda não estiver disponível.
-4. Depois do pareamento, o agente é configurado para iniciar quando a pessoa entrar no Windows. O arquivo `config.json` fica em `%LOCALAPPDATA%\ARGUS\Agent`; proteja-o, pois contém o token do agente e a chave da ponte local.
+1. No painel, escolha **Adicionar computador** e baixe o `ARGUS.cmd`. O arquivo contém apenas o endereço de onde baixar os componentes; não contém nome, senha nem código de autenticação.
+2. Execute o arquivo no PC autorizado. Ele instala Node.js LTS via `winget` se necessário e abre o assistente local no navegador.
+3. No assistente, informe o endereço LAN do servidor (por exemplo, `http://192.168.1.10:3000`), o nome desejado para o computador e a conta administradora ARGUS. É possível abrir os termos atuais pelo próprio assistente. Após o aceite, ele autentica a conta, solicita ao servidor um código de pareamento de uso único e o consome imediatamente para vincular o PC. A senha não é salva localmente; use somente uma rede confiável, pois o protótipo não oferece TLS no HTTP padrão. **Cancelar instalação** encerra o assistente sem parear o computador.
+4. Após a configuração, o agente inicia e fica programado para iniciar quando a pessoa entrar no Windows. O arquivo `%LOCALAPPDATA%\ARGUS\Agent\config.json` contém o token do agente e a chave da ponte local; proteja-o. O menu ARGUS continua disponível para iniciar ou parar o agente depois.
 
 ### Instalação manual (desenvolvimento)
 
@@ -166,9 +166,9 @@ No Windows, abra `ARGUS.cmd` e escolha **Iniciar servidor e abrir painel**. Aces
 3. Execute `node agent.js` a partir da pasta `agent`.
 4. Depois do pareamento, o agente salva `deviceToken` e `bridgeKey` no `config.json`. Proteja esse arquivo: o token autoriza o agente e a chave permite comunicação local com a extensão.
 
-O agente envia o primeiro heartbeat ao iniciar e continua no intervalo configurado (mínimo de cinco segundos). Se o computador parar de enviar heartbeats, o painel marca-o offline depois do limite configurado, 45 segundos por padrão. Para parear novamente, gere um novo código no painel e remova `deviceToken` e `connectionCode` antigos da configuração antes de iniciar o agente.
+O agente envia o primeiro heartbeat ao iniciar e continua no intervalo configurado (mínimo de cinco segundos). No Windows, também inicia `foreground-watcher.ps1` em segundo plano; **Parar agente** encerra o watcher. Se o computador parar de enviar heartbeats, o painel marca-o offline depois do limite configurado, 45 segundos por padrão. Para parear novamente, gere um novo código no painel e remova `deviceToken` e `connectionCode` antigos da configuração antes de iniciar o agente.
 
-O histórico de aplicações é mantido no campo JSON de processos da máquina já existente no MySQL, sem exigir migração de tabela. Computadores já cadastrados passam a acumular estimativas e contagens depois da atualização; dados anteriores não podem ser reconstruídos.
+O histórico foreground medido é mantido no campo JSON de aplicações já existente no MySQL, sem exigir migração de tabela. O relatório individual usa hoje/7/30 dias e isola os dados da máquina aberta. Computadores já cadastrados começam a acumular medições ao instalar/atualizar o agente; uso passado não pode ser reconstruído. Totais estimados legados não são apresentados como tempo foreground real.
 
 ## Atividade web opcional
 
@@ -186,9 +186,9 @@ Ao revogar a coleta web, o servidor deixa de aceitar novas amostras e elimina os
 ## Funcionalidades do painel
 
 - **Visão geral:** quantidade de computadores online/offline, usuários ativos, alertas e eventos recentes.
-- **Computadores:** lista de endpoints, estado de conexão e métricas atuais; detalhes por computador.
+- **Computadores:** lista de endpoints, estado de conexão e métricas atuais; clicar em uma máquina abre seu detalhe individual com processos da última amostra e relatório de aplicações filtrável por hoje, 7 ou 30 dias.
 - **Atividades:** eventos de conexão, desconexão e alertas.
-- **Aplicações:** processos amostrados, com nomes amigáveis, estado observado, número de identificações e tempo aproximado acumulado entre heartbeats consecutivos (até 60 segundos por intervalo). A lista é limitada pelo agente; “não observado” não afirma que o processo terminou.
+- **Aplicações:** processos detectados e, no Windows, nome do processo em primeiro plano, duração foreground observada e mudanças de foco, separados por computador. O detalhe de cada máquina mostra totais por aplicação e distribuição diária, isolados daquele computador. A amostragem é limitada a 250 ms e ao agendamento do sistema; períodos sem entrada por 60 segundos são excluídos. Não lê conteúdo ou título de janela e não prova atenção humana. Sistemas sem watcher informam que não há medição, em vez de usar estimativas de heartbeat.
 - **Navegação web:** domínios agregados, tempo aproximado, computador e período, se a coleta estiver habilitada.
 - **Relatórios:** eventos, alertas e atividade web dentro de um período selecionado (até 30 dias na consulta).
 - **Alertas:** CPU alta, RAM alta e endpoint offline; alertas podem ser reconhecidos.
@@ -210,7 +210,7 @@ As rotas são servidas pelo backend na porta configurada em `PORT`. Rotas do pai
 | `POST` | `/api/agent/connect` | Parear um agente com um código válido |
 | `POST` | `/api/agent/heartbeat` | Receber métricas e, se autorizado, amostras web |
 | `GET` | `/api/dashboard` | Obter dados agregados do painel |
-| `GET` | `/api/machines/:id` | Consultar detalhes de um computador da conta |
+| `GET` | `/api/machines/:id?days=7` | Consultar detalhes e relatório foreground observado daquela máquina (1, 7 ou 30 dias) |
 | `GET` | `/api/reports?days=7` | Consultar relatório de 1 a 30 dias |
 | `GET` | `/api/config` | Obter IPs locais e porta do servidor |
 | `GET` | `/api/privacy/export` | Exportar registros da conta em JSON |
@@ -270,7 +270,7 @@ Para encerrar rapidamente os componentes locais, execute `ARGUS.cmd /stop`; isso
 
 ## Testes
 
-O comando `npm test` executa `scripts/smoke-test.js`. O smoke test inicia a API com um adaptador MySQL em memória e cobre cadastro e aceite dos termos, login, pareamento, downloads do `ARGUS.cmd` e do controlador, coleta de métricas e processos, identificação e agregação de aplicações, ponte de navegação, revogação, exclusão de conta e transições online/offline. Ele não grava nem altera o banco MySQL configurado para uso normal.
+O comando `npm test` executa `scripts/smoke-test.js` neste próprio computador. O smoke test inicia a API em uma porta local livre com um adaptador MySQL em memória, executa o assistente local HTTP real com credenciais de teste e inicia um agente real de teste. Cobre autenticação, termos, instalador, assistente e cancelamento, sintaxe JavaScript/PowerShell, uma amostra real do watcher Windows, métricas, processos, deltas foreground/idempotência de lote, relatório isolado entre computadores, filtros de período, alertas, ponte de navegação, consentimento, exportação/exclusão e transições online/offline. Não instala serviços, altera a inicialização do Windows nem grava no MySQL normal. A validação da persistência MySQL real continua sendo manual.
 
 Para validar a integração real com MySQL, configure o `.env`, inicie o backend e confira no log a conexão e a criação/verificação do esquema. Em seguida, crie uma conta, reinicie o backend e confirme que os dados persistiram.
 
@@ -280,6 +280,8 @@ Para validar a integração real com MySQL, configure o `.env`, inicie o backend
 .
 ├── agent/
 │   ├── agent.js                 # coleta local, heartbeat e ponte do navegador
+│   ├── foreground-watcher.ps1   # observação foreground/idle via APIs locais do Windows
+│   ├── setup.js                 # assistente web local de autenticação e pareamento
 │   ├── config.example.json      # exemplo de configuração do agente
 ├── backend/
 │   └── server.js                # API Express, Socket.IO e regras de negócio

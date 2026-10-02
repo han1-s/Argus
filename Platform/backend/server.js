@@ -37,11 +37,20 @@ function clamp(value) { const n = Number(value); return Number.isFinite(n) ? Mat
 function ownerForMachine(machineId) { const machine = db.machines.find(m => m.id === machineId); return machine && db.users.find(u => u.id === machine.userId); }
 const APP_NAMES = { chrome:'Google Chrome', msedge:'Microsoft Edge', firefox:'Mozilla Firefox', code:'Visual Studio Code', devenv:'Visual Studio', winword:'Microsoft Word', excel:'Microsoft Excel', powerpnt:'Microsoft PowerPoint', outlook:'Microsoft Outlook', teams:'Microsoft Teams', discord:'Discord', slack:'Slack', zoom:'Zoom Workplace', spotify:'Spotify', notepad:'Bloco de Notas', notepadplusplus:'Notepad++', explorer:'Explorador de Arquivos', vlc:'VLC media player', obs64:'OBS Studio', brave:'Brave', opera:'Opera', msaccess:'Microsoft Access', onedrive:'Microsoft OneDrive' };
 function friendlyAppName(processName) { const key = String(processName || '').toLowerCase().replace(/\.exe$/, ''); return APP_NAMES[key] || key.replace(/[-_]+/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) || 'Aplicação sem identificação'; }
-function updateApplicationSnapshot(machine, processes, now) {
-  const previousSeen = Date.parse(machine.lastSeen);
-  const elapsed = Number.isFinite(previousSeen) ? Math.max(0, Math.min(60, Math.floor((Date.parse(now) - previousSeen) / 1000))) : 0;
+function updateApplicationSnapshot(machine, processes, foregroundUsage, foregroundApp, foregroundBatchId, foregroundTelemetryAvailable, now) {
+  const retainAfter = Date.now() - 90 * 86400000;
   const history = Array.isArray(machine.apps) ? machine.apps : [];
-  for (const app of history) if (!app.processName) { app.processName = String(app.name || ''); app.name = friendlyAppName(app.processName); app.status = 'not_observed'; app.durationSeconds = 0; app.occurrences = 0; app.lastSeenAt = machine.lastSeen || now; app.timeType = 'estimativa por amostras do agente'; }
+  for (const app of history) {
+    if (!app.processName) { app.processName = String(app.name || ''); app.name = friendlyAppName(app.processName); app.status = 'not_observed'; app.durationSeconds = 0; app.occurrences = 0; app.lastSeenAt = machine.lastSeen || now; }
+    app.durationSeconds = 0;
+    app.occurrences = 0;
+    delete app.dailyUsage;
+    app.foregroundDailyUsage = Array.isArray(app.foregroundDailyUsage) ? app.foregroundDailyUsage.filter(day => Date.parse(`${day.date}T00:00:00Z`) >= retainAfter) : [];
+    app.foregroundDurationMilliseconds = Math.max(0, Number(app.foregroundDurationMilliseconds) || 0);
+    app.foregroundOccurrences = Math.max(0, Number(app.foregroundOccurrences) || 0);
+    app.foregroundBatchIds = Array.isArray(app.foregroundBatchIds) ? app.foregroundBatchIds.slice(-128) : [];
+    app.timeType = foregroundTelemetryAvailable ? 'tempo observado em primeiro plano pelo Windows' : 'medição foreground indisponível neste sistema';
+  }
   const active = new Map(history.filter(a => a.status === 'running').map(a => [String(a.processName || a.name).toLowerCase(), a]));
   const detected = new Set();
   for (const item of Array.isArray(processes) ? processes.slice(0, 25) : []) {
@@ -49,14 +58,40 @@ function updateApplicationSnapshot(machine, processes, now) {
     const key = processName.toLowerCase(); if (!key || detected.has(key)) continue; detected.add(key);
     let app = history.find(a => String(a.processName || a.name).toLowerCase() === key);
     const isNewSession = !active.has(key) || active.get(key).status !== 'running';
-    if (!app) { app = { processName, name: friendlyAppName(processName), durationSeconds: 0, occurrences: 0, firstSeenAt: now, lastSeenAt: now, status: 'running', cpu: 0, memory: 0, timeType: 'estimativa por amostras do agente' }; history.push(app); }
+    if (!app) { app = { processName, name: friendlyAppName(processName), durationSeconds: 0, occurrences: 0, foregroundDurationMilliseconds: 0, foregroundOccurrences: 0, foregroundDailyUsage: [], foregroundBatchIds: [], firstSeenAt: now, lastSeenAt: now, status: 'running', cpu: 0, memory: 0, timeType: foregroundTelemetryAvailable ? 'tempo observado em primeiro plano pelo Windows' : 'medição foreground indisponível neste sistema' }; history.push(app); }
     app.processName = processName; app.name = friendlyAppName(processName); app.status = 'running'; app.cpu = Number.isFinite(Number(item.cpu)) ? Number(item.cpu) : null; app.memory = Number(item.memory) || 0;
-    app.durationSeconds = Math.max(0, Number(app.durationSeconds) || 0) + (isNewSession ? 0 : elapsed);
-    app.occurrences = Math.max(0, Number(app.occurrences) || 0) + (isNewSession ? 1 : 0);
     if (isNewSession) app.firstSeenAt = now;
     app.lastSeenAt = now;
     if (isNewSession) addEvent(machine, 'application', `Aplicação identificada: ${app.name}`);
   }
+  for (const item of Array.isArray(foregroundUsage) ? foregroundUsage.slice(0, 100) : []) {
+    const processName = String(item.processName || '').replace(/\.exe$/i, '').trim().slice(0, 100);
+    const date = String(item.date || '');
+    const durationMilliseconds = Math.floor(Number(item.durationMilliseconds));
+    const occurrences = Math.floor(Number(item.occurrences));
+    const dateTimestamp = Date.parse(`${date}T00:00:00Z`);
+    if (typeof foregroundBatchId !== 'string' || !/^[\da-f-]{36}$/i.test(foregroundBatchId) || !processName || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isFinite(dateTimestamp) || new Date(dateTimestamp).toISOString().slice(0, 10) !== date || dateTimestamp < retainAfter || dateTimestamp > Date.now() + 86400000 || !Number.isFinite(durationMilliseconds) || durationMilliseconds < 0 || durationMilliseconds > 86400000 || !Number.isFinite(occurrences) || occurrences < 0 || occurrences > 1000000) continue;
+    let app = history.find(entry => String(entry.processName || entry.name).toLowerCase() === processName.toLowerCase());
+    if (!app) {
+      app = { processName, name: friendlyAppName(processName), durationSeconds: 0, occurrences: 0, foregroundDurationMilliseconds: 0, foregroundOccurrences: 0, foregroundDailyUsage: [], foregroundBatchIds: [], firstSeenAt: now, lastSeenAt: now, status: 'not_observed', cpu: null, memory: 0, timeType: foregroundTelemetryAvailable ? 'tempo observado em primeiro plano pelo Windows' : 'medição foreground indisponível neste sistema' };
+      history.push(app);
+    }
+    app.foregroundBatchIds = Array.isArray(app.foregroundBatchIds) ? app.foregroundBatchIds : [];
+    if (app.foregroundBatchIds.includes(foregroundBatchId)) continue;
+    app.foregroundBatchIds.push(foregroundBatchId);
+    app.foregroundBatchIds = app.foregroundBatchIds.slice(-128);
+    app.foregroundDurationMilliseconds += durationMilliseconds;
+    app.foregroundOccurrences += occurrences;
+    let day = app.foregroundDailyUsage.find(entry => entry.date === date);
+    if (!day) { day = { date, durationMilliseconds: 0, occurrences: 0 }; app.foregroundDailyUsage.push(day); }
+    day.durationMilliseconds += durationMilliseconds;
+    day.occurrences += occurrences;
+    app.lastSeenAt = now;
+    app.timeType = foregroundTelemetryAvailable ? 'tempo observado em primeiro plano pelo Windows' : 'medição foreground indisponível neste sistema';
+  }
+  const reportedForegroundApp = String(foregroundApp || '').replace(/\.exe$/i, '').trim().slice(0, 100);
+  machine.foregroundApp = reportedForegroundApp || null;
+  machine.foregroundObservedAt = now;
   for (const app of history) if (app.status === 'running' && !detected.has(String(app.processName || app.name).toLowerCase())) app.status = 'not_observed';
   machine.apps = history.sort((a,b) => Date.parse(b.lastSeenAt) - Date.parse(a.lastSeenAt)).slice(0, 100);
 }
@@ -64,13 +99,62 @@ function applicationSummary(machines) {
   const grouped = new Map();
   for (const machine of machines) for (const app of machine.apps || []) {
     const key = String(app.processName || app.name).toLowerCase();
-    const item = grouped.get(key) || { name: app.name, processName: app.processName, durationSeconds: 0, occurrences: 0, machineIds: new Set(), runningMachines: 0, lastSeenAt: app.lastSeenAt };
-    item.durationSeconds += Number(app.durationSeconds) || 0; item.occurrences += Number(app.occurrences) || 0; item.machineIds.add(machine.id);
-    if (machine.status === 'online' && app.status === 'running') item.runningMachines++;
+    const item = grouped.get(key) || { name: app.name, processName: app.processName, durationMilliseconds: 0, occurrences: 0, machineIds: new Set(), runningMachines: 0, lastSeenAt: app.lastSeenAt, timeType: 'tempo observado em primeiro plano pelo Windows' };
+    item.durationMilliseconds += Number(app.foregroundDurationMilliseconds) || 0; item.occurrences += Number(app.foregroundOccurrences) || 0; item.machineIds.add(machine.id);
+    if (machine.status === 'online' && machine.foregroundApp && String(machine.foregroundApp).toLowerCase() === key) item.runningMachines++;
     if (Date.parse(app.lastSeenAt) > Date.parse(item.lastSeenAt)) item.lastSeenAt = app.lastSeenAt;
     grouped.set(key, item);
   }
-  return [...grouped.values()].map(({machineIds,...a}) => ({...a, machineCount:machineIds.size})).sort((a,b) => b.durationSeconds-a.durationSeconds).slice(0,50);
+  return [...grouped.values()].map(({machineIds,...a}) => ({...a, durationSeconds: Math.floor(a.durationMilliseconds / 1000), machineCount:machineIds.size})).sort((a,b) => b.durationMilliseconds-a.durationMilliseconds).slice(0,50);
+}
+function machineApplicationReport(machine, days) {
+  const today = new Date(); today.setUTCHours(0, 0, 0, 0);
+  const firstDay = new Date(today.getTime() - (days - 1) * 86400000);
+  const firstDate = firstDay.toISOString().slice(0, 10);
+  const dayTotals = Array.from({ length: days }, (_, index) => ({
+    date: new Date(firstDay.getTime() + index * 86400000).toISOString().slice(0, 10),
+    durationMilliseconds: 0,
+    durationSeconds: 0,
+    occurrences: 0
+  }));
+  const daysByDate = new Map(dayTotals.map(day => [day.date, day]));
+  const applications = (machine.apps || []).map(app => {
+    const usage = (Array.isArray(app.foregroundDailyUsage) ? app.foregroundDailyUsage : []).filter(day => day.date >= firstDate);
+    const durationMilliseconds = usage.reduce((total, day) => total + (Number(day.durationMilliseconds) || 0), 0);
+    const occurrences = usage.reduce((total, day) => total + (Number(day.occurrences) || 0), 0);
+    for (const day of usage) {
+      const total = daysByDate.get(day.date);
+      if (total) { total.durationMilliseconds += Number(day.durationMilliseconds) || 0; total.occurrences += Number(day.occurrences) || 0; }
+    }
+    return {
+      name: app.name,
+      processName: app.processName || app.name,
+      durationMilliseconds,
+      durationSeconds: Math.floor(durationMilliseconds / 1000),
+      occurrences,
+      status: machine.foregroundApp && String(machine.foregroundApp).toLowerCase() === String(app.processName || app.name).toLowerCase() ? 'foreground' : 'not_foreground',
+      cpu: app.cpu,
+      memory: app.memory,
+      firstSeenAt: app.firstSeenAt,
+      lastSeenAt: app.lastSeenAt,
+      timeType: app.timeType || 'medição foreground indisponível neste sistema'
+    };
+  }).filter(app => app.durationMilliseconds > 0 || app.occurrences > 0 || app.status === 'foreground');
+  applications.sort((a, b) => b.durationMilliseconds - a.durationMilliseconds || a.name.localeCompare(b.name));
+  return {
+    days,
+    from: firstDate,
+    through: today.toISOString().slice(0, 10),
+    totalMilliseconds: applications.reduce((total, app) => total + app.durationMilliseconds, 0),
+    totalSeconds: Math.floor(applications.reduce((total, app) => total + app.durationMilliseconds, 0) / 1000),
+    totalOccurrences: applications.reduce((total, app) => total + app.occurrences, 0),
+    runningCount: applications.filter(app => machine.status === 'online' && app.status === 'foreground').length,
+    measurementSupported: machine.foregroundTelemetryAvailable === true,
+    hasMeasuredData: applications.some(app => app.durationMilliseconds > 0 || app.occurrences > 0),
+    timeType: 'tempo observado em primeiro plano pelo Windows; resolução de amostragem de 250 ms',
+    applications,
+    daily: dayTotals.map(day => ({ ...day, durationSeconds: Math.floor(day.durationMilliseconds / 1000) }))
+  };
 }
 function webSummary(userId, days = 30) {
   const machines = new Map(db.machines.filter(m => m.userId === userId).map(m => [m.id, m.name]));
@@ -98,11 +182,13 @@ async function save() { await mysqlStore.save(db); }
 app.use(express.json({ limit: '256kb' }));
 app.use(express.static(require('path').join(__dirname, '..', 'frontend')));
 app.get('/downloads/argus-agent.js', (req,res) => res.sendFile(require('path').join(__dirname, '..', 'agent', 'agent.js')));
+app.get('/downloads/argus-setup.js', (req,res) => res.sendFile(require('path').join(__dirname, '..', 'agent', 'setup.js')));
+app.get('/downloads/argus-foreground-watcher.ps1', (req,res) => res.download(require('path').join(__dirname, '..', 'agent', 'foreground-watcher.ps1'), 'argus-foreground-watcher.ps1'));
 app.get('/downloads/argus-control.ps1', (req,res) => res.download(require('path').join(__dirname, '..', 'scripts', 'argus-control.ps1'), 'argus-control.ps1'));
 function agentCommandDownload(req, res) {
   const host = String(req.query.server || '').trim(); const code = String(req.query.code || '').trim().toUpperCase();
-  if (!/^https?:\/\/(?:[a-zA-Z0-9.-]+|\[[a-fA-F0-9:]+\])(?::[0-9]{1,5})?$/.test(host) || !/^ARG-[A-F0-9]{4}-[A-F0-9]{4}$/.test(code)) return res.status(400).send('Endereço do servidor ou código temporário inválido. Gere um novo pareamento no painel.');
-  const content = `@echo off\r\nsetlocal\r\ncd /d "%~dp0"\r\nset "ARGUS_SERVER_URL=${host}"\r\nset "ARGUS_PAIR_CODE=${code}"\r\nset "ARGUS_AGENT_ONLY=1"\r\nset "ARGUS_HELPER_PATH=%~dp0argus-control.ps1"\r\nif not exist "%ARGUS_HELPER_PATH%" (\r\n  echo Baixando componentes de suporte do ARGUS...\r\n  powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "Invoke-WebRequest -Uri ($env:ARGUS_SERVER_URL + '/downloads/argus-control.ps1') -OutFile $env:ARGUS_HELPER_PATH"\r\n  if errorlevel 1 (echo Nao foi possivel baixar o suporte. Confira a rede e tente novamente.& pause & exit /b 1)\r\n)\r\npowershell.exe -NoProfile -ExecutionPolicy Bypass -File "%ARGUS_HELPER_PATH%"\r\n`;
+  if (!/^https?:\/\/(?:[a-zA-Z0-9.-]+|\[[a-fA-F0-9:]+\])(?::[0-9]{1,5})?$/.test(host) || code) return res.status(400).send('Endereço do servidor inválido. Baixe um instalador ARGUS válido.');
+  const content = `@echo off\r\nsetlocal\r\ncd /d "%~dp0"\r\nset "ARGUS_SERVER_URL=${host}"\r\nset "ARGUS_AGENT_ONLY=1"\r\nset "ARGUS_INSTALL_ONLY=1"\r\nset "ARGUS_HELPER_PATH=%~dp0argus-control.ps1"\r\nif not exist "%ARGUS_HELPER_PATH%" (\r\n  echo Baixando componentes de suporte do ARGUS...\r\n  powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "Invoke-WebRequest -Uri ($env:ARGUS_SERVER_URL + '/downloads/argus-control.ps1') -OutFile $env:ARGUS_HELPER_PATH"\r\n  if errorlevel 1 (echo Nao foi possivel baixar o suporte. Confira a rede e tente novamente.& pause & exit /b 1)\r\n)\r\npowershell.exe -NoProfile -ExecutionPolicy Bypass -File "%ARGUS_HELPER_PATH%"\r\n`;
   res.setHeader('Content-Type', 'application/octet-stream'); res.setHeader('Content-Disposition', 'attachment; filename="ARGUS.cmd"'); res.send(content);
 }
 app.get('/downloads/ARGUS.cmd', agentCommandDownload);
@@ -163,7 +249,7 @@ app.post('/api/agent/heartbeat', async (req, res, next) => {
     machine.name = String(body.name || machine.name).slice(0,80); machine.userName = String(body.userName || 'Não informado').slice(0,100);
     machine.os = String(body.os || 'Sistema desconhecido').slice(0,120); machine.arch = String(body.arch || '').slice(0,30); machine.uptime = Number(body.uptime) || 0;
     machine.metrics = { cpu: clamp(body.metrics?.cpu), ram: clamp(body.metrics?.ram), disk: clamp(body.metrics?.disk), memoryUsed: Number(body.metrics?.memoryUsed) || 0, memoryTotal: Number(body.metrics?.memoryTotal) || 0 };
-    const heartbeatAt = new Date().toISOString(); updateApplicationSnapshot(machine, body.apps, heartbeatAt); machine.lastSeen = heartbeatAt; machine.status = 'online';
+    const heartbeatAt = new Date().toISOString(); machine.foregroundTelemetryAvailable = body.foregroundTelemetryAvailable === true; updateApplicationSnapshot(machine, body.apps, body.foregroundUsage, body.foregroundApp, body.foregroundBatchId, machine.foregroundTelemetryAvailable, heartbeatAt); machine.lastSeen = heartbeatAt; machine.status = 'online';
     if (previousStatus !== 'online') addEvent(machine,'connected','Computador voltou a ficar online');
     if ((machine.metrics.cpu >= 85 || machine.metrics.ram >= 90) && !db.alerts.some(a => a.machineId === machine.id && a.open && a.kind === (machine.metrics.cpu >= 85 ? 'cpu' : 'ram'))) {
       const kind = machine.metrics.cpu >= 85 ? 'cpu' : 'ram'; const alert = { id:id(),machineId:machine.id,machineName:machine.name,kind,message:kind === 'cpu' ? 'CPU acima de 85%' : 'RAM acima de 90%',at:machine.lastSeen,open:true }; db.alerts.unshift(alert); addEvent(machine,'alert',alert.message);
@@ -187,7 +273,9 @@ app.get('/api/dashboard', auth, (req,res) => {
 });
 app.get('/api/machines/:id', auth, (req,res) => {
   const machine = db.machines.find(m => m.id === req.params.id && m.userId === req.user.id); if (!machine) return res.status(404).json({error:'Computador não encontrado.'});
-  res.json({ machine:publicMachine(machine),events:db.events.filter(e=>e.machineId===machine.id).slice(0,100),webActivity:webSummary(req.user.id).filter(w=>w.machineId===machine.id) });
+  const requestedDays = Number(req.query.days);
+  const days = [1, 7, 30].includes(requestedDays) ? requestedDays : 7;
+  res.json({ machine:publicMachine(machine),events:db.events.filter(e=>e.machineId===machine.id).slice(0,100),webActivity:webSummary(req.user.id).filter(w=>w.machineId===machine.id),applicationReport:machineApplicationReport(machine,days) });
 });
 app.get('/api/reports', auth, (req,res) => {
   const days = Math.min(30,Math.max(1,Number(req.query.days)||7)); const since=Date.now()-days*86400000; const machines=db.machines.filter(m=>m.userId===req.user.id); const ids=new Set(machines.map(m=>m.id));

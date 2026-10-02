@@ -43,7 +43,7 @@ npm run preview
 
 ### Protótipo — `Platform/`
 
-Aplicação Node.js com Express e Socket.IO. Inclui painel HTML/CSS/JavaScript, API, persistência MySQL, agente Node.js e extensão de navegador opcional. O agente envia nome e usuário do computador, sistema operacional, tempo ligado, métricas de CPU/RAM/disco e uma lista limitada de processos. A extensão, se habilitada separadamente, envia domínio e duração aproximada da aba ativa, não a URL completa.
+Aplicação Node.js com Express e Socket.IO. Inclui painel HTML/CSS/JavaScript, API, persistência MySQL, agente Node.js e extensão de navegador opcional. O agente envia nome e usuário do computador, sistema operacional, tempo ligado, métricas de CPU/RAM/disco e processos. No Windows, mede localmente a aplicação em primeiro plano enquanto há entrada do usuário e apresenta esse tempo por computador; não captura conteúdo nem teclas e não exige modo desenvolvedor. A extensão, se habilitada separadamente, envia domínio e duração aproximada da aba ativa, não a URL completa.
 
 Requisitos: Node.js 18 ou superior, MySQL 8 ou superior e conectividade de rede local. Configure `Platform/.env` com base em `.env.example`, criando um usuário MySQL próprio para o ARGUS. Não exponha a porta do MySQL aos computadores monitorados.
 
@@ -53,16 +53,16 @@ npm install
 npm start
 ```
 
-Abra `http://localhost:3000` no computador servidor. Para registrar um computador, gere um código temporário de pareamento no painel e configure o agente conforme `Platform/README.md`. O atalho `Platform/ARGUS.cmd` também auxilia a execução no Windows. Para executar o agente diretamente, crie `Platform/agent/config.json` a partir de `config.example.json` e rode `npm run agent`.
+Abra `http://localhost:3000` no computador servidor. Para conectar um computador autorizado, baixe `ARGUS.cmd` em **Adicionar computador** e execute no endpoint. O instalador prepara o agente e abre um assistente local; nele, informe o nome do PC, o endereço LAN do servidor e autentique sua conta ARGUS. O assistente cria e usa o código temporário sem gravar a senha. O menu `Platform/ARGUS.cmd` também auxilia a execução do servidor e o gerenciamento local do agente. Este fluxo pertence exclusivamente à `Platform`; não integra autenticação ou dados com o site `Web`. Para executar o agente manualmente, crie `Platform/agent/config.json` a partir de `config.example.json` e rode `npm run agent`.
 
-O protótipo possui um teste de integração HTTP/agente que substitui o MySQL por armazenamento em memória:
+O protótipo possui um teste de integração que executa API, assistente local e agente usando armazenamento em memória:
 
 ```powershell
 cd Platform
 npm test
 ```
 
-O teste não verifica uma instalação MySQL real. O fluxo manual com MySQL e navegador deve ser validado no ambiente onde o servidor será usado.
+O teste não instala serviços no Windows nem verifica uma instalação MySQL real. O fluxo manual com MySQL e navegador deve ser validado no ambiente onde o servidor será usado.
 
 ## Privacidade e escopo
 

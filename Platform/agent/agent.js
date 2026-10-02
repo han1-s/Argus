@@ -1,7 +1,7 @@
 const os = require('os');
 const fs = require('fs');
 const path = require('path');
-const { execFile } = require('child_process');
+const { execFile, spawn } = require('child_process');
 const http = require('http');
 const configPath = path.join(__dirname, 'config.json');
 if (!fs.existsSync(configPath)) {
@@ -11,7 +11,7 @@ if (!fs.existsSync(configPath)) {
 const config = JSON.parse(fs.readFileSync(configPath, 'utf8').replace(/^\uFEFF/, ''));
 const serverUrl = String(config.serverUrl || '').replace(/\/$/, '');
 if (!/^https?:\/\//.test(serverUrl)) { console.error('serverUrl deve começar com http:// ou https://'); process.exit(1); }
-const interval = Math.max(5, Number(config.heartbeatSeconds) || 10) * 1000;
+const interval = Math.max(5, Number(config.heartbeatSeconds) || 5) * 1000;
 let token = config.deviceToken || '';
 let bridgeKey = config.bridgeKey || require('crypto').randomBytes(32).toString('hex');
 let webEnabled = false;
@@ -20,6 +20,12 @@ let previousCpu = cpuSnapshot();
 const windowsProcessTimes = new Map();
 let windowsProcessSampleAt = Date.now();
 let busy = false;
+const foregroundUsage = new Map();
+let foregroundState = null;
+let foregroundSampleAt = null;
+let foregroundWatcher;
+let foregroundTelemetryAvailable = false;
+let pendingForegroundBatch = null;
 
 function cpuSnapshot() {
   const cpus = os.cpus();
@@ -32,6 +38,68 @@ function cpuUsage() {
   const total = now.total - previousCpu.total, idle = now.idle - previousCpu.idle;
   previousCpu = now;
   return total > 0 ? Math.round((1 - idle / total) * 100) : 0;
+}
+function recordForegroundSample(line) {
+  const sampledAt = Date.now();
+  if (foregroundSampleAt !== null && foregroundState?.processName) {
+    const durationMilliseconds = Math.max(0, Math.min(1000, sampledAt - foregroundSampleAt));
+    if (durationMilliseconds) {
+      const key = foregroundState.processName.toLowerCase();
+      const date = new Date(foregroundSampleAt).toISOString().slice(0, 10);
+      const usageKey = `${key}:${date}`;
+      const entry = foregroundUsage.get(usageKey) || { processName: foregroundState.processName, date, durationMilliseconds: 0, occurrences: 0 };
+      entry.durationMilliseconds += durationMilliseconds;
+      foregroundUsage.set(usageKey, entry);
+    }
+  }
+  const fields = line.split('\t');
+  const processName = fields[0] === 'FOCUS' ? String(fields.slice(2).join('\t')).trim().replace(/\.exe$/i, '').slice(0, 100) : '';
+  const nextKey = processName.toLowerCase();
+  const previousKey = foregroundState?.processName?.toLowerCase() || '';
+  if (nextKey && nextKey !== previousKey) {
+    const date = new Date(sampledAt).toISOString().slice(0, 10);
+    const usageKey = `${nextKey}:${date}`;
+    const entry = foregroundUsage.get(usageKey) || { processName, date, durationMilliseconds: 0, occurrences: 0 };
+    entry.occurrences += 1;
+    foregroundUsage.set(usageKey, entry);
+  }
+  foregroundState = processName ? { processName } : null;
+  foregroundSampleAt = sampledAt;
+}
+function startForegroundWatcher() {
+  if (process.platform !== 'win32') return;
+  const watcherPath = path.join(__dirname, 'foreground-watcher.ps1');
+  if (!fs.existsSync(watcherPath)) { console.error('Medição foreground indisponível: foreground-watcher.ps1 não foi instalado.'); return; }
+  foregroundWatcher = spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', watcherPath, '-IntervalMilliseconds', '250', '-IdleTimeoutSeconds', '60'], { windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
+  let pending = '';
+  foregroundWatcher.stdout.setEncoding('utf8');
+  foregroundWatcher.stdout.on('data', chunk => {
+    pending += chunk;
+    const lines = pending.split(/\r?\n/);
+    pending = lines.pop() || '';
+    for (const line of lines) if (line === 'IDLE' || line.startsWith('FOCUS\t')) recordForegroundSample(line);
+  });
+  foregroundWatcher.stderr.on('data', chunk => console.error(`Watcher de aplicações: ${String(chunk).trim()}`));
+  foregroundWatcher.on('spawn', () => { foregroundTelemetryAvailable = true; });
+  foregroundWatcher.on('error', error => { foregroundTelemetryAvailable = false; console.error(`Não foi possível iniciar o watcher foreground: ${error.message}`); });
+  foregroundWatcher.on('exit', code => {
+    foregroundTelemetryAvailable = false; foregroundState = null; foregroundSampleAt = null;
+    if (code !== 0) console.error(`Watcher foreground encerrou (código ${code}).`);
+  });
+}
+function foregroundUsageSnapshot() {
+  if (pendingForegroundBatch) return pendingForegroundBatch.items.map(item => ({ ...item }));
+  return [...foregroundUsage.values()].filter(item => item.durationMilliseconds > 0 || item.occurrences > 0).slice(0, 100).map(item => ({ ...item }));
+}
+function acknowledgeForegroundUsage(sent) {
+  for (const item of sent) {
+    const key = `${item.processName.toLowerCase()}:${item.date}`;
+    const current = foregroundUsage.get(key);
+    if (!current) continue;
+    current.durationMilliseconds = Math.max(0, current.durationMilliseconds - item.durationMilliseconds);
+    current.occurrences = Math.max(0, current.occurrences - item.occurrences);
+    if (!current.durationMilliseconds && !current.occurrences) foregroundUsage.delete(key);
+  }
 }
 function activeProcesses() {
   return new Promise(resolve => {
@@ -110,7 +178,7 @@ async function request(route, data, bearer) {
   return result;
 }
 async function enroll() {
-  const result = await request('/api/agent/connect', { code: config.connectionCode, name: os.hostname() });
+  const result = await request('/api/agent/connect', { code: config.connectionCode, name: config.deviceName || os.hostname() });
   token = result.token; config.deviceToken = token; delete config.connectionCode;
   config.bridgeKey = bridgeKey; config.bridgePort = Number(config.bridgePort) || 43172;
   fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
@@ -121,7 +189,15 @@ async function heartbeat() {
   try {
     const total = os.totalmem(), free = os.freemem();
     const apps = await activeProcesses();
-    const result = await request('/api/agent/heartbeat', { name: os.hostname(), userName: os.userInfo().username, os: `${os.type()} ${os.release()}`, arch: os.arch(), uptime: os.uptime(), metrics: { cpu: cpuUsage(), ram: Math.round((1 - free / total) * 100), disk: await diskUsage(), memoryUsed: total - free, memoryTotal: total }, apps, navigation: webEnabled ? navigationQueue.slice(0, 40) : [] }, token);
+    let reportedForegroundUsage = foregroundTelemetryAvailable ? foregroundUsageSnapshot() : [];
+    if (reportedForegroundUsage.length && !pendingForegroundBatch) {
+      pendingForegroundBatch = { id: require('crypto').randomUUID(), items: reportedForegroundUsage.map(item => ({ ...item })) };
+      reportedForegroundUsage = pendingForegroundBatch.items.map(item => ({ ...item }));
+    }
+    const batchId = pendingForegroundBatch?.id || null;
+    const result = await request('/api/agent/heartbeat', { name: config.deviceName || os.hostname(), userName: os.userInfo().username, os: `${os.type()} ${os.release()}`, arch: os.arch(), uptime: os.uptime(), metrics: { cpu: cpuUsage(), ram: Math.round((1 - free / total) * 100), disk: await diskUsage(), memoryUsed: total - free, memoryTotal: total }, apps, foregroundTelemetryAvailable, foregroundApp: foregroundTelemetryAvailable ? foregroundState?.processName || null : null, foregroundBatchId: batchId, foregroundUsage: reportedForegroundUsage, navigation: webEnabled ? navigationQueue.slice(0, 40) : [] }, token);
+    acknowledgeForegroundUsage(reportedForegroundUsage);
+    if (batchId === pendingForegroundBatch?.id) pendingForegroundBatch = null;
     webEnabled = result.webCollection === true;
     if (webEnabled) navigationQueue.splice(0, Math.min(40, navigationQueue.length));
   } catch (error) { console.error(`Falha ao enviar heartbeat: ${error.message}`); }
@@ -130,9 +206,10 @@ async function heartbeat() {
 async function start() {
   if (!token) await enroll();
   if (!config.bridgeKey) { config.bridgeKey = bridgeKey; config.bridgePort = Number(config.bridgePort) || 43172; fs.writeFileSync(configPath, JSON.stringify(config, null, 2)); }
-  bridgeKey = config.bridgeKey; startBrowserBridge();
+  bridgeKey = config.bridgeKey; startBrowserBridge(); startForegroundWatcher();
   console.log(`Ponte local da extensão: http://127.0.0.1:${Number(config.bridgePort) || 43172} — chave em config.json`);
   await heartbeat(); setInterval(heartbeat, interval);
 }
 start().catch(error => { console.error(`Não foi possível conectar: ${error.message}`); process.exitCode = 1; });
-process.on('SIGINT', () => { console.log('\nAgente encerrado.'); process.exit(0); });
+process.on('SIGINT', () => { console.log('\nAgente encerrado.'); if (foregroundWatcher && !foregroundWatcher.killed) foregroundWatcher.kill(); process.exit(0); });
+process.on('exit', () => { if (foregroundWatcher && !foregroundWatcher.killed) foregroundWatcher.kill(); });

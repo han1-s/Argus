@@ -7,3 +7,8 @@ node_modules/
 **/database/data.json.tmp
 Platform/.tmp-mysql-test*/
 *.log
+**/coverage/
+**/test-results/
+**/playwright-report/
+Platform/.test-artifacts/
+*.test-output

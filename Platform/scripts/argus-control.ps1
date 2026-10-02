@@ -1,4 +1,4 @@
-﻿param([switch]$StopAll, [string]$ServerUrl = $env:ARGUS_SERVER_URL, [string]$PairingCode = $env:ARGUS_PAIR_CODE)
+﻿param([switch]$StopAll, [string]$ServerUrl = $env:ARGUS_SERVER_URL)
 $ErrorActionPreference = 'Stop'
 $ParentRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $ProjectRoot = if (Test-Path (Join-Path $ParentRoot 'backend\server.js')) { $ParentRoot } else { $PSScriptRoot }
@@ -16,8 +16,8 @@ function Show-MoreInfo {
   if ($AgentOnly) {
     Write-Host 'SAIBA MAIS - CONTROLE DO AGENTE' -ForegroundColor Magenta
     Write-Host ''
-    Write-Host '1 - Instalar/conectar: baixa o agente, grava o servidor e o codigo temporario, pareia este computador e inicia o agente.'
-    Write-Host '    O codigo e de uso unico e expira; gere outro no painel se estiver vencido.'
+    Write-Host '1 - Instalar/configurar: baixa o agente e abre o assistente local no navegador.'
+    Write-Host '    No assistente, informe o servidor LAN, nome do PC e autentique sua conta ARGUS.'
     Write-Host '2 - Iniciar: inicia o agente ja configurado e habilita seu inicio ao entrar no Windows.'
     Write-Host '3 - Parar: encerra o agente deste computador e remove o inicio automatico.'
     Write-Host '4 - Sair: fecha este menu sem alterar o agente.'
@@ -27,7 +27,7 @@ function Show-MoreInfo {
     Write-Host '1 - Preparar servidor: instala Node.js se faltar, baixa dependencias e cria/abre .env para configurar o MySQL.'
     Write-Host '    Inicie o MySQL antes de continuar. Esta opcao nao inicia o painel.'
     Write-Host '2 - Iniciar servidor: executa a API em segundo plano e abre o painel no navegador.'
-    Write-Host '3 - Instalar/conectar agente: pareia este computador usando o codigo temporario do painel e inicia o agente.'
+    Write-Host '3 - Instalar/configurar agente: abre o assistente local para informar servidor, nome e conta ARGUS.'
     Write-Host '4 - Iniciar agente: inicia o agente ja configurado neste computador.'
     Write-Host '5 - Parar locais: encerra o servidor e o agente deste computador e remove a inicializacao automatica do agente.'
     Write-Host '    Agentes em outros computadores devem ser parados em cada endpoint.'
@@ -52,6 +52,10 @@ function Get-AgentProcesses {
   if (Get-Command Get-NetTCPConnection -ErrorAction SilentlyContinue) { $listenerIds = @(Get-NetTCPConnection -LocalPort $agentPort -State Listen -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique) }
   $projectAgent = Join-Path $ProjectRoot 'agent\agent.js'
   return @(Get-CimInstance Win32_Process -Filter "Name = 'node.exe'" | Where-Object { $_.CommandLine -and ($_.CommandLine.Contains($AgentScript) -or $_.CommandLine.Contains($projectAgent) -or ($_.CommandLine -match 'agent\.js' -and $listenerIds -contains $_.ProcessId)) })
+}
+function Get-ForegroundWatcherProcesses {
+  $watcherScript = Join-Path $AgentDir 'foreground-watcher.ps1'
+  return @(Get-CimInstance Win32_Process | Where-Object { $_.Name -in @('powershell.exe','pwsh.exe') -and $_.CommandLine -and $_.CommandLine.Contains($watcherScript) })
 }
 function Install-Node {
   if (Find-Node) { return $true }
@@ -80,23 +84,41 @@ function Prepare-Server {
   Write-Host 'Confira também se o serviço MySQL está iniciado.'
 }
 function Install-Agent {
-  param([string]$RequestedServerUrl, [string]$RequestedPairingCode)
+  param([string]$RequestedServerUrl)
   if (-not $RequestedServerUrl) { $RequestedServerUrl = $ServerUrl }
-  if (-not $RequestedPairingCode) { $RequestedPairingCode = $PairingCode }
-  if (-not $RequestedServerUrl) { $RequestedServerUrl = Read-Host 'Endereço do servidor ARGUS (ex.: http://192.168.0.10:3000)' }
+  if (-not $RequestedServerUrl) { $RequestedServerUrl = Read-Host 'Endereço do painel ARGUS para baixar os componentes (ex.: http://192.168.0.10:3000)' }
   try { $serverUri = [Uri]$RequestedServerUrl.Trim().TrimEnd('/') } catch { throw 'Endereço do servidor inválido.' }
   if ($serverUri.Scheme -notin @('http','https') -or -not $serverUri.IsAbsoluteUri) { throw 'Use um endereço começando com http:// ou https://.' }
   $RequestedServerUrl = $serverUri.GetLeftPart([UriPartial]::Authority)
-  if (-not $RequestedPairingCode) { $RequestedPairingCode = Read-Host 'Código temporário mostrado em Adicionar computador' }
-  $RequestedPairingCode = $RequestedPairingCode.Trim().ToUpper()
-  if ($RequestedPairingCode -notmatch '^ARG-[A-F0-9]{4}-[A-F0-9]{4}$') { throw 'Código de pareamento inválido ou expirado.' }
   if (-not (Install-Node)) { return $false }
   New-Item -ItemType Directory -Force -Path $AgentDir | Out-Null
-  Write-Host 'Baixando o agente do servidor ARGUS...'
+  Write-Host 'Baixando o agente e o assistente local do ARGUS...'
   Invoke-WebRequest -Uri "$RequestedServerUrl/downloads/argus-agent.js" -OutFile (Join-Path $AgentDir 'agent.js')
-  $agentConfig = [ordered]@{ serverUrl = $RequestedServerUrl; connectionCode = $RequestedPairingCode; heartbeatSeconds = 10; bridgePort = 43172 }
-  $agentConfig | ConvertTo-Json | Set-Content -Encoding utf8 (Join-Path $AgentDir 'config.json')
-  Write-Host "Agente configurado em $AgentDir." -ForegroundColor Green
+  Invoke-WebRequest -Uri "$RequestedServerUrl/downloads/argus-setup.js" -OutFile (Join-Path $AgentDir 'setup.js')
+  Invoke-WebRequest -Uri "$RequestedServerUrl/downloads/argus-foreground-watcher.ps1" -OutFile (Join-Path $AgentDir 'foreground-watcher.ps1')
+  Remove-Item (Join-Path $AgentDir 'setup-complete') -Force -ErrorAction SilentlyContinue
+  $logDir = Join-Path $env:LOCALAPPDATA 'ARGUS\Logs'
+  New-Item -ItemType Directory -Force -Path $logDir | Out-Null
+  $setupScript = Join-Path $AgentDir 'setup.js'
+  $setupProcess = Start-Process -FilePath (Find-Node) -ArgumentList "`"$setupScript`"" -WorkingDirectory $AgentDir -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $logDir 'setup.out.log') -RedirectStandardError (Join-Path $logDir 'setup.err.log')
+  Start-Sleep -Milliseconds 500
+  $setupProcess.Refresh()
+  if ($setupProcess.HasExited) { throw 'O assistente local não iniciou. Confira %LOCALAPPDATA%\ARGUS\Logs\setup.err.log.' }
+  $setupAddress = 'http://127.0.0.1:43173'
+  Write-Host 'Abrindo o assistente ARGUS no navegador. Informe nome, servidor LAN e conta para concluir a conexão.' -ForegroundColor Green
+  Start-Process $setupAddress
+  $completionFile = Join-Path $AgentDir 'setup-complete'
+  $setupTimeout = [Diagnostics.Stopwatch]::StartNew()
+  while (-not (Test-Path $completionFile)) {
+    $setupProcess.Refresh()
+    if ($setupProcess.HasExited) { Write-Host 'O assistente foi fechado antes de concluir a configuração.' -ForegroundColor Yellow; return $false }
+    if ($setupTimeout.Elapsed.TotalMinutes -ge 15) {
+      Stop-Process -Id $setupProcess.Id -Force -ErrorAction SilentlyContinue
+      throw 'Tempo limite do assistente excedido. Execute novamente o ARGUS.cmd para continuar.'
+    }
+    Start-Sleep -Seconds 1
+  }
+  Remove-Item $completionFile -Force -ErrorAction SilentlyContinue
   return $true
 }
 function Start-Server {
@@ -150,13 +172,24 @@ function Start-Agent {
 function Stop-Agent {
   $targets = @(Get-AgentProcesses)
   foreach ($target in $targets) { Stop-Process -Id $target.ProcessId -Force -ErrorAction SilentlyContinue }
+  $watchers = @(Get-ForegroundWatcherProcesses)
+  foreach ($watcher in $watchers) { Stop-Process -Id $watcher.ProcessId -Force -ErrorAction SilentlyContinue }
   Remove-Item $AgentStartup -Force -ErrorAction SilentlyContinue
-  if ($targets.Count) { Write-Host 'Agente ARGUS deste computador parado; inicialização automática removida.' -ForegroundColor Green } else { Write-Host 'Agente ARGUS não estava em execução; inicialização automática removida.' }
+  if ($targets.Count -or $watchers.Count) { Write-Host 'Agente ARGUS e watcher foreground deste computador parados; inicialização automática removida.' -ForegroundColor Green } else { Write-Host 'Agente ARGUS não estava em execução; inicialização automática removida.' }
 }
 
 if ($StopAll) { Stop-Server; Stop-Agent; exit 0 }
 
-if ($env:ARGUS_AGENT_ONLY -eq '1') {
+if ($env:ARGUS_AGENT_ONLY -eq '1' -and $env:ARGUS_INSTALL_ONLY -eq '1') {
+  Clear-Host
+  Write-Host 'ARGUS — Instalar e configurar este computador' -ForegroundColor Magenta
+  Write-Host ''
+  Write-Host "Computador: $env:COMPUTERNAME"
+  Write-Host 'O assistente no navegador solicitará o nome, o endereço LAN do servidor e a autenticação ARGUS.' -ForegroundColor Yellow
+  try { if (Install-Agent) { Stop-Agent; Start-Agent } }
+  catch { Write-Host "Falha: $($_.Exception.Message)" -ForegroundColor Red; exit 1 }
+  exit 0
+} elseif ($env:ARGUS_AGENT_ONLY -eq '1') {
   do {
     Clear-Host
     Write-Host 'ARGUS — Controle do agente' -ForegroundColor Magenta
@@ -170,7 +203,7 @@ if ($env:ARGUS_AGENT_ONLY -eq '1') {
     $choice = Read-Host 'Escolha uma opção'
     try {
       switch ($choice) {
-        '1' { Stop-Agent; if (Install-Agent) { Start-Agent }; Pause-Menu }
+        '1' { if (Install-Agent) { Stop-Agent; Start-Agent }; Pause-Menu }
         '2' { Start-Agent; Pause-Menu }
         '3' { Stop-Agent; Pause-Menu }
         '4' { break }
@@ -197,7 +230,7 @@ if ($env:ARGUS_AGENT_ONLY -eq '1') {
       switch ($choice) {
         '1' { Prepare-Server; Pause-Menu }
         '2' { Start-Server; Pause-Menu }
-        '3' { Stop-Agent; if (Install-Agent) { Start-Agent }; Pause-Menu }
+        '3' { if (Install-Agent) { Stop-Agent; Start-Agent }; Pause-Menu }
         '4' { Start-Agent; Pause-Menu }
         '5' { Stop-Server; Stop-Agent; Pause-Menu }
         '6' { break }

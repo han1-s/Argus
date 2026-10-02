@@ -6,7 +6,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const net = require('node:net');
-const { spawn } = require('node:child_process');
+const { spawn, execFileSync } = require('node:child_process');
 const Module = require('node:module');
 
 const db = { users: [], machines: [], pairings: [], events: [], alerts: [], webActivity: [], termAcceptances: [], sessions: [] };
@@ -22,6 +22,9 @@ const store = {
   prune: async () => {}, close: async () => {}
 };
 const backendPath = path.resolve(__dirname, '..', 'backend', 'server.js');
+for (const relativePath of ['backend/server.js','agent/agent.js','agent/setup.js','frontend/app.js','browser-extension/background.js','browser-extension/popup.js']) {
+  execFileSync(process.execPath, ['--check',path.resolve(__dirname,'..',relativePath)], { stdio:'pipe' });
+}
 const originalLoad = Module._load;
 Module._load = function(request, parent, isMain) {
   if (parent?.filename === backendPath && request === '../database/mysql') return store;
@@ -44,65 +47,139 @@ function launchAgent(folder) {
   child.stdout.on('data', chunk => process.stdout.write(`[agent] ${chunk}`)); child.stderr.on('data', chunk => process.stderr.write(`[agent] ${chunk}`));
   return child;
 }
+function launchSetup(folder, port) {
+  const child = spawn(process.execPath, ['setup.js'], { cwd: folder, env:{...process.env,ARGUS_SETUP_PORT:String(port),COMPUTERNAME:'ARGUS-SMOKE-PC'}, windowsHide: true, stdio: ['ignore','pipe','pipe'] });
+  child.stdout.on('data', chunk => process.stdout.write(`[setup] ${chunk}`)); child.stderr.on('data', chunk => process.stderr.write(`[setup] ${chunk}`));
+  return child;
+}
 async function stopAgent(child) {
   if (!child || child.exitCode !== null) return;
   child.kill('SIGINT'); await Promise.race([new Promise(resolve => child.once('exit', resolve)), delay(3000)]);
   if (child.exitCode === null) child.kill('SIGKILL');
 }
+async function stopSetup(child) {
+  if (!child || child.exitCode !== null) return;
+  child.kill('SIGTERM'); await Promise.race([new Promise(resolve => child.once('exit', resolve)), delay(1500)]);
+  if (child.exitCode === null) child.kill('SIGKILL');
+}
 
 (async () => {
-  let agent; let agentDir;
+  let agent; let setup; let agentDir;
   try {
     process.env.PORT = String(await availablePort()); process.env.HOST = '127.0.0.1';
     process.env.OFFLINE_TIMEOUT_MS = '4000'; process.env.OFFLINE_CHECK_INTERVAL_MS = '250';
     const base = `http://127.0.0.1:${process.env.PORT}`;
     require(backendPath);
     await waitFor(async () => (await fetch(`${base}/api/legal/terms`)).ok, 'backend iniciar');
+    assert.equal((await fetch(`${base}/api/dashboard`)).status, 401, 'dashboard requires an authenticated session');
     const terms = await (await fetch(`${base}/terms.html`)).text(); assert.match(terms, /LGPD/);
+      assert.equal((await fetch(`${base}/downloads/ARGUS.cmd`)).status, 400, 'installer rejects missing server address');
+    assert.equal((await fetch(`${base}/downloads/argus-agent.js`)).status, 200, 'agent package is downloadable');
+    assert.equal((await fetch(`${base}/downloads/argus-foreground-watcher.ps1`)).status, 200, 'foreground watcher is downloadable');
     const email = `argus-smoke-${crypto.randomUUID()}@example.test`;
     const invalid = await responseJson(`${base}/api/auth/signup`, { method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:'Smoke Admin',email,password:'ValidPass123'}) });
     assert.equal(invalid.response.status, 400, 'signup must require an explicit terms acceptance');
     const signup = await responseJson(`${base}/api/auth/signup`, { method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:'Smoke Admin',email,password:'ValidPass123',termsAccepted:true,termsVersion:'2026-09-v1',webConsent:true}) });
     assert.equal(signup.response.status, 201); const cookie = signup.response.headers.get('set-cookie')?.split(';')[0]; assert.ok(cookie, 'login cookie returned');
+    assert.equal((await responseJson(`${base}/api/auth/signup`, { method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:'Smoke Admin',email,password:'ValidPass123',termsAccepted:true,termsVersion:'2026-09-v1'}) })).response.status, 409, 'duplicate accounts are rejected');
+    assert.equal((await responseJson(`${base}/api/auth/login`, { method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:'wrong-password',termsVersion:'2026-09-v1',termsAccepted:true}) })).response.status, 401, 'incorrect credentials are rejected');
     const rejectedLogin = await responseJson(`${base}/api/auth/login`, { method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:'ValidPass123',termsVersion:'2026-09-v1',termsAccepted:false}) });
     assert.equal(rejectedLogin.response.status, 428, 'login must require explicit terms confirmation');
     const successfulLogin = await responseJson(`${base}/api/auth/login`, { method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:'ValidPass123',termsVersion:'2026-09-v1',termsAccepted:true}) });
     assert.equal(successfulLogin.response.status,200,'accepted terms allow login');
-    const pairing = await responseJson(`${base}/api/pairings`, { method:'POST',headers:{Cookie:cookie,'Content-Type':'application/json'},body:'{}' }); assert.equal(pairing.response.status,201);
-    const setupCommandResponse = await fetch(`${base}/downloads/ARGUS.cmd?server=${encodeURIComponent(base)}&code=${encodeURIComponent(pairing.body.code)}`);
+    const networkConfig = await responseJson(`${base}/api/config`, { headers:{Cookie:cookie} }); assert.equal(networkConfig.response.status,200); assert.equal(networkConfig.body.port,Number(process.env.PORT));
+    assert.equal((await fetch(`${base}/downloads/ARGUS.cmd?server=${encodeURIComponent(base)}&code=ARG-AB12-CD34`)).status,400,'installer refuses an embedded pairing code');
+    const setupCommandResponse = await fetch(`${base}/downloads/ARGUS.cmd?server=${encodeURIComponent(base)}`);
     assert.equal(setupCommandResponse.status,200,'pairing flow provides a downloadable ARGUS command');
-    const setupCommand = await setupCommandResponse.text(); assert.match(setupCommand,/ARGUS_AGENT_ONLY=1/); assert.match(setupCommand,new RegExp(pairing.body.code)); assert.match(setupCommand,new RegExp(base.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')));
-    const controlScript = await fetch(`${base}/downloads/argus-control.ps1`); assert.equal(controlScript.status,200); const controlText=await controlScript.text(); assert.match(controlText,/function Install-Agent/); assert.match(controlText,/SAIBA MAIS/); assert.match(controlText,/5\. Saiba mais/); assert.match(controlText,/7\. Saiba mais/);
-    const config = { serverUrl:base, connectionCode:pairing.body.code, heartbeatSeconds:5, bridgePort:await availablePort() };
-    const connected = await responseJson(`${base}/api/agent/connect`, { method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:config.connectionCode,name:'ARGUS-SMOKE-PC'}) });
-    assert.equal(connected.response.status,200); config.deviceToken=connected.body.token; config.bridgeKey=crypto.randomBytes(32).toString('hex'); delete config.connectionCode;
-    agentDir = fs.mkdtempSync(path.join(os.tmpdir(),'argus-agent-smoke-')); fs.copyFileSync(path.resolve(__dirname,'..','agent','agent.js'),path.join(agentDir,'agent.js')); fs.writeFileSync(path.join(agentDir,'config.json'),JSON.stringify(config));
+    const setupCommand = await setupCommandResponse.text(); assert.match(setupCommand,/ARGUS_AGENT_ONLY=1/); assert.match(setupCommand,/ARGUS_INSTALL_ONLY=1/); assert.doesNotMatch(setupCommand,/ARGUS_PAIR_CODE|ARG-[A-F0-9]{4}-[A-F0-9]{4}/); assert.match(setupCommand,new RegExp(base.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')));
+    assert.equal((await fetch(`${base}/downloads/argus-setup.js`)).status,200,'local setup assistant is downloadable');
+    const controlScript = await fetch(`${base}/downloads/argus-control.ps1`); assert.equal(controlScript.status,200); const controlText=await controlScript.text(); assert.match(controlText,/function Install-Agent/); assert.match(controlText,/ARGUS_INSTALL_ONLY/); assert.match(controlText,/setup.js/); assert.match(controlText,/foreground-watcher\.ps1/); assert.match(controlText,/127\.0\.0\.1:43173/); assert.match(controlText,/SAIBA MAIS/); assert.match(controlText,/5\. Saiba mais/); assert.match(controlText,/7\. Saiba mais/);
+    if (process.platform === 'win32') {
+      const scriptPath = path.resolve(__dirname, 'argus-control.ps1').replace(/'/g, "''");
+      execFileSync('powershell.exe', ['-NoProfile','-Command',`$source = [System.IO.File]::ReadAllText('${scriptPath}'); [void][scriptblock]::Create($source)`], { stdio:'pipe' });
+      const watcherPath = path.resolve(__dirname, '..', 'agent', 'foreground-watcher.ps1');
+      const watcherSample = execFileSync('powershell.exe', ['-NoProfile','-ExecutionPolicy','Bypass','-File',watcherPath,'-Once'], { encoding:'utf8', timeout:10000 }).trim();
+      assert.match(watcherSample,/^(FOCUS\t\d+\t.+|IDLE)$/,'foreground watcher reports the current app or idle state');
+    }
+    agentDir = fs.mkdtempSync(path.join(os.tmpdir(),'argus-agent-smoke-')); fs.copyFileSync(path.resolve(__dirname,'..','agent','agent.js'),path.join(agentDir,'agent.js')); fs.copyFileSync(path.resolve(__dirname,'..','agent','setup.js'),path.join(agentDir,'setup.js')); fs.copyFileSync(path.resolve(__dirname,'..','agent','foreground-watcher.ps1'),path.join(agentDir,'foreground-watcher.ps1'));
+    let setupPort=await availablePort(); let setupBase=`http://127.0.0.1:${setupPort}`; setup=launchSetup(agentDir,setupPort);
+    const setupPage=await waitFor(async()=>{const response=await fetch(setupBase);return response.ok?response:null;},'assistente local abrir');
+    const setupHtml=await setupPage.text(); assert.match(setupHtml,/Endereço LAN do servidor ARGUS/); assert.match(setupHtml,/Nome deste computador/); assert.match(setupHtml,/Código de autenticação/);
+    assert.match(setupHtml,/Cancelar instalação/);
+    assert.equal((await fetch(`${setupBase}/api/cancel`,{method:'POST'})).status,200,'setup can be canceled');
+    await waitFor(async()=>setup.exitCode!==null,'assistente encerrar após cancelamento'); assert.equal(db.pairings.length,0); assert.equal(fs.existsSync(path.join(agentDir,'config.json')),false,'canceling setup does not create an agent config');
+    setupPort=await availablePort(); setupBase=`http://127.0.0.1:${setupPort}`; setup=launchSetup(agentDir,setupPort);
+    await waitFor(async()=>{const response=await fetch(setupBase);return response.ok?response:null;},'assistente local reabrir após cancelamento');
+    const badSetup=await responseJson(`${setupBase}/api/setup`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({serverUrl:base,deviceName:'ARGUS-SMOKE-PC',email,password:'ValidPass123',termsAccepted:false})}); assert.equal(badSetup.response.status,400,'setup requires terms acceptance');
+    const badSetupLogin=await responseJson(`${setupBase}/api/setup`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({serverUrl:base,deviceName:'ARGUS-SMOKE-PC',email,password:'WrongPass123',termsAccepted:true})}); assert.equal(badSetupLogin.response.status,401,'setup rejects invalid ARGUS credentials'); assert.equal(db.pairings.length,0,'failed authentication cannot create a pairing code');
+    const configured=await responseJson(`${setupBase}/api/setup`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({serverUrl:base,deviceName:'ARGUS-SMOKE-PC',email,password:'ValidPass123',termsAccepted:true})});
+    assert.equal(configured.response.status,200,'local setup assistant authenticates and pairs the computer'); assert.match(configured.body.pairingCode,/^ARG-[A-F0-9]{4}-[A-F0-9]{4}$/);
+    await waitFor(async()=>setup.exitCode!==null,'assistente local encerrar após configurar');
+    const config=JSON.parse(fs.readFileSync(path.join(agentDir,'config.json'),'utf8'));
+    assert.equal(config.deviceName,'ARGUS-SMOKE-PC'); assert.ok(config.deviceToken); assert.ok(config.bridgeKey); assert.ok(!JSON.stringify(config).includes('ValidPass123'),'admin password is not persisted in the agent config');
+    const connected={body:{token:config.deviceToken,machineId:db.machines[0].id}};
+    assert.equal((await responseJson(`${base}/api/agent/connect`, { method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:configured.body.pairingCode,name:'ARGUS-REPLAY-PC'}) })).response.status,400,'setup-generated pairing code is single-use');
     agent=launchAgent(agentDir);
     const live = await waitFor(async()=>{const {body}=await responseJson(`${base}/api/dashboard`,{headers:{Cookie:cookie}});return body.machines?.[0]?.status==='online'&&body.machines[0].metrics?.memoryTotal?body:null;},'agente enviar métricas reais');
+    assert.equal(live.machines[0].name,'ARGUS-SMOKE-PC','agent preserves the configured device name');
     assert.ok(live.machines[0].metrics.cpu >= 0 && live.machines[0].metrics.cpu <= 100); assert.ok(live.machines[0].apps.length > 0,'agent reports local processes');
     await stopAgent(agent); agent=null;
-    const appHeartbeat = apps => responseJson(`${base}/api/agent/heartbeat`, { method:'POST',headers:{Authorization:`Bearer ${connected.body.token}`,'Content-Type':'application/json'},body:JSON.stringify({name:'ARGUS-SMOKE-PC',userName:'smoke',os:'test',metrics:{cpu:5,ram:8,disk:10},apps}) });
+    const reportDate=new Date().toISOString().slice(0,10);
+    const appHeartbeat = (apps,foregroundUsage=[],foregroundApp=null,batchId=crypto.randomUUID()) => responseJson(`${base}/api/agent/heartbeat`, { method:'POST',headers:{Authorization:`Bearer ${connected.body.token}`,'Content-Type':'application/json'},body:JSON.stringify({name:'ARGUS-SMOKE-PC',userName:'smoke',os:'Windows_NT test',metrics:{cpu:5,ram:8,disk:10},apps,foregroundTelemetryAvailable:true,foregroundApp,foregroundBatchId:batchId,foregroundUsage}) });
     const smokeApp = [{name:'argus-smoke-app',processName:'argus-smoke-app',cpu:null,memory:12}];
-    assert.equal((await appHeartbeat(smokeApp)).response.status,200);
+    const firstFocusBatch=crypto.randomUUID();
+    assert.equal((await appHeartbeat(smokeApp,[{processName:'argus-smoke-app',date:reportDate,durationMilliseconds:0,occurrences:1}],'argus-smoke-app',firstFocusBatch)).response.status,200);
     await delay(1200);
-    assert.equal((await appHeartbeat(smokeApp)).response.status,200);
+    db.machines[0].apps.find(app=>app.processName==='argus-smoke-app').durationSeconds=900;
+    db.machines[0].apps.find(app=>app.processName==='argus-smoke-app').occurrences=99;
+    const durationFocusBatch=crypto.randomUUID();
+    const measuredDelta=[{processName:'argus-smoke-app',date:reportDate,durationMilliseconds:1234,occurrences:0}];
+    assert.equal((await appHeartbeat(smokeApp,measuredDelta,'argus-smoke-app',durationFocusBatch)).response.status,200);
+    assert.equal((await appHeartbeat(smokeApp,measuredDelta,'argus-smoke-app',durationFocusBatch)).response.status,200,'replayed foreground batch is idempotent');
     let appDashboard = (await responseJson(`${base}/api/dashboard`,{headers:{Cookie:cookie}})).body;
     let appRecord = appDashboard.machines[0].apps.find(a=>a.processName==='argus-smoke-app');
     assert.equal(appRecord.name,'Argus Smoke App','process name is presented as a friendly application name');
-    assert.equal(appRecord.occurrences,1,'consecutive samples count one observed application session');
-    assert.ok(appRecord.durationSeconds>=1,'application duration is accumulated only across consecutive samples');
+    assert.equal(appRecord.foregroundOccurrences,1,'foreground transition records one observed app session');
+    assert.equal(appRecord.foregroundDurationMilliseconds,1234,'application duration uses measured foreground milliseconds');
+    assert.equal(appRecord.durationSeconds,0,'legacy heartbeat estimates are not retained as actual usage');
+    assert.equal(appRecord.occurrences,0,'legacy process-session counts are not reported as foreground transitions');
+    assert.equal(appDashboard.applications.find(a=>a.processName==='argus-smoke-app').durationMilliseconds,1234,'application overview aggregates observed foreground use');
     assert.equal(appDashboard.applications.find(a=>a.processName==='argus-smoke-app').machineCount,1,'dashboard aggregates application use by machine');
     assert.equal((await appHeartbeat([])).response.status,200);
     appDashboard = (await responseJson(`${base}/api/dashboard`,{headers:{Cookie:cookie}})).body;
     assert.equal(appDashboard.machines[0].apps.find(a=>a.processName==='argus-smoke-app').status,'not_observed','missing process samples are not mislabeled as confirmed exits');
-    assert.equal((await appHeartbeat(smokeApp)).response.status,200);
+    assert.equal((await appHeartbeat(smokeApp,[{processName:'argus-smoke-app',date:reportDate,durationMilliseconds:0,occurrences:1}],'argus-smoke-app')).response.status,200);
     appDashboard = (await responseJson(`${base}/api/dashboard`,{headers:{Cookie:cookie}})).body;
-    assert.equal(appDashboard.machines[0].apps.find(a=>a.processName==='argus-smoke-app').occurrences,2,'a later reappearance is counted separately');
+    assert.equal(appDashboard.machines[0].apps.find(a=>a.processName==='argus-smoke-app').foregroundOccurrences,2,'a later foreground reappearance is counted separately');
+    const secondPairing=await responseJson(`${base}/api/pairings`,{method:'POST',headers:{Cookie:cookie,'Content-Type':'application/json'},body:'{}'});assert.equal(secondPairing.response.status,201);
+    const secondConnection=await responseJson(`${base}/api/agent/connect`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:secondPairing.body.code,name:'ARGUS-SMOKE-SECOND-PC'})});assert.equal(secondConnection.response.status,200);
+    const secondHeartbeat=(apps,foregroundUsage=[],batchId=crypto.randomUUID())=>responseJson(`${base}/api/agent/heartbeat`,{method:'POST',headers:{Authorization:`Bearer ${secondConnection.body.token}`,'Content-Type':'application/json'},body:JSON.stringify({name:'ARGUS-SMOKE-SECOND-PC',metrics:{cpu:3,ram:7,disk:11},apps,foregroundTelemetryAvailable:true,foregroundApp:'isolated-report-app',foregroundBatchId:batchId,foregroundUsage})});
+    const otherApp=[{name:'isolated-report-app',processName:'isolated-report-app',cpu:1,memory:8}];
+    assert.equal((await secondHeartbeat(otherApp,[{processName:'isolated-report-app',date:reportDate,durationMilliseconds:0,occurrences:1}])).response.status,200);await delay(1200);assert.equal((await secondHeartbeat(otherApp,[{processName:'isolated-report-app',date:reportDate,durationMilliseconds:1200,occurrences:0}])).response.status,200);
+    const machineDetail = await responseJson(`${base}/api/machines/${connected.body.machineId}?days=7`,{headers:{Cookie:cookie}}); assert.equal(machineDetail.response.status,200); assert.equal(machineDetail.body.machine.name,'ARGUS-SMOKE-PC');
+    assert.equal(machineDetail.body.applicationReport.days,7);assert.ok(machineDetail.body.applicationReport.totalMilliseconds>=1234);assert.ok(machineDetail.body.applicationReport.daily.some(day=>day.durationMilliseconds>0));assert.equal(machineDetail.body.applicationReport.measurementSupported,true);
+    assert.equal(machineDetail.body.applicationReport.applications.find(app=>app.processName==='argus-smoke-app').durationMilliseconds,1234);assert.ok(!machineDetail.body.applicationReport.applications.some(app=>app.processName==='isolated-report-app'),'computer report excludes applications from other computers');
+    const todayReport=await responseJson(`${base}/api/machines/${connected.body.machineId}?days=1`,{headers:{Cookie:cookie}});assert.equal(todayReport.body.applicationReport.days,1);
+    const monthReport=await responseJson(`${base}/api/machines/${connected.body.machineId}?days=30`,{headers:{Cookie:cookie}});assert.equal(monthReport.body.applicationReport.days,30);
+    const secondDetail=await responseJson(`${base}/api/machines/${secondConnection.body.machineId}?days=7`,{headers:{Cookie:cookie}});assert.ok(secondDetail.body.applicationReport.applications.some(app=>app.processName==='isolated-report-app'));assert.ok(!secondDetail.body.applicationReport.applications.some(app=>app.processName==='argus-smoke-app'),'second computer report contains only its own application history');
+    const watcherUnavailable=await responseJson(`${base}/api/agent/heartbeat`,{method:'POST',headers:{Authorization:`Bearer ${secondConnection.body.token}`,'Content-Type':'application/json'},body:JSON.stringify({name:'ARGUS-SMOKE-SECOND-PC',metrics:{cpu:1,ram:1,disk:1},apps:otherApp,foregroundTelemetryAvailable:false,foregroundApp:null})});assert.equal(watcherUnavailable.response.status,200);
+    const historicalMeasurement=await responseJson(`${base}/api/machines/${secondConnection.body.machineId}?days=7`,{headers:{Cookie:cookie}});assert.equal(historicalMeasurement.body.applicationReport.measurementSupported,false);assert.equal(historicalMeasurement.body.applicationReport.hasMeasuredData,true);assert.ok(historicalMeasurement.body.applicationReport.totalMilliseconds>=1200,'previously measured data remains available without substituting process estimates');
+    assert.equal((await responseJson(`${base}/api/machines/not-owned`,{headers:{Cookie:cookie}})).response.status,404,'unknown machine details are not exposed');
+    const alertHeartbeat = await responseJson(`${base}/api/agent/heartbeat`,{method:'POST',headers:{Authorization:`Bearer ${connected.body.token}`,'Content-Type':'application/json'},body:JSON.stringify({metrics:{cpu:90,ram:20,disk:10},apps:[]})}); assert.equal(alertHeartbeat.response.status,200);
+    let alertDashboard = (await responseJson(`${base}/api/dashboard`,{headers:{Cookie:cookie}})).body; const cpuAlert=alertDashboard.alerts.find(a=>a.kind==='cpu'); assert.ok(cpuAlert,'high CPU creates a CPU alert');
+    const acknowledged = await responseJson(`${base}/api/alerts/${cpuAlert.id}/ack`,{method:'POST',headers:{Cookie:cookie,'Content-Type':'application/json'},body:'{}'}); assert.equal(acknowledged.response.status,200);
+    alertDashboard = (await responseJson(`${base}/api/dashboard`,{headers:{Cookie:cookie}})).body; assert.ok(!alertDashboard.alerts.some(a=>a.kind==='cpu'),'acknowledged CPU alerts leave the active summary');
+    assert.equal((await responseJson(`${base}/api/reports?days=999`,{headers:{Cookie:cookie}})).body.days,30,'reports cap the period to 30 days');
+    assert.equal((await responseJson(`${base}/api/reports?days=0`,{headers:{Cookie:cookie}})).body.days,7,'invalid report periods use the default');
     agent=launchAgent(agentDir);
     await waitFor(async()=>{const preflight=await fetch(`http://127.0.0.1:${config.bridgePort}/navigation`,{method:'OPTIONS',headers:{Origin:'chrome-extension://abcdefghijklmnopabcdefghijklmnop','Access-Control-Request-Method':'POST','Access-Control-Request-Headers':'content-type,x-argus-bridge-key'}});return preflight.status===204;},'ponte local do agente voltar a escutar');
     const origin='chrome-extension://abcdefghijklmnopabcdefghijklmnop';
     const preflight=await fetch(`http://127.0.0.1:${config.bridgePort}/navigation`,{method:'OPTIONS',headers:{Origin:origin,'Access-Control-Request-Method':'POST','Access-Control-Request-Headers':'content-type,x-argus-bridge-key'}});
     assert.equal(preflight.status,204,'extension bridge preflight');
+    assert.equal((await fetch(`http://127.0.0.1:${config.bridgePort}/navigation`,{method:'POST',headers:{Origin:'https://example.test','Content-Type':'application/json','X-Argus-Bridge-Key':config.bridgeKey},body:'{}'})).status,403,'browser bridge rejects non-extension origins');
+    assert.equal((await fetch(`http://127.0.0.1:${config.bridgePort}/navigation`,{method:'POST',headers:{Origin:origin,'Content-Type':'application/json','X-Argus-Bridge-Key':'wrong'},body:'{}'})).status,401,'browser bridge rejects an invalid key');
+    const invalidNavigation = await waitFor(async()=>{const response=await fetch(`http://127.0.0.1:${config.bridgePort}/navigation`,{method:'POST',headers:{Origin:origin,'Content-Type':'application/json','X-Argus-Bridge-Key':config.bridgeKey},body:JSON.stringify({domain:'not a domain',durationSeconds:27})});return response.status===400?response:null;},'agente aplicar consentimento antes de validar domínio');
+    assert.equal(invalidNavigation.status,400,'browser bridge validates submitted domains');
     const submitNavigation=()=>fetch(`http://127.0.0.1:${config.bridgePort}/navigation`,{method:'POST',headers:{Origin:origin,'Content-Type':'application/json','X-Argus-Bridge-Key':config.bridgeKey},body:JSON.stringify({domain:'github.com',durationSeconds:27})});
     const authorizedNavigation = await waitFor(async()=>{const response=await submitNavigation();return response.status===202?response:null;},'agente receber a autorização de coleta web');
     assert.equal(authorizedNavigation.status,202,'authorized extension can submit domain-only activity');
@@ -114,15 +191,15 @@ async function stopAgent(child) {
     await waitFor(async()=>{await submitNavigation();const {body}=await responseJson(`${base}/api/dashboard`,{headers:{Cookie:cookie}});return body.machines[0].webActivity.includes('desativada');},'agente aplicar revogação');
     assert.equal((await submitNavigation()).status,403,'agent bridge blocks navigation after revocation');
     await stopAgent(agent); agent=null;
-    const offline=await waitFor(async()=>{const {body}=await responseJson(`${base}/api/dashboard`,{headers:{Cookie:cookie}});return body.machines[0]?.status==='offline'?body:null;},'offline ser refletido',8000);assert.equal(offline.summary.offline,1);
+    const offline=await waitFor(async()=>{const {body}=await responseJson(`${base}/api/dashboard`,{headers:{Cookie:cookie}});return body.machines.find(m=>m.id===connected.body.machineId)?.status==='offline'?body:null;},'offline ser refletido',8000);assert.ok(offline.summary.offline>=1);
     agent=launchAgent(agentDir);
     const recovered=await waitFor(async()=>{const {body}=await responseJson(`${base}/api/dashboard`,{headers:{Cookie:cookie}});return body.machines[0]?.status==='online'?body:null;},'agente reconectar',12000);assert.equal(recovered.summary.online,1);
     const exported=await responseJson(`${base}/api/privacy/export`,{headers:{Cookie:cookie}});assert.equal(exported.response.status,200);assert.ok(!JSON.stringify(exported.body).includes(connected.body.token),'export never exposes device token');
     const deleted=await responseJson(`${base}/api/privacy/delete-account`,{method:'POST',headers:{Cookie:cookie,'Content-Type':'application/json'},body:'{}'});assert.equal(deleted.response.status,200);
     const unauthorized=await responseJson(`${base}/api/dashboard`,{headers:{Cookie:cookie}});assert.equal(unauthorized.response.status,401,'account deletion revokes its session');
-    console.log('PASS: terms/authentication, pair and installer downloads, live metrics/processes, application history/aggregation, extension consent, privacy deletion, offline and recovery.');
+    console.log('PASS: auth/terms, installer and Windows foreground watcher, pairing, metrics/processes, measured foreground app durations, isolated machine reports, reports/alerts, extension bridge/consent, privacy deletion, offline and recovery.');
     process.exitCode=0;
   } catch (error) { console.error('FAIL:',error); process.exitCode=1; }
-  finally { await stopAgent(agent); if(agentDir)fs.rmSync(agentDir,{recursive:true,force:true}); }
+  finally { await stopAgent(agent); await stopSetup(setup); if(agentDir)fs.rmSync(agentDir,{recursive:true,force:true}); }
   process.exit(process.exitCode||0);
 })();
