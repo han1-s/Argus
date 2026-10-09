@@ -59,7 +59,7 @@ export const Download: React.FC = () => {
           <p className="download-feedback visible" role="status">O arquivo baixa os componentes do agente; ele não instala o servidor MySQL nem configura um servidor remoto.</p>
         </div>
         <aside className="download-availability"><span className="availability-icon"><Shield size={17} /></span><div><strong>Conexão autenticada e assistida</strong><p>Execute o arquivo no endpoint autorizado. O instalador obtém os componentes pela Platform e abre o assistente local para conectar o computador com o código de pareamento gerado no painel.</p></div></aside>
-        <p className="download-data-note">O servidor Platform e o MySQL devem estar previamente instalados e ativos na rede.</p>
+        <p className="download-data-note">O servidor Platform e o MySQL devem estar ativos na rede quando você executar o instalador.</p>
       </section>
 
       <section className="section-block download-compatibility" aria-labelledby="compatibility-title">

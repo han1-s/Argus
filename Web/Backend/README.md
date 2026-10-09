@@ -27,7 +27,7 @@ npm --prefix Web/Frontend run dev
 O Web Backend usa `http://127.0.0.1:3001`; o frontend Vite encaminha `/api` para essa porta. A Platform continua na porta `3000`. Ambos abrem pool de conexões para o mesmo serviço MySQL local e a mesma base `argus`; não são necessárias duas instâncias do MySQL.
 
 Para alterar a porta da API Web, configure `WEB_API_PORT`. Para apontar o Vite para outro host/porta, configure `VITE_API_TARGET`. Se o arquivo de ambiente não estiver em `Platform/.env`, informe `ARGUS_ENV_FILE` ao iniciar o backend Web.
-Para encaminhar o instalador ao backend Platform em outro endereco, configure `PLATFORM_API_TARGET` no ambiente do Web Backend.
+O Web Backend gera o arquivo `ARGUS.cmd` diretamente. O endpoint que executar esse arquivo ainda precisa alcançar a Platform indicada no endereço informado durante o download.
 
 ## Rotas
 
