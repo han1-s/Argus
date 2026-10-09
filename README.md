@@ -13,21 +13,13 @@ O ARGUS reúne um site e uma plataforma para acompanhar computadores autorizados
 
 1. Baixe e extraia o projeto. Não execute arquivos de dentro do ZIP.
 2. Instale e inicie o MySQL no computador servidor.
-3. No MySQL Workbench, abra `Platform/database/schema.sql`. Copie todo o conteúdo, cole em uma nova consulta SQL e clique em **Executar**. Isso cria o banco `argus` e as tabelas.
-4. Crie um usuário para o ARGUS no MySQL. Troque `SUA_SENHA_FORTE` por uma senha sua:
+3. No MySQL Workbench, abra `Platform/database/schema.sql`. Copie todo o conteúdo, cole em uma nova consulta SQL e clique em **Executar**. Isso cria o banco `argus` e suas tabelas.
+4. Abra `ARGUS.cmd`. No menu inicial, escolha **3 > 1** para preparar a instalação.
+5. Confira `Platform/.env`. Configure `MYSQL_USER` e `MYSQL_PASSWORD` com uma conta MySQL que já exista (por exemplo, a mesma usada para conectar no Workbench) e deixe `MYSQL_DATABASE=argus`. Esses dados conectam o ARGUS ao banco; não são o cadastro da conta do sistema.
+6. No menu inicial, escolha **2** para abrir o menu da Platform. Escolha **1** para abrir o controle e, nele, **1** para preparar o servidor e **2** para iniciar o painel em <http://localhost:3000>.
+7. Para iniciar o Web, volte ao menu inicial, escolha **1** e depois **1 (Iniciar Web)**. Ele abre em <http://localhost:5173/login>.
 
-```sql
-CREATE USER IF NOT EXISTS 'argus_app'@'127.0.0.1' IDENTIFIED BY 'SUA_SENHA_FORTE';
-GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, ALTER, INDEX, REFERENCES ON argus.* TO 'argus_app'@'127.0.0.1';
-FLUSH PRIVILEGES;
-```
-
-5. Abra `ARGUS.cmd` e escolha **Ferramentas > Preparar primeira instalação**.
-6. Confira `Platform/.env`: informe `MYSQL_USER=argus_app`, a senha criada e `MYSQL_DATABASE=argus`. Não compartilhe esse arquivo: ele guarda credenciais.
-7. No menu principal, escolha **2 > 1** para abrir o controle da Platform. Escolha **1** para preparar o servidor e **2** para iniciá-lo em <http://localhost:3000>.
-8. Para iniciar o site, volte ao menu principal e escolha **1 > 1**. Ele abre em <http://localhost:5173/login>.
-
-O MySQL precisa continuar ativo enquanto o ARGUS estiver em uso. O Web Backend usa a porta `3001`; o Vite usa `5173` durante o desenvolvimento.
+O cadastro de acesso ao ARGUS é feito na tela pelo botão **Criar conta**. O MySQL precisa continuar ativo enquanto o sistema estiver em uso.
 
 ## Conectar um computador
 

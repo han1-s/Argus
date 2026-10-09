@@ -28,29 +28,22 @@ O agente nunca acessa o MySQL diretamente. A porta `3306` do banco deve ficar di
 ## 1. Preparar o servidor
 
 1. Instale e inicie o MySQL no computador servidor.
-2. No MySQL Workbench, abra `Platform/database/schema.sql`. Copie o arquivo inteiro, cole em uma nova consulta SQL e clique em **Executar**. O script cria o banco `argus` e suas tabelas.
-3. Crie um usuário para a Platform. Troque `SUA_SENHA_FORTE` por uma senha sua:
-
-```sql
-CREATE USER IF NOT EXISTS 'argus_app'@'127.0.0.1' IDENTIFIED BY 'SUA_SENHA_FORTE';
-GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, ALTER, INDEX, REFERENCES ON argus.* TO 'argus_app'@'127.0.0.1';
-FLUSH PRIVILEGES;
-```
-
-4. Abra PowerShell na pasta `Platform` e instale as dependências:
+2. No MySQL Workbench, abra `Platform/database/schema.sql`. Copie todo o conteúdo, cole em uma nova consulta SQL e clique em **Executar**. O script cria o banco `argus` e suas tabelas.
+3. Copie `.env.example` para `.env`. Configure `MYSQL_USER` e `MYSQL_PASSWORD` com uma conta MySQL que já exista (por exemplo, a usada no Workbench). Deixe `MYSQL_DATABASE=argus`. O acesso MySQL do `.env` conecta o servidor ao banco; ele é diferente da conta ARGUS criada pela tela **Criar conta**.
+4. O servidor também prepara a conta inicial com os valores `ARGUS_ADMIN_EMAIL` e `ARGUS_ADMIN_PASSWORD` do `.env`. Troque os valores padrão antes de iniciar. Outros acessos podem ser cadastrados na tela **Criar conta**.
+5. Abra PowerShell na pasta `Platform` e instale as dependências:
 
 ```powershell
 npm install
 ```
 
-5. Copie `.env.example` para `.env`. Configure `MYSQL_USER=argus_app`, `MYSQL_PASSWORD` com a senha criada e `MYSQL_DATABASE=argus`. Esse arquivo contém segredos; não o publique.
 6. Inicie o servidor:
 
 ```powershell
 npm start
 ```
 
-7. No servidor, abra <http://localhost:3000> e crie a conta administradora.
+7. No servidor, abra <http://localhost:3000> e entre com a conta inicial ou escolha **Criar conta**.
 
 Também é possível abrir `Platform/ARGUS.cmd` e escolher **Preparar servidor** e depois **Iniciar servidor e abrir o painel**. O MySQL precisa estar iniciado antes.
 
