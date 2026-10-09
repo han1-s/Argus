@@ -26,6 +26,8 @@ let foregroundSampleAt = null;
 let foregroundWatcher;
 let foregroundTelemetryAvailable = false;
 let pendingForegroundBatch = null;
+let heartbeatTimer;
+let shuttingDown = false;
 
 function cpuSnapshot() {
   const cpus = os.cpus();
@@ -208,8 +210,22 @@ async function start() {
   if (!config.bridgeKey) { config.bridgeKey = bridgeKey; config.bridgePort = Number(config.bridgePort) || 43172; fs.writeFileSync(configPath, JSON.stringify(config, null, 2)); }
   bridgeKey = config.bridgeKey; startBrowserBridge(); startForegroundWatcher();
   console.log(`Ponte local da extensão: http://127.0.0.1:${Number(config.bridgePort) || 43172} — chave em config.json`);
-  await heartbeat(); setInterval(heartbeat, interval);
+  await heartbeat(); heartbeatTimer = setInterval(heartbeat, interval);
 }
 start().catch(error => { console.error(`Não foi possível conectar: ${error.message}`); process.exitCode = 1; });
-process.on('SIGINT', () => { console.log('\nAgente encerrado.'); if (foregroundWatcher && !foregroundWatcher.killed) foregroundWatcher.kill(); process.exit(0); });
-process.on('exit', () => { if (foregroundWatcher && !foregroundWatcher.killed) foregroundWatcher.kill(); });
+async function shutdown() {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  clearInterval(heartbeatTimer);
+  if (foregroundWatcher && foregroundWatcher.exitCode === null && !foregroundWatcher.killed) {
+    await new Promise(resolve => {
+      const timeout = setTimeout(resolve, 2000);
+      foregroundWatcher.once('close', () => { clearTimeout(timeout); resolve(); });
+      foregroundWatcher.kill();
+    });
+  }
+  process.exit(0);
+}
+process.on('SIGINT', () => { console.log('\nAgente encerrado.'); void shutdown(); });
+process.on('SIGTERM', () => { void shutdown(); });
+process.on('exit', () => { if (foregroundWatcher && foregroundWatcher.exitCode === null && !foregroundWatcher.killed) foregroundWatcher.kill(); });

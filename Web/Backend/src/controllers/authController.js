@@ -157,8 +157,8 @@ async function redefinirSenha(req, res, next) {
   const email = String(req.body.email || '').trim().toLowerCase();
   const code = String(req.body.code || '').trim();
   const password = String(req.body.password || '');
-  if (!/^\S+@\S+\.\S+$/.test(email) || !/^\d{6}$/.test(code) || password.length < 8) {
-    return res.status(400).json({ error: 'Informe e-mail válido, código de 6 dígitos e senha com pelo menos 8 caracteres.' });
+  if (!/^\S+@\S+\.\S+$/.test(email) || !/^\d{6}$/.test(code) || password.length < 10) {
+    return res.status(400).json({ error: 'Informe e-mail válido, código de 6 dígitos e senha com pelo menos 10 caracteres.' });
   }
 
   const connection = await pool.getConnection();

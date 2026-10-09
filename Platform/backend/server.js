@@ -21,12 +21,34 @@ function id() { return crypto.randomUUID(); }
 function safeUser(user) { return { id: user.id, name: user.name, email: user.email, webConsent: Boolean(user.webConsent), termsVersion: user.termsVersion || null }; }
 function hashPassword(password, salt = crypto.randomBytes(16).toString('hex')) { return { salt, hash: crypto.scryptSync(password, salt, 64).toString('hex') }; }
 function cookie(name, value, maxAge) { return `${name}=${encodeURIComponent(value)}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${maxAge}`; }
-function sessionToken(req) { const t = (req.headers.cookie || '').match(/(?:^|;\s*)argus_session=([^;]+)/)?.[1]; return t ? decodeURIComponent(t) : null; }
-function resolveSession(token) { if (!token) return null; const cached=sessions.get(token); if(cached)return cached; const digest=crypto.createHash('sha256').update(token).digest('hex'); const stored=(db.sessions||[]).find(s=>s.tokenHash===digest&&Date.parse(s.expiresAt)>Date.now()); if(stored)sessions.set(token,stored.userId); return stored?.userId||null; }
-function auth(req, res, next) {
-  const userId = resolveSession(sessionToken(req)); const user = db.users.find(u => u.id === userId);
-  if (!user) return res.status(401).json({ error: 'Sessão expirada. Entre novamente.' });
-  req.user = user; next();
+function sessionToken(req) { const t = (req.headers.cookie || '').match(/(?:^|;\s*)argus_session=([^;]+)/)?.[1]; try { return t ? decodeURIComponent(t) : null; } catch { return null; } }
+async function auth(req, res, next) {
+  try {
+    const token = sessionToken(req);
+    if (!token) return res.status(401).json({ error: 'Sessão não informada.' });
+    const digest = crypto.createHash('sha256').update(token).digest('hex');
+    const user = await mysqlStore.findSessionUser(digest);
+    if (!user) {
+      sessions.delete(token);
+      return res.status(401).json({ error: 'Sessão expirada. Entre novamente.' });
+    }
+    sessions.set(token, user.id);
+    let cachedUser = db.users.find(entry => entry.id === user.id);
+    if (!cachedUser) {
+      await mysqlStore.refreshUsers(db);
+      cachedUser = db.users.find(entry => entry.id === user.id);
+    }
+    if (cachedUser) {
+      cachedUser.name = user.name;
+      cachedUser.email = user.email;
+      cachedUser.webConsent = user.webConsent;
+      cachedUser.termsVersion = user.termsVersion;
+    }
+    req.user = cachedUser || user;
+    next();
+  } catch (error) {
+    next(error);
+  }
 }
 function addEvent(machine, type, message) {
   db.events.unshift({ id: id(), machineId: machine.id, machineName: machine.name, type, message, at: new Date().toISOString() });
@@ -191,7 +213,30 @@ function validDomain(value) {
   if (!/^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/.test(domain)) return null;
   return domain;
 }
-async function issueSession(user, res) { const token = crypto.randomBytes(32).toString('hex'); const createdAt=new Date(); const expiresAt=new Date(createdAt.getTime()+7*86400000); db.sessions.push({tokenHash:crypto.createHash('sha256').update(token).digest('hex'),userId:user.id,createdAt:createdAt.toISOString(),expiresAt:expiresAt.toISOString()}); await save(); sessions.set(token,user.id); res.setHeader('Set-Cookie', cookie('argus_session', token, 60 * 60 * 24 * 7)); }
+function validServerAddress(value) {
+  try {
+    const url = new URL(value);
+    const port = Number(url.port || (url.protocol === 'https:' ? 443 : 80));
+    return ['http:', 'https:'].includes(url.protocol)
+      && Boolean(url.hostname)
+      && !url.username && !url.password
+      && url.pathname === '/' && !url.search && !url.hash
+      && port >= 1 && port <= 65535;
+  } catch {
+    return false;
+  }
+}
+async function issueSession(user, res) {
+  const token = crypto.randomBytes(32).toString('hex');
+  const createdAt = new Date();
+  const expiresAt = new Date(createdAt.getTime() + 7 * 86400000);
+  const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+  const session = { tokenHash, userId: user.id, createdAt: createdAt.toISOString(), expiresAt: expiresAt.toISOString() };
+  await mysqlStore.createSession(session);
+  db.sessions.push(session);
+  sessions.set(token, user.id);
+  res.setHeader('Set-Cookie', cookie('argus_session', token, 60 * 60 * 24 * 7));
+}
 async function save() { await mysqlStore.save(db); }
 
 app.use(express.json({ limit: '256kb' }));
@@ -202,7 +247,7 @@ app.get('/downloads/argus-foreground-watcher.ps1', (req,res) => res.download(req
 app.get('/downloads/argus-control.ps1', (req,res) => res.download(require('path').join(__dirname, '..', 'scripts', 'argus-control.ps1'), 'argus-control.ps1'));
 function agentCommandDownload(req, res) {
   const host = String(req.query.server || '').trim(); const code = String(req.query.code || '').trim().toUpperCase();
-  if (!/^https?:\/\/(?:[a-zA-Z0-9.-]+|\[[a-fA-F0-9:]+\])(?::[0-9]{1,5})?$/.test(host) || code) return res.status(400).send('Endereço do servidor inválido. Baixe um instalador ARGUS válido.');
+  if (!validServerAddress(host) || code) return res.status(400).send('Endereço do servidor inválido. Baixe um instalador ARGUS válido.');
   const content = `@echo off\r\nsetlocal\r\ncd /d "%~dp0"\r\nset "ARGUS_SERVER_URL=${host}"\r\nset "ARGUS_AGENT_ONLY=1"\r\nset "ARGUS_INSTALL_ONLY=1"\r\nset "ARGUS_HELPER_PATH=%~dp0argus-control.ps1"\r\nif not exist "%ARGUS_HELPER_PATH%" (\r\n  echo Baixando componentes de suporte do ARGUS...\r\n  powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "Invoke-WebRequest -Uri ($env:ARGUS_SERVER_URL + '/downloads/argus-control.ps1') -OutFile $env:ARGUS_HELPER_PATH"\r\n  if errorlevel 1 (echo Nao foi possivel baixar o suporte. Confira a rede e tente novamente.& pause & exit /b 1)\r\n)\r\npowershell.exe -NoProfile -ExecutionPolicy Bypass -File "%ARGUS_HELPER_PATH%"\r\n`;
   res.setHeader('Content-Type', 'application/octet-stream'); res.setHeader('Content-Disposition', 'attachment; filename="ARGUS.cmd"'); res.send(content);
 }
@@ -249,7 +294,7 @@ app.post('/api/auth/reset-password', async (req, res, next) => {
     const email = String(req.body.email || '').trim().toLowerCase();
     const code = String(req.body.code || '').trim();
     const password = String(req.body.password || '');
-    if (!/^\S+@\S+\.\S+$/.test(email) || !/^\d{6}$/.test(code) || password.length < 8) return res.status(400).json({ error: 'Informe e-mail válido, código de 6 dígitos e senha com pelo menos 8 caracteres.' });
+    if (!/^\S+@\S+\.\S+$/.test(email) || !/^\d{6}$/.test(code) || password.length < 10) return res.status(400).json({ error: 'Informe e-mail válido, código de 6 dígitos e senha com pelo menos 10 caracteres.' });
     const userId = await mysqlStore.completePasswordReset(email, code, password);
     if (!userId) return res.status(400).json({ error: 'Código inválido ou expirado. Solicite uma nova recuperação.' });
     for (const [token, owner] of sessions) if (owner === userId) sessions.delete(token);
@@ -257,7 +302,19 @@ app.post('/api/auth/reset-password', async (req, res, next) => {
     res.json({ ok: true, message: 'Senha alterada. Entre novamente com a nova senha.' });
   } catch (e) { next(e); }
 });
-app.post('/api/auth/logout', async (req, res, next) => { try { const token=sessionToken(req); if(token){sessions.delete(token);const digest=crypto.createHash('sha256').update(token).digest('hex');db.sessions=db.sessions.filter(s=>s.tokenHash!==digest);await save();}res.setHeader('Set-Cookie',cookie('argus_session','',0));res.json({ok:true});}catch(e){next(e);} });
+app.post('/api/auth/logout', async (req, res, next) => {
+  try {
+    const token = sessionToken(req);
+    if (token) {
+      sessions.delete(token);
+      const digest = crypto.createHash('sha256').update(token).digest('hex');
+      db.sessions = db.sessions.filter(session => session.tokenHash !== digest);
+      await mysqlStore.deleteSession(digest);
+    }
+    res.setHeader('Set-Cookie', cookie('argus_session', '', 0));
+    res.json({ ok: true });
+  } catch (error) { next(error); }
+});
 app.get('/api/auth/me', auth, (req,res) => res.json({ user: safeUser(req.user) }));
 
 app.post('/api/pairings', auth, async (req, res, next) => {
@@ -331,7 +388,22 @@ app.post('/api/privacy/delete-account', auth, async (req,res,next) => {
 });
 app.post('/api/alerts/:id/ack', auth, async (req,res,next) => { try { const a=db.alerts.find(x=>x.id===req.params.id&&db.machines.some(m=>m.id===x.machineId&&m.userId===req.user.id));if(!a)return res.status(404).json({error:'Alerta não encontrado.'});a.open=false;await save();io.to(`user:${req.user.id}`).emit('update');res.json({ok:true});}catch(e){next(e);} });
 
-io.use((socket,next)=>{const raw=socket.handshake.headers.cookie?.match(/(?:^|;\s*)argus_session=([^;]+)/)?.[1];let token;try{token=raw&&decodeURIComponent(raw);}catch{}const userId=resolveSession(token);if(!userId)return next(new Error('unauthorized'));socket.userId=userId;next();});
+io.use(async (socket, next) => {
+  const raw = socket.handshake.headers.cookie?.match(/(?:^|;\s*)argus_session=([^;]+)/)?.[1];
+  let token;
+  try { token = raw && decodeURIComponent(raw); } catch { return next(new Error('unauthorized')); }
+  if (!token) return next(new Error('unauthorized'));
+  try {
+    const digest = crypto.createHash('sha256').update(token).digest('hex');
+    const user = await mysqlStore.findSessionUser(digest);
+    if (!user) { sessions.delete(token); return next(new Error('unauthorized')); }
+    sessions.set(token, user.id);
+    socket.userId = user.id;
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
 io.on('connection',socket=>socket.join(`user:${socket.userId}`));
 setInterval(async()=>{if(!db)return;let changed=false;for(const machine of db.machines)if(machine.status!=='offline'&&Date.now()-Date.parse(machine.lastSeen)>OFFLINE_TIMEOUT_MS){machine.status='offline';for(const app of machine.apps||[])if(app.status==='running')app.status='not_observed';addEvent(machine,'offline',`Conexão perdida — sem heartbeat há ${Math.round(OFFLINE_TIMEOUT_MS/1000)} segundos`);db.alerts.unshift({id:id(),machineId:machine.id,machineName:machine.name,kind:'offline',message:'Conexão perdida',at:new Date().toISOString(),open:true});changed=true;}if(changed){try{await save();for(const user of db.users)io.to(`user:${user.id}`).emit('update');}catch(e){console.error('Falha ao salvar status offline:',e.message);}}},OFFLINE_CHECK_INTERVAL_MS).unref();
 

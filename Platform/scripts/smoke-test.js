@@ -14,6 +14,13 @@ const resetCodes = new Map();
 const store = {
   initialize: async () => db,
   refreshUsers: async () => {},
+  findSessionUser: async tokenHash => {
+    const session = db.sessions.find(row => row.tokenHash === tokenHash && Date.parse(row.expiresAt) > Date.now());
+    const user = session && db.users.find(row => row.id === session.userId);
+    return user ? { id: user.id, name: user.name, email: user.email, webConsent: Boolean(user.webConsent), termsVersion: user.termsVersion || null } : null;
+  },
+  createSession: async session => { db.sessions.push(session); },
+  deleteSession: async tokenHash => { db.sessions = db.sessions.filter(row => row.tokenHash !== tokenHash); },
   createPasswordReset: async email => { if (!db.users.some(user => user.email === email)) return null; resetCodes.set(email, '123456'); return '123456'; },
   completePasswordReset: async (email, code, password) => {
     if (resetCodes.get(email) !== code) return null;
@@ -72,6 +79,15 @@ async function stopSetup(child) {
   child.kill('SIGTERM'); await Promise.race([new Promise(resolve => child.once('exit', resolve)), delay(1500)]);
   if (child.exitCode === null) child.kill('SIGKILL');
 }
+async function removeSmokeDirectory(folder) {
+  for (let attempt = 0; attempt < 12; attempt += 1) {
+    try { await fs.promises.rm(folder, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 }); return; }
+    catch (error) {
+      if (!['EPERM', 'EBUSY', 'ENOTEMPTY'].includes(error.code) || attempt === 11) throw error;
+      await delay(250);
+    }
+  }
+}
 
 (async () => {
   let agent; let setup; let agentDir;
@@ -97,6 +113,14 @@ async function stopSetup(child) {
     assert.equal(rejectedLogin.response.status, 428, 'login must require explicit terms confirmation');
     const successfulLogin = await responseJson(`${base}/api/auth/login`, { method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:'ValidPass123',termsVersion:'2026-09-v1',termsAccepted:true}) });
     assert.equal(successfulLogin.response.status,200,'accepted terms allow login');
+    const externalSessionToken = crypto.randomBytes(32).toString('hex');
+    const externalSessionHash = crypto.createHash('sha256').update(externalSessionToken).digest('hex');
+    db.sessions.push({ tokenHash:externalSessionHash, userId:db.users[0].id, createdAt:new Date().toISOString(), expiresAt:new Date(Date.now()+60000).toISOString() });
+    const externalCookie = `argus_session=${externalSessionToken}`;
+    assert.equal((await responseJson(`${base}/api/auth/me`,{headers:{Cookie:externalCookie}})).response.status,200,'Platform accepts a live session created by another ARGUS backend');
+    assert.equal((await responseJson(`${base}/api/auth/logout`,{method:'POST',headers:{Cookie:externalCookie}})).response.status,200);
+    assert.equal(db.sessions.some(session=>session.tokenHash===externalSessionHash),false,'Platform logout removes a shared MySQL session');
+    assert.equal((await responseJson(`${base}/api/auth/me`,{headers:{Cookie:externalCookie}})).response.status,401,'revoked shared sessions are rejected on the next request');
     const resetEmail = `argus-reset-${crypto.randomUUID()}@example.test`;
     const resetSignup = await responseJson(`${base}/api/auth/signup`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:'Reset Test',email:resetEmail,password:'BeforeReset123',termsAccepted:true,termsVersion:'2026-09-v1'})});
     assert.equal(resetSignup.response.status,201);
@@ -104,12 +128,15 @@ async function stopSetup(child) {
     assert.equal(recovery.response.status,200); assert.equal(recovery.body.simulatedEmail.code,'123456','simulated email exposes a usable demo code');
     const wrongReset = await responseJson(`${base}/api/auth/reset-password`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:resetEmail,code:'000000',password:'AfterReset123'})});
     assert.equal(wrongReset.response.status,400,'invalid reset code is rejected');
+    const shortReset = await responseJson(`${base}/api/auth/reset-password`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:resetEmail,code:recovery.body.simulatedEmail.code,password:'Short1234'})});
+    assert.equal(shortReset.response.status,400,'password reset keeps the 10-character account password minimum');
     const completedReset = await responseJson(`${base}/api/auth/reset-password`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:resetEmail,code:recovery.body.simulatedEmail.code,password:'AfterReset123'})});
     assert.equal(completedReset.response.status,200,'valid reset code changes the account password');
     assert.equal((await responseJson(`${base}/api/auth/login`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:resetEmail,password:'BeforeReset123',termsAccepted:true,termsVersion:'2026-09-v1'})})).response.status,401,'old password is invalid after reset');
     assert.equal((await responseJson(`${base}/api/auth/login`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:resetEmail,password:'AfterReset123',termsAccepted:true,termsVersion:'2026-09-v1'})})).response.status,200,'replacement password authenticates');
     const networkConfig = await responseJson(`${base}/api/config`, { headers:{Cookie:cookie} }); assert.equal(networkConfig.response.status,200); assert.equal(networkConfig.body.port,Number(process.env.PORT));
     assert.equal((await fetch(`${base}/downloads/ARGUS.cmd?server=${encodeURIComponent(base)}&code=ARG-AB12-CD34`)).status,400,'installer refuses an embedded pairing code');
+    assert.equal((await fetch(`${base}/downloads/ARGUS.cmd?server=${encodeURIComponent('http://127.0.0.1:99999')}`)).status,400,'installer rejects out-of-range server ports');
     const setupCommandResponse = await fetch(`${base}/downloads/ARGUS.cmd?server=${encodeURIComponent(base)}`);
     assert.equal(setupCommandResponse.status,200,'pairing flow provides a downloadable ARGUS command');
     const setupCommand = await setupCommandResponse.text(); assert.match(setupCommand,/ARGUS_AGENT_ONLY=1/); assert.match(setupCommand,/ARGUS_INSTALL_ONLY=1/); assert.doesNotMatch(setupCommand,/ARGUS_PAIR_CODE|ARG-[A-F0-9]{4}-[A-F0-9]{4}/); assert.match(setupCommand,new RegExp(base.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')));
@@ -229,6 +256,6 @@ async function stopSetup(child) {
     console.log('PASS: auth/terms, installer and Windows foreground watcher, pairing, metrics/processes, measured foreground app durations, isolated machine reports, reports/alerts, extension bridge/consent, privacy deletion, offline and recovery.');
     process.exitCode=0;
   } catch (error) { console.error('FAIL:',error); process.exitCode=1; }
-  finally { await stopAgent(agent); await stopSetup(setup); if(agentDir)fs.rmSync(agentDir,{recursive:true,force:true}); }
+  finally { await stopAgent(agent); await stopSetup(setup); if(agentDir)await removeSmokeDirectory(agentDir); }
   process.exit(process.exitCode||0);
 })();

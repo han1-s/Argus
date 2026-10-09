@@ -9,6 +9,20 @@ const app = express();
 const PORT = Number(process.env.WEB_API_PORT || 3001);
 const TERMS_VERSION = process.env.ARGUS_TERMS_VERSION || '2026-09-v1';
 
+function isValidServerUrl(value) {
+  try {
+    const url = new URL(value);
+    const port = Number(url.port || (url.protocol === 'https:' ? 443 : 80));
+    return ['http:', 'https:'].includes(url.protocol)
+      && Boolean(url.hostname)
+      && !url.username && !url.password
+      && url.pathname === '/' && !url.search && !url.hash
+      && port >= 1 && port <= 65535;
+  } catch {
+    return false;
+  }
+}
+
 app.use(express.json({ limit: '256kb' }));
 app.use('/api/auth', authRoutes);
 app.use('/api', argusDataRoutes);
@@ -21,7 +35,7 @@ app.get('/api/health', async (req, res, next) => {
 });
 app.get('/downloads/ARGUS.cmd', async (req, res, next) => {
   const serverUrl = String(req.query.server || '').trim();
-  if (!/^https?:\/\/(?:[a-zA-Z0-9.-]+|\[[a-fA-F0-9:]+\])(?::[0-9]{1,5})?$/.test(serverUrl)) {
+  if (!isValidServerUrl(serverUrl)) {
     return res.status(400).send('Informe o endereco HTTP/HTTPS da Platform.');
   }
   try {

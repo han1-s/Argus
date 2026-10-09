@@ -8,7 +8,7 @@ import './Download.css';
 const releaseHistory = [
   {
     version: 'v2.4.0', label: 'Nova versão', date: '14/08/2026', latest: true,
-    changes: ['Monitoramento preditivo com IA', 'Alertas preditivos', 'Otimização do uso de memória RAM'],
+    changes: ['Integração do site com os serviços ARGUS', 'Assinatura demonstrativa persistida no MySQL', 'Notificações recebidas da Platform'],
   },
   {
     version: 'v2.3.1', label: 'Correções', latest: false,
@@ -16,14 +16,14 @@ const releaseHistory = [
   },
   {
     version: 'v2.3.0', label: 'Novos recursos', latest: false,
-    changes: ['Suporte indicado para Linux baseado em Debian', 'Suporte à arquitetura ARM64'],
+    changes: ['Inicialização manual do agente com Node.js', 'Coleta de métricas e processos em sistemas compatíveis'],
   },
 ];
 
 const installationSteps = [
-  { number: '01', title: 'Baixe', text: 'Obtenha o agente ARGUS correspondente ao sistema operacional.', icon: <ArrowDownToLine size={18} /> },
-  { number: '02', title: 'Instale', text: 'Execute o instalador no computador que será integrado.', icon: <Package size={18} /> },
-  { number: '03', title: 'Conecte', text: 'O agente estabelece a comunicação necessária com a plataforma.', icon: <Network size={18} /> },
+  { number: '01', title: 'Baixe', text: 'Baixe o instalador Windows disponibilizado pela Platform.', icon: <ArrowDownToLine size={18} /> },
+  { number: '02', title: 'Instale', text: 'Execute o CMD no computador autorizado e informe o código de pareamento.', icon: <Package size={18} /> },
+  { number: '03', title: 'Conecte', text: 'O agente envia métricas ao servidor Platform na rede local.', icon: <Network size={18} /> },
   { number: '04', title: 'Monitore', text: 'As informações coletadas ficam disponíveis para análise no ARGUS.', icon: <Activity size={18} /> },
 ];
 
@@ -31,7 +31,9 @@ export const Download: React.FC = () => {
   const defaultServerUrl = import.meta.env.VITE_PLATFORM_SERVER_URL
     || `${window.location.protocol}//${window.location.hostname}:3000`;
   const [platformServerUrl, setPlatformServerUrl] = useState(defaultServerUrl);
-  const serverUrlIsValid = /^https?:\/\/(?:[a-zA-Z0-9.-]+|\[[a-fA-F0-9:]+\])(?::[0-9]{1,5})?$/.test(platformServerUrl.trim());
+  const serverUrlMatch = platformServerUrl.trim().match(/^https?:\/\/(?:[a-zA-Z0-9.-]+|\[[a-fA-F0-9:]+\])(?::([0-9]{1,5}))?$/);
+  const serverPort = serverUrlMatch?.[1];
+  const serverUrlIsValid = Boolean(serverUrlMatch) && (!serverPort || (Number(serverPort) >= 1 && Number(serverPort) <= 65535));
   const installerUrl = `/downloads/ARGUS.cmd?server=${encodeURIComponent(platformServerUrl.trim())}`;
 
   return (
@@ -45,7 +47,7 @@ export const Download: React.FC = () => {
         <div className="download-agent-main">
           <div className="download-agent-icon"><Package size={26} /></div>
           <div className="download-agent-title-row"><div><span className="download-eyebrow">INSTALADOR DA PLATFORM</span><h2 id="agent-title">ARGUS para Windows</h2></div><span className="download-release-badge"><Shield size={13} /> Instalador guiado</span></div>
-          <p className="download-agent-description">Baixe o instalador no computador que será conectado ao servidor Platform. O assistente configura o agente e solicita autenticação da conta ARGUS.</p>
+          <p className="download-agent-description">Baixe o instalador no computador que será conectado ao servidor Platform. O assistente pede o código de pareamento de uso único gerado no painel Platform.</p>
           <label className="download-server-field">Endereço do servidor Platform<input value={platformServerUrl} onChange={(event) => setPlatformServerUrl(event.target.value)} placeholder="http://192.168.1.10:3000" inputMode="url" aria-invalid={!serverUrlIsValid} /></label>
           <div className="download-spec-grid" aria-label="Componentes do instalador">
             <div className="download-spec"><span><Package size={14} /> Componentes</span><strong>Agente + assistente</strong></div>
@@ -56,14 +58,14 @@ export const Download: React.FC = () => {
           <div className="download-action-row">{serverUrlIsValid ? <a className="btn-download-pill download-demo-button" href={installerUrl}><ArrowDownToLine size={17} />Baixar instalador</a> : <button className="btn-download-pill download-demo-button download-not-available" type="button" disabled><ArrowDownToLine size={17} />Informe um endereço válido</button>}<span className="download-action-caption">Gera o instalador da Platform para este servidor</span></div>
           <p className="download-feedback visible" role="status">O arquivo baixa os componentes do agente; ele não instala o servidor MySQL nem configura um servidor remoto.</p>
         </div>
-        <aside className="download-availability"><span className="availability-icon"><Shield size={17} /></span><div><strong>Conexão autenticada e assistida</strong><p>Execute o arquivo no endpoint autorizado. O instalador obtém os componentes pela Platform e abre o assistente local para conectar a conta.</p></div></aside>
+        <aside className="download-availability"><span className="availability-icon"><Shield size={17} /></span><div><strong>Conexão autenticada e assistida</strong><p>Execute o arquivo no endpoint autorizado. O instalador obtém os componentes pela Platform e abre o assistente local para conectar o computador com o código de pareamento gerado no painel.</p></div></aside>
         <p className="download-data-note">O servidor Platform e o MySQL devem estar previamente instalados e ativos na rede.</p>
       </section>
 
       <section className="section-block download-compatibility" aria-labelledby="compatibility-title">
-        <div className="section-header"><span className="section-label">Plataformas previstas</span><h2 id="compatibility-title">Compatibilidade</h2><p className="section-desc">Sistemas operacionais indicados para o agente nesta demonstração.</p></div>
-        <div className="download-platform-grid"><article className="download-platform-card"><span className="platform-icon"><Monitor size={20} /></span><div><h3>Windows</h3><p>Windows 10 / 11</p></div><span className="platform-status">Indicado</span></article><article className="download-platform-card"><span className="platform-icon"><Cpu size={20} /></span><div><h3>Linux</h3><p>Distribuições compatíveis indicadas no histórico de versão</p></div><span className="platform-status">Indicado</span></article></div>
-        <p className="download-platform-note">A compatibilidade ainda depende da publicação e validação dos instaladores oficiais.</p>
+        <div className="section-header"><span className="section-label">Plataformas previstas</span><h2 id="compatibility-title">Compatibilidade</h2><p className="section-desc">O instalador guiado ARGUS.cmd é compatível com Windows.</p></div>
+        <div className="download-platform-grid"><article className="download-platform-card"><span className="platform-icon"><Monitor size={20} /></span><div><h3>Windows</h3><p>Windows 10 / 11</p></div><span className="platform-status">Indicado</span></article><article className="download-platform-card"><span className="platform-icon"><Cpu size={20} /></span><div><h3>Linux</h3><p>Execução manual com Node.js; sem instalador guiado</p></div><span className="platform-status">Manual</span></article></div>
+        <p className="download-platform-note">Em outros sistemas, o agente pode ser iniciado manualmente com Node.js; a medição foreground depende do watcher do Windows.</p>
       </section>
 
       <section className="section-block download-history" aria-labelledby="history-title">
@@ -72,12 +74,12 @@ export const Download: React.FC = () => {
       </section>
 
       <section className="section-block download-howto" aria-labelledby="howto-title">
-        <div className="section-header"><span className="section-label">Fluxo previsto</span><h2 id="howto-title">Como funciona</h2><p className="section-desc">Etapas planejadas para a integração do agente à plataforma.</p></div>
+        <div className="section-header"><span className="section-label">Fluxo previsto</span><h2 id="howto-title">Como funciona</h2><p className="section-desc">Etapas de instalação e conexão do agente à Platform.</p></div>
         <div className="download-steps-grid">{installationSteps.map((step) => <article className="download-step-card" key={step.number}><span className="step-number">{step.number}</span><span className="step-icon">{step.icon}</span><h3>{step.title}</h3><p>{step.text}</p></article>)}</div>
-        <p className="download-flow-note">Este fluxo descreve a experiência prevista. A instalação e a conexão reais dependem da disponibilização do agente.</p>
+        <p className="download-flow-note">O instalador é obtido de uma Platform em execução. Gere um código de pareamento no painel antes de conectar o computador.</p>
       </section>
 
-      <section className="download-distribution-note"><span><Shield size={18} /></span><div><span className="section-label">USO RESPONSÁVEL</span><h2>Distribuição e segurança</h2><p>Distribua o agente de forma controlada e utilize-o de acordo com as políticas, autorizações e práticas de segurança da sua organização. A publicação do instalador oficial ainda está em desenvolvimento.</p></div></section>
+      <section className="download-distribution-note"><span><Shield size={18} /></span><div><span className="section-label">USO RESPONSÁVEL</span><h2>Distribuição e segurança</h2><p>Distribua o agente de forma controlada e utilize-o de acordo com as políticas, autorizações e práticas de segurança da sua organização. O botão baixa o CMD gerado pela Platform informada acima. Execute-o somente em um computador autorizado.</p></div></section>
     </div>
   );
 };

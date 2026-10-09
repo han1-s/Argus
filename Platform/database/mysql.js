@@ -94,6 +94,35 @@ async function refreshUsers(data) {
   data.sessions = sessions.map(s => ({ tokenHash: s.token_hash, userId: s.user_id, createdAt: date(s.created_at), expiresAt: date(s.expires_at) }));
 }
 
+async function findSessionUser(tokenHash) {
+  const [rows] = await pool.execute(
+    `SELECT u.id, u.name, u.email, u.web_consent, u.terms_version
+     FROM sessions s JOIN users u ON u.id = s.user_id
+     WHERE s.token_hash = ? AND s.expires_at > UTC_TIMESTAMP(3)
+     LIMIT 1`,
+    [tokenHash],
+  );
+  const user = rows[0];
+  return user ? {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    webConsent: Boolean(user.web_consent),
+    termsVersion: user.terms_version,
+  } : null;
+}
+
+async function deleteSession(tokenHash) {
+  await pool.execute('DELETE FROM sessions WHERE token_hash = ?', [tokenHash]);
+}
+
+async function createSession(session) {
+  await pool.execute(
+    'INSERT INTO sessions (token_hash, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)',
+    [session.tokenHash, session.userId, new Date(session.createdAt), new Date(session.expiresAt)],
+  );
+}
+
 async function createPasswordReset(email) {
   const [users] = await pool.execute('SELECT id FROM users WHERE email = ? LIMIT 1', [email]);
   if (!users.length) return null;
@@ -148,7 +177,6 @@ async function saveNow(data) {
     await connection.query('DELETE FROM pairings');
     await connection.execute('DELETE FROM sessions WHERE expires_at <= UTC_TIMESTAMP(3)');
     for (const u of data.users) await connection.execute(`INSERT INTO users (id,name,email,salt,password_hash,created_at,web_consent,terms_version,terms_accepted_at) VALUES (?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE name=VALUES(name),email=VALUES(email),salt=VALUES(salt),password_hash=VALUES(password_hash),web_consent=VALUES(web_consent),terms_version=VALUES(terms_version),terms_accepted_at=VALUES(terms_accepted_at)`, [u.id,u.name,u.email,u.salt,u.hash,new Date(u.createdAt),Boolean(u.webConsent),u.termsVersion || null,u.termsAcceptedAt ? new Date(u.termsAcceptedAt) : null]);
-    for (const s of (data.sessions || [])) await connection.execute('INSERT INTO sessions (token_hash,user_id,created_at,expires_at) VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE expires_at=VALUES(expires_at)', [s.tokenHash,s.userId,new Date(s.createdAt),new Date(s.expiresAt)]);
     for (const m of data.machines) await connection.execute(`INSERT INTO machines (id,user_id,name,token,status,user_name,os,arch,uptime,metrics,apps,web_activity,last_seen,created_at,first_seen_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE name=VALUES(name),token=VALUES(token),status=VALUES(status),user_name=VALUES(user_name),os=VALUES(os),arch=VALUES(arch),uptime=VALUES(uptime),metrics=VALUES(metrics),apps=VALUES(apps),web_activity=VALUES(web_activity),last_seen=VALUES(last_seen)`, [m.id,m.userId,m.name,m.token,m.status,m.userName || null,m.os || null,m.arch || null,m.uptime || 0,JSON.stringify(m.metrics || {}),JSON.stringify(m.apps || []),m.webActivity || null,new Date(m.lastSeen),new Date(m.createdAt || m.lastSeen),new Date(m.firstSeenAt || m.createdAt || m.lastSeen)]);
     for (const p of data.pairings) await connection.execute('INSERT INTO pairings (code,user_id,expires_at) VALUES (?,?,?) ON DUPLICATE KEY UPDATE expires_at=VALUES(expires_at)', [p.code,p.userId,p.expiresAt]);
     const newEvents = data.events.filter(e => !eventIds.has(e.id));
@@ -177,4 +205,4 @@ async function prune() {
   await pool.execute('DELETE FROM alerts WHERE is_open=FALSE AND occurred_at < DATE_SUB(UTC_TIMESTAMP(3), INTERVAL 90 DAY)');
 }
 async function close() { if (pool) await pool.end(); }
-module.exports = { initialize, refreshUsers, createPasswordReset, completePasswordReset, save, acknowledgeConsentRevocation, deleteUser, prune, close };
+module.exports = { initialize, refreshUsers, findSessionUser, createSession, deleteSession, createPasswordReset, completePasswordReset, save, acknowledgeConsentRevocation, deleteUser, prune, close };
