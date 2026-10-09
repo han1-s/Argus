@@ -14,7 +14,7 @@ export const Footer: React.FC = () => {
         </nav>
       </div>
       <div className="footer-bottom">
-        <p>&copy; 2026 ARGUS</p>
+        <p>&copy; 2026 ARGUS. Todos os direitos reservados.</p>
       </div>
     </footer>
   );

@@ -107,7 +107,7 @@ O npm atualiza `package.json` e `package-lock.json`; mantenha ambos no controle 
 
 ### Sobre os fluxos demonstrativos
 
-Algumas interações do frontend, incluindo a autenticação e a contratação de planos, são demonstrativas e usam armazenamento local do navegador. Elas não substituem um backend nem validam credenciais, pagamentos ou dados em um servidor. Consulte a indicação exibida na própria tela antes de tratar uma informação como dado operacional.
+Autenticação, assinaturas e pagamentos demonstrativos usam o Web Backend e o banco MySQL compartilhado. Preferências de interface, como tema e idioma, ficam salvas localmente neste navegador. Os pagamentos são simulados e não fazem cobranças reais.
 
 ### Problemas comuns
 
@@ -116,3 +116,12 @@ Algumas interações do frontend, incluindo a autenticação e a contratação d
 - **A porta já está em uso:** o Vite pode escolher outra porta; confira a mensagem do terminal.
 - **Instalação de dependências inconsistente:** na pasta `Frontend`, rode `npm install` novamente e aguarde sua conclusão antes de iniciar o servidor.
 - **A prévia não encontra `dist`:** gere a compilação primeiro com `npm run build`.
+
+## Créditos e horas
+
+- Haniel: frontend e Platform.
+- Matheus: backend Web.
+- Kaique: banco de dados geral.
+- Demais integrantes: testes e outras contribuições.
+
+Total de horas trabalhadas informado pela equipe: **61 horas**.

@@ -70,7 +70,7 @@ Para incluir o teste de integração MySQL do Web Backend, mantenha MySQL e API 
 - Kaique: banco de dados geral.
 - Demais integrantes da equipe: testes e demais contribuições do projeto.
 
-Estimativa informada pela equipe: aproximadamente **53 horas** no total. O valor ainda precisa de confirmação pelos registros de trabalho.
+Total de horas trabalhadas informado pela equipe: **61 horas**.
 
 ## Organização
 

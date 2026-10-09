@@ -144,4 +144,4 @@ O teste da Platform usa uma base MySQL em memória e endpoints locais temporári
 - Kaique: banco de dados geral.
 - Demais integrantes: testes e outras contribuições.
 
-Estimativa informada pela equipe: aproximadamente **53 horas** trabalhadas no projeto; confirmar com os registros da equipe.
+Total de horas trabalhadas informado pela equipe: **61 horas**.

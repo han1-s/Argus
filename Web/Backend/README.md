@@ -52,3 +52,12 @@ O teste ativa a integração automaticamente, usa a base configurada em `Platfor
 - `GET /downloads/ARGUS.cmd?server=http://host:3000`: encaminha o instalador gerado pela Platform para conectar um endpoint ao servidor.
 
 Assinaturas não processam cobranças. A área de download precisa alcançar uma Platform ativa para obter o instalador.
+
+## Créditos e horas
+
+- Haniel: frontend e Platform.
+- Matheus: backend Web.
+- Kaique: banco de dados geral.
+- Demais integrantes: testes e outras contribuições.
+
+Total de horas trabalhadas informado pela equipe: **61 horas**.
