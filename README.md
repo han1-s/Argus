@@ -28,7 +28,7 @@ Copie `Platform/.env.example` para `Platform/.env` e configure `MYSQL_USER=argus
 
 Execute `ARGUS.cmd` na raiz. Na primeira execução, escolha **Instalar todas as dependências** para instalar os pacotes da Platform, Web Backend e Web Frontend em sequência. O comando informa qual etapa falhou caso ocorra um erro. Também é possível executar `scripts/install-dependencies.cmd` diretamente.
 
-No menu principal, escolha **Iniciar ARGUS Web** para iniciar backend e frontend em segundo plano, abrir a tela de login e voltar automaticamente ao menu. Assim você pode iniciar a Platform em seguida, sem fechar o Web. Use **Gerenciar ou parar o Web** para encerrar seus serviços ou abrir os logs. Para a Platform, abra seu menu e escolha o painel de controle, somente a API, **Parar o servidor da Platform** ou abrir seus logs. Os serviços iniciados pelos menus rodam em segundo plano; a Platform usa a porta `3000`, o Web Backend `3001` e o Vite `5173` durante o desenvolvimento. Para abrir manualmente:
+No menu principal, escolha **Iniciar ARGUS Web** para iniciar backend e frontend em segundo plano e abrir o login no Microsoft Edge da máquina servidor. O menu de controle do Web permanece aberto: escolha **3** para voltar ao menu principal sem desligar o Web e então abrir a Platform. Use a opção **Gerenciar ou parar o Web** no menu principal para iniciar/parar serviços ou abrir logs. O início do servidor Platform pelo CMD também abre o painel no Edge local. Se o Edge não estiver instalado, o navegador padrão será usado. A Platform usa a porta `3000`; o Web Backend `3001` e o Vite `5173` durante o desenvolvimento. Para abrir manualmente:
 
 ```powershell
 npm --prefix Platform start

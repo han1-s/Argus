@@ -3,6 +3,7 @@ $ErrorActionPreference = 'Stop'
 $ParentRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $ProjectRoot = if (Test-Path (Join-Path $ParentRoot 'backend\server.js')) { $ParentRoot } else { $PSScriptRoot }
 $ControlDir = Join-Path $env:LOCALAPPDATA 'ARGUS\Control'
+$EdgeLauncher = Join-Path $ParentRoot '..\scripts\open-edge.ps1'
 New-Item -ItemType Directory -Force -Path $ControlDir | Out-Null
 $ServerPidFile = Join-Path $ControlDir 'server.pid'
 $AgentDir = Join-Path $env:LOCALAPPDATA 'ARGUS\Agent'
@@ -122,14 +123,17 @@ function Install-Agent {
   return $true
 }
 function Start-Server {
-  param([switch]$NoBrowser)
   $node = Find-Node
   if (-not $node) { Write-Host 'Node.js não encontrado. Escolha Preparar servidor primeiro.' -ForegroundColor Yellow; return }
   if (-not (Test-Path (Join-Path $ProjectRoot '.env'))) { Write-Host 'Arquivo .env ausente. Escolha Preparar servidor primeiro.' -ForegroundColor Yellow; return }
   if (-not (Test-Path (Join-Path $ProjectRoot 'node_modules\express\package.json'))) { Write-Host 'Dependências ausentes. Escolha Preparar servidor primeiro.' -ForegroundColor Yellow; return }
   $entry = Join-Path $ProjectRoot 'backend\server.js'
+  $port = 3000; $envFile = Join-Path $ProjectRoot '.env'
+  $portLine = Get-Content $envFile | Where-Object { $_ -match '^\s*PORT\s*=\s*\d+' } | Select-Object -First 1
+  if ($portLine -match '^\s*PORT\s*=\s*(\d+)') { $port = [int]$Matches[1] }
+  $address = "http://localhost:$port"
   $running = Get-CimInstance Win32_Process -Filter "Name = 'node.exe'" | Where-Object { $_.CommandLine -and $_.CommandLine.Contains($entry) } | Select-Object -First 1
-  if ($running) { Set-Content -Path $ServerPidFile -Value $running.ProcessId; Write-Host "Servidor ARGUS já está ativo (PID $($running.ProcessId))." -ForegroundColor Green; return }
+  if ($running) { Set-Content -Path $ServerPidFile -Value $running.ProcessId; Write-Host "Servidor ARGUS já está ativo (PID $($running.ProcessId))." -ForegroundColor Green; & $EdgeLauncher -Url $address; return }
   $logDir = Join-Path $env:LOCALAPPDATA 'ARGUS\Logs'
   New-Item -ItemType Directory -Force -Path $logDir | Out-Null
   $outLog = Join-Path $logDir 'server.out.log'; $errLog = Join-Path $logDir 'server.err.log'
@@ -137,12 +141,8 @@ function Start-Server {
   Set-Content -Path $ServerPidFile -Value $process.Id
   Start-Sleep -Seconds 2
   if ($process.HasExited) { Write-Host 'O servidor encerrou durante a inicialização. Confira o log de erro:' -ForegroundColor Red; Write-Host $errLog; Get-Content $errLog -Tail 12; return }
-  $port = 3000; $envFile = Join-Path $ProjectRoot '.env'
-  $portLine = Get-Content $envFile | Where-Object { $_ -match '^\s*PORT\s*=\s*\d+' } | Select-Object -First 1
-  if ($portLine -match '^\s*PORT\s*=\s*(\d+)') { $port = [int]$Matches[1] }
-  $address = "http://localhost:$port"
-  if ($NoBrowser) { Write-Host "Servidor ARGUS iniciado em segundo plano (PID $($process.Id)) em $address." -ForegroundColor Green }
-  else { Write-Host "Servidor ARGUS iniciado (PID $($process.Id)). Abrindo o painel em $address." -ForegroundColor Green; Start-Process $address }
+  Write-Host "Servidor ARGUS iniciado (PID $($process.Id)). Abrindo o painel no Microsoft Edge em $address." -ForegroundColor Green
+  & $EdgeLauncher -Url $address
 }
 function Stop-Server {
   $entry = Join-Path $ProjectRoot 'backend\server.js'
@@ -191,7 +191,7 @@ function Stop-Agent {
 
 if ($StopAll) { Stop-Server; Stop-Agent; exit 0 }
 if ($StopServerOnly) { Stop-Server; exit 0 }
-if ($StartServerOnly) { Start-Server -NoBrowser; exit 0 }
+if ($StartServerOnly) { Start-Server; exit 0 }
 
 if ($env:ARGUS_AGENT_ONLY -eq '1' -and $env:ARGUS_INSTALL_ONLY -eq '1') {
   Clear-Host

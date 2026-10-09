@@ -22,6 +22,7 @@ if ($busyPorts.Count -eq 2) {
   $viteProcess = if ($vite) { Get-CimInstance Win32_Process -Filter "ProcessId = $($vite.OwningProcess)" -ErrorAction SilentlyContinue }
   if ($apiProcess.CommandLine -match '(?i)(?:^|\s)src[\\/]server\.js(?:\s|$)' -and $viteProcess.CommandLine -match '(?i)vite[\\/]bin[\\/]vite\.js') {
     Write-Host 'ARGUS Web já está rodando.' -ForegroundColor Green
+    & (Join-Path $PSScriptRoot 'open-edge.ps1') -Url 'http://127.0.0.1:5173/login'
     exit 2
   }
 }
@@ -54,7 +55,7 @@ try {
   Write-Host 'Web iniciado em segundo plano.' -ForegroundColor Green
   Write-Host 'Frontend: http://127.0.0.1:5173/login'
   Write-Host "Logs: $logDir"
-  Start-Process 'http://127.0.0.1:5173/login'
+  & (Join-Path $PSScriptRoot 'open-edge.ps1') -Url 'http://127.0.0.1:5173/login'
 } catch {
   & (Join-Path $PSScriptRoot 'stop-web.ps1') | Out-Null
   Write-Error $_
