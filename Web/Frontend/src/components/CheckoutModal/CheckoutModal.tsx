@@ -116,7 +116,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, planName, 
   const methodLabel = (value: ArgusPayment['method']) => ({ pix: 'PIX', credit_card: 'Cartão de crédito', debit_card: 'Cartão de débito' })[value];
 
   return (
-    <div className="modal-overlay monetization-modal-overlay" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+    <div className="modal-overlay active monetization-modal-overlay" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
       <section className="modal-card monetization-modal" role="dialog" aria-modal="true" aria-labelledby="checkout-title">
         <button className="modal-close" type="button" onClick={onClose} aria-label="Fechar checkout"><X size={20} /></button>
         {completed ? <div className="checkout-success">
