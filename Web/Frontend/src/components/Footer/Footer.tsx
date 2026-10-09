@@ -5,27 +5,16 @@ export const Footer: React.FC = () => {
   return (
     <footer className="main-footer">
       <div className="footer-container">
-        <div className="footer-brand">
-          <strong className="footer-brand-wordmark">ARGUS</strong>
-          <p>Plataforma de monitoramento e análise de ambientes computacionais.</p>
-          <span className="footer-tech">Tecnologias: React · TypeScript · Node.js · MySQL</span>
-        </div>
-        <div className="footer-links">
+        <Link to="/" className="footer-brand-wordmark" aria-label="ARGUS — página inicial">ARGUS</Link>
+        <nav className="footer-links" aria-label="Links do rodapé">
           <Link to="/">Início</Link>
           <Link to="/saiba-mais">Saiba Mais</Link>
           <Link to="/monetizacao">Planos</Link>
           <Link to="/download">Download</Link>
-        </div>
-        <section className="footer-creators" aria-label="Criadores do ARGUS">
-          <strong>Equipe ARGUS</strong>
-          <span>Haniel · frontend e Platform</span>
-          <span>Matheus · backend Web</span>
-          <span>Kaique · banco de dados geral</span>
-          <span>Demais integrantes · testes e apoio</span>
-        </section>
+        </nav>
       </div>
       <div className="footer-bottom">
-        <p>&copy; 2026 ARGUS. Todos os direitos reservados.</p>
+        <p>&copy; 2026 ARGUS</p>
       </div>
     </footer>
   );
