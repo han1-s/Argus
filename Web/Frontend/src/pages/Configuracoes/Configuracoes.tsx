@@ -24,7 +24,7 @@ function getStoredSettings(): UserSettings {
     const notifications = localStorage.getItem(ARGUS_KEYS.NOTIFS);
     const parsed = saved ? JSON.parse(saved) as Partial<UserSettings> : {};
     const legacyNotifications = notifications ? JSON.parse(notifications) as Partial<UserSettings> : {};
-    return { ...defaultSettings, ...legacyNotifications, ...parsed, theme: getArgusTheme() };
+    return { ...defaultSettings, ...legacyNotifications, ...parsed, theme: getArgusTheme(), language: 'pt-BR' };
   } catch {
     return { ...defaultSettings, theme: getArgusTheme() };
   }
@@ -253,7 +253,7 @@ export const Configuracoes: React.FC = () => {
 
           {activeTab === 'system' && <div className="settings-tab-content">
             <div className="settings-section-heading"><span className="settings-section-icon"><Globe size={19} /></span><div><h2>Idioma e Horário</h2><p>Preferências regionais para a experiência ARGUS.</p></div></div>
-            <section className="settings-subsection"><div className="settings-subsection-heading"><h3>Idioma</h3><p>Escolha o idioma de toda a interface ARGUS. A preferência é salva neste navegador.</p></div><div className="form-group settings-system-field"><label htmlFor="language"><Languages size={15} /> Idioma da interface</label><select id="language" className="form-input" value={settings.language} onChange={(event) => { updateSetting('language', event.target.value); window.dispatchEvent(new CustomEvent('argus-language-changed', { detail: event.target.value })); showArgusToast('Preferência de idioma salva.'); }}><option value="pt-BR">Português (Brasil)</option><option value="en-US">English (United States)</option></select><small>O idioma pode ser alterado novamente a qualquer momento.</small></div></section>
+            <section className="settings-subsection"><div className="settings-subsection-heading"><h3>Idioma</h3><p>A interface ARGUS está disponível em português nesta versão.</p></div><div className="form-group settings-system-field"><label htmlFor="language"><Languages size={15} /> Idioma da interface</label><select id="language" className="form-input" value="pt-BR" disabled><option value="pt-BR">Português (Brasil)</option></select><small>O idioma inglês poderá ser disponibilizado novamente em uma versão futura.</small></div></section>
             <section className="settings-subsection"><div className="settings-subsection-heading"><h3>Fuso horário</h3><p>O fuso horário é definido pelo sistema e não pode ser alterado nesta versão.</p></div><div className="form-group settings-system-field"><label htmlFor="timezone">Horário local</label><input id="timezone" className="form-input" value="Horário Oficial de Brasília (UTC−03:00)" disabled readOnly /></div></section>
           </div>}
 

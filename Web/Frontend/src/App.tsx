@@ -14,19 +14,14 @@ import { Cadastro } from './pages/Cadastro/Cadastro';
 import { applyArgusPreferences } from './services/argusPreferences';
 import { restoreArgusSession } from './services/argusAuth';
 import { AuthGate } from './components/AuthGate/AuthGate';
-import { installArgusTranslations } from './services/argusI18n';
 
 export const App: React.FC = () => {
   useEffect(() => {
     applyArgusPreferences();
-    const uninstallTranslations = installArgusTranslations();
     void restoreArgusSession();
     const handleStorage = () => applyArgusPreferences();
     window.addEventListener('storage', handleStorage);
-    return () => {
-      window.removeEventListener('storage', handleStorage);
-      uninstallTranslations();
-    };
+    return () => window.removeEventListener('storage', handleStorage);
   }, []);
 
   return (
