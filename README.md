@@ -48,19 +48,20 @@ No painel Platform, use **Adicionar computador**, baixe `ARGUS.cmd` e execute-o 
 - Recuperação de senha demonstrativa: o sistema gera um código temporário e o mostra na interface como simulação de e-mail. Nenhuma mensagem é enviada por um provedor de e-mail.
 - Assinatura Free, Pro ou Business guardada na tabela `subscriptions`. A seleção é demonstrativa e não processa pagamentos.
 - Configurações da conta e preferências locais; a seção de notificações consulta eventos e alertas da Platform associados à conta.
-- Página de download encaminha ao instalador real servido pela Platform. A Platform precisa estar ativa e acessível para baixar `ARGUS.cmd`.
+- Página de download gera o `ARGUS.cmd` pelo Web Backend. A Platform precisa estar ativa e acessível quando o instalador for executado para obter os componentes do agente.
 
 ## Verificação
 
-Na raiz, rode:
+Na raiz, execute `scripts/test-all.cmd` para rodar o smoke test da Platform, testes do Web Backend, lint e build do Frontend e auditoria das dependências, em sequência. Também é possível executar as verificações manualmente:
 
 ```powershell
 npm --prefix Platform test
+npm --prefix Web/Backend test
 npm --prefix Web/Frontend run lint
 npm --prefix Web/Frontend run build
 ```
 
-O smoke test da Platform cobre a API local com armazenamento de teste. Build e lint verificam o frontend; rotas que dependem de MySQL devem ser conferidas com MySQL configurado e ambos os backends em execução. Não há envio real de e-mail nem cobrança real.
+Para incluir o teste de integração MySQL do Web Backend, mantenha MySQL e API Web ativos e rode `npm --prefix Web/Backend run test:integration` (ele cria e remove contas de teste). `npm --prefix Web/Backend test` também executa essa integração quando `ARGUS_RUN_MYSQL_INTEGRATION_TESTS=1`. O smoke test da Platform usa armazenamento de teste e cobre backend, instalador, agente e watcher Windows. Não há envio real de e-mail nem cobrança real.
 
 ## Créditos e horas
 

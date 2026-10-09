@@ -29,6 +29,16 @@ O Web Backend usa `http://127.0.0.1:3001`; o frontend Vite encaminha `/api` para
 Para alterar a porta da API Web, configure `WEB_API_PORT`. Para apontar o Vite para outro host/porta, configure `VITE_API_TARGET`. Se o arquivo de ambiente não estiver em `Platform/.env`, informe `ARGUS_ENV_FILE` ao iniciar o backend Web.
 O Web Backend gera o arquivo `ARGUS.cmd` diretamente. O endpoint que executar esse arquivo ainda precisa alcançar a Platform indicada no endereço informado durante o download.
 
+## Testes
+
+`npm test` executa os testes unitários do gerador de instalador e deixa a integração MySQL desativada por padrão. Para testar as rotas autenticadas, inicie o MySQL e a API Web, depois execute na raiz do repositório:
+
+```powershell
+npm --prefix Web/Backend run test:integration
+```
+
+O teste ativa a integração automaticamente, usa a base configurada em `Platform/.env`, exige que a API Web esteja ativa, cria contas com endereços aleatórios em `example.invalid`, insere dados de máquina temporários e os remove ao terminar. Não execute esse teste contra uma base com dados que não possam ser alterados.
+
 ## Rotas
 
 - `POST /api/auth/signup` e `POST /api/auth/register`: cria usuário na tabela compartilhada `users`.

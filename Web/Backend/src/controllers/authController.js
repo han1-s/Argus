@@ -47,8 +47,9 @@ async function cadastrar(req, res, next) {
     return res.status(400).json({ error: 'Leia e aceite os termos atuais antes de criar a conta.' });
   }
 
-  const connection = await pool.getConnection();
+  let connection;
   try {
+    connection = await pool.getConnection();
     const [existing] = await connection.execute('SELECT id FROM users WHERE email = ? LIMIT 1', [email]);
     if (existing.length) return res.status(409).json({ error: 'Este e-mail já possui uma conta.' });
 
@@ -69,11 +70,11 @@ async function cadastrar(req, res, next) {
     await connection.commit();
     res.status(201).json({ user: { id, name, email, webConsent, termsVersion: TERMS_VERSION } });
   } catch (error) {
-    await connection.rollback().catch(() => {});
+    await connection?.rollback().catch(() => {});
     if (error.code === 'ER_DUP_ENTRY') return res.status(409).json({ error: 'Este e-mail já possui uma conta.' });
     next(error);
   } finally {
-    connection.release();
+    connection?.release();
   }
 }
 
@@ -82,8 +83,9 @@ async function login(req, res, next) {
   const password = String(req.body.password || req.body.senha || '');
   if (!email || !password) return res.status(400).json({ error: 'E-mail e senha são obrigatórios.' });
 
-  const connection = await pool.getConnection();
+  let connection;
   try {
+    connection = await pool.getConnection();
     const [rows] = await connection.execute('SELECT * FROM users WHERE email = ? LIMIT 1', [email]);
     const user = rows[0];
     const candidate = user && hashPassword(password, user.salt);
@@ -112,10 +114,10 @@ async function login(req, res, next) {
     await connection.commit();
     res.json({ user: publicUser({ ...user, web_consent: webConsent, terms_version: TERMS_VERSION }) });
   } catch (error) {
-    await connection.rollback().catch(() => {});
+    await connection?.rollback().catch(() => {});
     next(error);
   } finally {
-    connection.release();
+    connection?.release();
   }
 }
 
@@ -161,8 +163,9 @@ async function redefinirSenha(req, res, next) {
     return res.status(400).json({ error: 'Informe e-mail válido, código de 6 dígitos e senha com pelo menos 10 caracteres.' });
   }
 
-  const connection = await pool.getConnection();
+  let connection;
   try {
+    connection = await pool.getConnection();
     await connection.beginTransaction();
     const codeHash = crypto.createHash('sha256').update(code).digest('hex');
     const [rows] = await connection.execute(
@@ -183,10 +186,10 @@ async function redefinirSenha(req, res, next) {
     await connection.commit();
     res.json({ ok: true, message: 'Senha alterada. Entre novamente com a nova senha.' });
   } catch (error) {
-    await connection.rollback().catch(() => {});
+    await connection?.rollback().catch(() => {});
     next(error);
   } finally {
-    connection.release();
+    connection?.release();
   }
 }
 

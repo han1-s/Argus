@@ -4,25 +4,11 @@ const pool = require('./config/database');
 const initializeAdmin = require('./config/initializeAdmin');
 const authRoutes = require('./routes/authRoutes');
 const argusDataRoutes = require('./routes/argusDataRoutes');
+const { createInstaller } = require('./installer');
 
 const app = express();
 const PORT = Number(process.env.WEB_API_PORT || 3001);
 const TERMS_VERSION = process.env.ARGUS_TERMS_VERSION || '2026-09-v1';
-
-function normalizeServerUrl(value) {
-  try {
-    const url = new URL(value);
-    const port = Number(url.port || (url.protocol === 'https:' ? 443 : 80));
-    const isValid = ['http:', 'https:'].includes(url.protocol)
-      && Boolean(url.hostname)
-      && !url.username && !url.password
-      && url.pathname === '/' && !url.search && !url.hash
-      && port >= 1 && port <= 65535;
-    return isValid ? url.origin : null;
-  } catch {
-    return null;
-  }
-}
 
 app.use(express.json({ limit: '256kb' }));
 app.use('/api/auth', authRoutes);
@@ -35,11 +21,10 @@ app.get('/api/health', async (req, res, next) => {
   } catch (error) { next(error); }
 });
 app.get('/downloads/ARGUS.cmd', (req, res) => {
-  const serverUrl = normalizeServerUrl(String(req.query.server || '').trim());
-  if (!serverUrl) {
+  const content = createInstaller(String(req.query.server || '').trim());
+  if (!content) {
     return res.status(400).send('Informe o endereco HTTP/HTTPS da Platform.');
   }
-  const content = `@echo off\r\nsetlocal\r\ncd /d "%~dp0"\r\nset "ARGUS_SERVER_URL=${serverUrl}"\r\nset "ARGUS_AGENT_ONLY=1"\r\nset "ARGUS_INSTALL_ONLY=1"\r\nset "ARGUS_HELPER_PATH=%~dp0argus-control.ps1"\r\nif not exist "%ARGUS_HELPER_PATH%" (\r\n  echo Baixando componentes de suporte do ARGUS...\r\n  powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "Invoke-WebRequest -Uri ($env:ARGUS_SERVER_URL + '/downloads/argus-control.ps1') -OutFile $env:ARGUS_HELPER_PATH"\r\n  if errorlevel 1 (echo Nao foi possivel baixar o suporte. Confira a rede e tente novamente.& pause & exit /b 1)\r\n)\r\npowershell.exe -NoProfile -ExecutionPolicy Bypass -File "%ARGUS_HELPER_PATH%"\r\n`;
   res.setHeader('Content-Type', 'application/octet-stream');
   res.setHeader('Content-Disposition', 'attachment; filename="ARGUS.cmd"');
   res.send(content);
