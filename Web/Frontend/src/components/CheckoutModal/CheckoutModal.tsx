@@ -47,6 +47,17 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, planName, 
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
   const cardFormRef = useRef<HTMLFormElement>(null);
+  const paymentTabRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const frame = window.requestAnimationFrame(() => paymentTabRef.current?.focus());
+    return () => {
+      window.cancelAnimationFrame(frame);
+      previousFocus?.focus();
+    };
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -131,7 +142,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, planName, 
           <div className="checkout-heading"><span className="checkout-kicker"><ShieldCheck size={15} /> CHECKOUT DEMONSTRATIVO</span><h2 id="checkout-title">Resumo da contratação</h2><p>Escolha uma forma de pagamento fictícia para registrar a demonstração.</p></div>
           <div className="checkout-summary"><div><span>Plano selecionado</span><strong>{planName}</strong></div><div><span>Período</span><strong>{cycleLabel}</strong></div><div className="checkout-total"><span>{cycle === 'annual' ? 'Total anual demonstrativo' : 'Valor demonstrativo'}</span><strong>R$ {new Intl.NumberFormat('pt-BR').format(cycle === 'annual' ? price * 12 : price)}<small> / {cycle === 'annual' ? 'ano' : 'mês'}</small></strong></div>{cycle === 'annual' && <p className="checkout-annual-note">Equivalente mensal de R$ {new Intl.NumberFormat('pt-BR').format(price)}. Nenhuma cobrança será realizada.</p>}</div>
           <div className="checkout-tabs" role="tablist" aria-label="Forma de pagamento simulada">
-            <button type="button" role="tab" aria-selected={method === 'pix'} className={method === 'pix' ? 'active' : ''} onClick={() => { setMethod('pix'); setSaveError(''); }}><QrCode size={16} /> PIX</button>
+            <button ref={paymentTabRef} type="button" role="tab" aria-selected={method === 'pix'} className={method === 'pix' ? 'active' : ''} onClick={() => { setMethod('pix'); setSaveError(''); }}><QrCode size={16} /> PIX</button>
             <button type="button" role="tab" aria-selected={method === 'credit_card'} className={method === 'credit_card' ? 'active' : ''} onClick={() => { setMethod('credit_card'); setSaveError(''); }}><CreditCard size={16} /> Crédito</button>
             <button type="button" role="tab" aria-selected={method === 'debit_card'} className={method === 'debit_card' ? 'active' : ''} onClick={() => { setMethod('debit_card'); setSaveError(''); }}><CreditCard size={16} /> Débito</button>
           </div>
