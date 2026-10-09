@@ -20,20 +20,45 @@ interface AuthResponse {
 }
 
 async function authRequest(path: string, options: RequestInit = {}): Promise<AuthResponse> {
-  const response = await fetch(path, {
-    ...options,
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json', ...options.headers },
-  });
-  const result = await response.json().catch(() => ({})) as AuthResponse;
-  if (!response.ok) throw new Error(result.error || 'Não foi possível autenticar no ARGUS.');
-  return result;
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), 12000);
+  try {
+    const response = await fetch(path, {
+      ...options,
+      signal: controller.signal,
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json', ...options.headers },
+    });
+    const result = await response.json().catch(() => ({})) as AuthResponse;
+    if (!response.ok) throw new Error(result.error || 'Não foi possível autenticar no ARGUS.');
+    return result;
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      throw new Error('O servidor demorou para responder. Verifique se o ARGUS Web está iniciado e tente novamente.', { cause: error });
+    }
+    throw error;
+  } finally {
+    window.clearTimeout(timeout);
+  }
 }
 
 export async function getArgusTerms(): Promise<{ version: string; url: string }> {
-  const response = await fetch('/api/legal/terms', { credentials: 'include' });
-  if (!response.ok) throw new Error('Não foi possível carregar os termos atuais.');
-  return response.json() as Promise<{ version: string; url: string }>;
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), 8000);
+  try {
+    const response = await fetch('/api/legal/terms', { credentials: 'include', signal: controller.signal });
+    if (!response.ok) throw new Error('Não foi possível carregar os termos atuais.');
+    const terms = await response.json() as { version?: string; url?: string };
+    if (!terms.version) throw new Error('O servidor não retornou a versão dos termos.');
+    return { version: terms.version, url: terms.url || '/terms.html' };
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      throw new Error('O servidor não respondeu ao carregar os termos. Confira se o ARGUS Web está iniciado.', { cause: error });
+    }
+    throw error;
+  } finally {
+    window.clearTimeout(timeout);
+  }
 }
 
 export async function registerArgus(name: string, email: string, password: string, termsVersion: string, webConsent: boolean): Promise<ArgusAuthUser> {

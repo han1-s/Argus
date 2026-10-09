@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Eye, EyeOff, KeyRound, Mail, UserRound } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { getArgusTerms, loginArgus, registerArgus, requestArgusPasswordReset, resetArgusPassword, signInArgus } from '../../services/argusAuth';
@@ -22,6 +22,8 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode }) => {
   const [feedback, setFeedback] = useState('');
   const [feedbackSuccess, setFeedbackSuccess] = useState(false);
   const [termsVersion, setTermsVersion] = useState('');
+  const [termsLoading, setTermsLoading] = useState(true);
+  const [termsLoadError, setTermsLoadError] = useState('');
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [webConsent, setWebConsent] = useState(false);
   const [termsError, setTermsError] = useState('');
@@ -34,13 +36,26 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode }) => {
   const [recoveryCodeSent, setRecoveryCodeSent] = useState(false);
   const timers = useRef<number[]>([]);
 
+  const loadTerms = useCallback(async () => {
+    try {
+      const terms = await getArgusTerms();
+      setTermsVersion(terms.version);
+    } catch (error) {
+      setTermsLoadError(error instanceof Error ? error.message : 'Não foi possível conectar ao servidor.');
+    } finally {
+      setTermsLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     let active = true;
     const activeTimers = timers.current;
     getArgusTerms().then((terms) => {
       if (active) setTermsVersion(terms.version);
     }).catch((error: unknown) => {
-      if (active) setFeedback(error instanceof Error ? error.message : 'Não foi possível conectar ao servidor.');
+      if (active) setTermsLoadError(error instanceof Error ? error.message : 'Não foi possível conectar ao servidor.');
+    }).finally(() => {
+      if (active) setTermsLoading(false);
     });
     return () => {
       active = false;
@@ -58,6 +73,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode }) => {
     else if (isRegister && password.length < 10) nextErrors.password = 'Use uma senha com pelo menos 10 caracteres.';
     setErrors(nextErrors);
     setTermsError(termsAccepted ? '' : 'Aceite os termos atuais para continuar.');
+    if (!termsVersion) setTermsLoadError('Os termos ainda não foram carregados. Tente novamente antes de continuar.');
     return Object.keys(nextErrors).length === 0 && termsAccepted && Boolean(termsVersion);
   };
 
@@ -130,7 +146,9 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode }) => {
         <label className="auth-terms-check"><input type="checkbox" checked={termsAccepted} onChange={(event) => setTermsAccepted(event.target.checked)} /><span>Li e aceito os <a href="/terms.html" target="_blank" rel="noreferrer">Termos de Uso e Aviso de Privacidade</a>.</span></label>
         {isRegister && <label className="auth-terms-check"><input type="checkbox" checked={webConsent} onChange={(event) => setWebConsent(event.target.checked)} /><span>Opcional: autorizo a coleta de domínios de navegação.</span></label>}
         {termsError && <p className="argus-auth-error" role="alert">{termsError}</p>}
-        <button type="submit" className="btn btn-primary btn-block argus-auth-submit" disabled={submitting || !termsVersion}>{submitting ? (isRegister ? 'Criando conta...' : 'Entrando...') : (isRegister ? 'Criar conta' : 'Entrar')}</button>
+        {termsLoading && <p className="argus-auth-feedback is-visible" role="status">Carregando os termos...</p>}
+        {termsLoadError && <div className="argus-auth-terms-error" role="alert"><p>{termsLoadError}</p><button type="button" className="auth-forgot-link" onClick={() => { setTermsLoading(true); setTermsLoadError(''); void loadTerms(); }} disabled={termsLoading}>Tentar carregar novamente</button></div>}
+        <button type="submit" className="btn btn-primary btn-block argus-auth-submit" disabled={submitting || termsLoading || !termsVersion}>{submitting ? (isRegister ? 'Criando conta...' : 'Entrando...') : (isRegister ? 'Criar conta' : 'Entrar')}</button>
         <p className={`argus-auth-feedback ${feedback ? 'is-visible' : ''} ${feedbackSuccess ? 'is-success' : ''}`} role="status" aria-live="polite">{feedback}</p>
       </form>
       {!isRegister && <button className="auth-forgot-link" type="button" onClick={() => { setRecoveryOpen((open) => !open); setRecoveryEmail(email); setRecoveryError(''); setRecoveryMessage(''); setRecoveryCodeSent(false); }}>{recoveryOpen ? 'Cancelar recuperação' : 'Esqueci a senha'}</button>}
