@@ -8,20 +8,22 @@ echo ==========================================
 echo              ARGUS - Inicial
 echo ==========================================
 echo.
-echo  1. Iniciar ARGUS Web (frontend + backend)
+echo  1. Iniciar ARGUS Web (volta a este menu ao iniciar)
 echo  2. Abrir menu da Platform
-echo  3. Instalar todas as dependencias
-echo  4. Executar testes e auditoria
-echo  5. Abrir README
-echo  6. Encerrar ARGUS nesta maquina (Web, Platform e agente local)
-echo  7. Sair
+echo  3. Gerenciar ou parar o Web
+echo  4. Instalar todas as dependencias
+echo  5. Executar testes e auditoria
+echo  6. Abrir README
+echo  7. Encerrar ARGUS nesta maquina (Web, Platform e agente local)
+echo  8. Sair
 echo.
-choice /c 1234567 /n /m "Escolha: "
-if errorlevel 7 exit /b 0
-if errorlevel 6 goto shutdown
-if errorlevel 5 goto docs
-if errorlevel 4 goto tests
-if errorlevel 3 goto dependencies
+choice /c 12345678 /n /m "Escolha: "
+if errorlevel 8 exit /b 0
+if errorlevel 7 goto shutdown
+if errorlevel 6 goto docs
+if errorlevel 5 goto tests
+if errorlevel 4 goto dependencies
+if errorlevel 3 goto manageweb
 if errorlevel 2 goto platform
 if errorlevel 1 goto web
 
@@ -41,6 +43,9 @@ call "%~dp0Platform\ARGUS-Platform.cmd"
 goto menu
 :web
 call "%~dp0Web\ARGUS-Web.cmd"
+goto menu
+:manageweb
+call "%~dp0Web\ARGUS-Web.cmd" /manage
 goto menu
 :shutdown
 echo.

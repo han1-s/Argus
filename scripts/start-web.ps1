@@ -7,12 +7,25 @@ $controlDir = Join-Path $env:LOCALAPPDATA 'ARGUS\Control'
 $logDir = Join-Path $env:LOCALAPPDATA 'ARGUS\Logs'
 New-Item -ItemType Directory -Force -Path $controlDir, $logDir | Out-Null
 
+$busyPorts = @()
 foreach ($port in @(3001, 5173)) {
   $client = [Net.Sockets.TcpClient]::new()
-  try { $client.Connect('127.0.0.1', $port); throw "A porta $port já está ocupada. Encerre a instância anterior do ARGUS Web primeiro." }
+  try { $client.Connect('127.0.0.1', $port); $busyPorts += $port }
   catch [System.Net.Sockets.SocketException] { }
   finally { $client.Dispose() }
 }
+if ($busyPorts.Count -eq 2) {
+  $listeners = @(Get-NetTCPConnection -State Listen -LocalPort 3001,5173 -ErrorAction SilentlyContinue)
+  $api = $listeners | Where-Object LocalPort -eq 3001 | Select-Object -First 1
+  $vite = $listeners | Where-Object LocalPort -eq 5173 | Select-Object -First 1
+  $apiProcess = if ($api) { Get-CimInstance Win32_Process -Filter "ProcessId = $($api.OwningProcess)" -ErrorAction SilentlyContinue }
+  $viteProcess = if ($vite) { Get-CimInstance Win32_Process -Filter "ProcessId = $($vite.OwningProcess)" -ErrorAction SilentlyContinue }
+  if ($apiProcess.CommandLine -match '(?i)(?:^|\s)src[\\/]server\.js(?:\s|$)' -and $viteProcess.CommandLine -match '(?i)vite[\\/]bin[\\/]vite\.js') {
+    Write-Host 'ARGUS Web já está rodando.' -ForegroundColor Green
+    exit 2
+  }
+}
+if ($busyPorts.Count) { throw "As portas $($busyPorts -join ', ') já estão ocupadas. Verifique se há uma instância anterior do ARGUS Web em execução." }
 
 $services = @(
   @{ Name = 'Web Backend'; Entry = (Join-Path $backendRoot 'src\server.js'); Working = $backendRoot; Args = @('src/server.js'); Port = 3001 },

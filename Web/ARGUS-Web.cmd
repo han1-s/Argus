@@ -1,6 +1,7 @@
 @echo off
 setlocal
 for %%I in ("%~dp0..") do set "ARGUS_ROOT=%%~fI"
+if /i "%~1"=="/manage" goto menu
 
 where node >nul 2>nul || (echo Node.js nao encontrado. Instale Node.js 20.19+ ou 22.12+ LTS e tente novamente.& pause & exit /b 1)
 where npm >nul 2>nul || (echo npm nao encontrado no PATH.& pause & exit /b 1)
@@ -22,14 +23,16 @@ if not exist "%ARGUS_ROOT%\Web\Frontend\node_modules\vite\package.json" (
 )
 
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%ARGUS_ROOT%\scripts\start-web.ps1"
+if errorlevel 2 goto alreadyrunning
 if errorlevel 1 (
   pause
   exit /b 1
 )
+exit /b 0
 
 :menu
 echo.
-echo ARGUS Web esta rodando em segundo plano.
+echo Gerenciar ARGUS Web (os servicos ficam em segundo plano).
 echo 1. Parar Web
 echo 2. Abrir logs
 echo 3. Voltar ao menu principal (mantendo Web ligado)
@@ -38,6 +41,10 @@ if errorlevel 3 exit /b 0
 if errorlevel 2 goto logs
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%ARGUS_ROOT%\scripts\stop-web.ps1"
 pause
+exit /b 0
+
+:alreadyrunning
+echo ARGUS Web ja esta rodando. Use a opcao 3 do menu principal para gerencia-lo.
 exit /b 0
 
 :logs
