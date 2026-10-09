@@ -34,5 +34,10 @@ timeout /t 5 /nobreak >nul
 start "ARGUS Web" http://127.0.0.1:5173/login
 echo.
 echo Web iniciado. Esta janela pode ser fechada; mantenha as duas janelas de servico abertas.
-echo Para parar o Web, feche as janelas ARGUS Web Backend e ARGUS Web Frontend.
+echo.
+echo  1. Encerrar o Web (frontend e backend)
+echo  2. Deixar o Web em execucao e fechar este menu
+choice /c 12 /n /m "Escolha: "
+if errorlevel 2 exit /b 0
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0..\scripts\stop-web.ps1"
 pause

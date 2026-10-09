@@ -1,4 +1,4 @@
-﻿param([switch]$StopAll, [string]$ServerUrl = $env:ARGUS_SERVER_URL)
+﻿param([switch]$StopAll, [switch]$StopServerOnly, [string]$ServerUrl = $env:ARGUS_SERVER_URL)
 $ErrorActionPreference = 'Stop'
 $ParentRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $ProjectRoot = if (Test-Path (Join-Path $ParentRoot 'backend\server.js')) { $ParentRoot } else { $PSScriptRoot }
@@ -145,10 +145,20 @@ function Start-Server {
 }
 function Stop-Server {
   $entry = Join-Path $ProjectRoot 'backend\server.js'
-  $targets = @(Get-CimInstance Win32_Process -Filter "Name = 'node.exe'" | Where-Object { $_.CommandLine -and $_.CommandLine.Contains($entry) })
+  $port = 3000
+  $envFile = Join-Path $ProjectRoot '.env'
+  if (Test-Path $envFile) {
+    $portLine = Get-Content $envFile | Where-Object { $_ -match '^\s*PORT\s*=\s*\d+' } | Select-Object -First 1
+    if ($portLine -match '^\s*PORT\s*=\s*(\d+)') { $port = [int]$Matches[1] }
+  }
+  $listenerIds = @()
+  try { $listenerIds = @(Get-NetTCPConnection -State Listen -LocalPort $port -ErrorAction Stop | Select-Object -ExpandProperty OwningProcess -Unique) } catch { }
+  $targets = @(Get-CimInstance Win32_Process -Filter "Name = 'node.exe'" | Where-Object { $_.CommandLine -and ($_.CommandLine.Contains($entry) -or ($listenerIds -contains $_.ProcessId -and $_.CommandLine -match '(?i)(?:^|\s)backend[\\/]server\.js(?:\s|$)')) })
   foreach ($target in $targets) { Stop-Process -Id $target.ProcessId -Force -ErrorAction SilentlyContinue }
+  $apiWindows = @(Get-Process -Name cmd -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowTitle -eq 'ARGUS Platform API' })
+  foreach ($window in $apiWindows) { & taskkill.exe /PID $window.Id /T /F 2>$null | Out-Null }
   Remove-Item $ServerPidFile -Force -ErrorAction SilentlyContinue
-  if ($targets.Count) { Write-Host 'Servidor ARGUS parado.' -ForegroundColor Green } else { Write-Host 'Servidor ARGUS não estava em execução.' }
+  if ($targets.Count -or $apiWindows.Count) { Write-Host 'Servidor ARGUS parado.' -ForegroundColor Green } else { Write-Host 'Servidor ARGUS não estava em execução.' }
 }
 function Start-Agent {
   if (-not (Test-Path $AgentScript) -or -not (Test-Path (Join-Path $AgentDir 'config.json'))) {
@@ -179,6 +189,7 @@ function Stop-Agent {
 }
 
 if ($StopAll) { Stop-Server; Stop-Agent; exit 0 }
+if ($StopServerOnly) { Stop-Server; exit 0 }
 
 if ($env:ARGUS_AGENT_ONLY -eq '1' -and $env:ARGUS_INSTALL_ONLY -eq '1') {
   Clear-Host

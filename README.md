@@ -28,7 +28,7 @@ Copie `Platform/.env.example` para `Platform/.env` e configure `MYSQL_USER=argus
 
 Execute `ARGUS.cmd` na raiz. Na primeira execução, escolha **Instalar todas as dependências** para instalar os pacotes da Platform, Web Backend e Web Frontend em sequência. O comando informa qual etapa falhou caso ocorra um erro. Também é possível executar `scripts/install-dependencies.cmd` diretamente.
 
-No menu principal, escolha **Iniciar ARGUS Web** para abrir o backend e o frontend em janelas separadas e acessar a tela de login. Para a Platform, abra seu menu e escolha o painel de controle ou somente a API. A Platform usa a porta `3000`; o Web Backend usa `3001` e o Vite usa `5173` durante o desenvolvimento. Para abrir manualmente:
+No menu principal, escolha **Iniciar ARGUS Web** para abrir o backend e o frontend em janelas separadas e acessar a tela de login; o menu Web oferece a opção de encerrar os dois serviços. Para a Platform, abra seu menu e escolha o painel de controle, somente a API ou **Parar o servidor da Platform**. A Platform usa a porta `3000`; o Web Backend usa `3001` e o Vite usa `5173` durante o desenvolvimento. Para abrir manualmente:
 
 ```powershell
 npm --prefix Platform start

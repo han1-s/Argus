@@ -13,6 +13,10 @@ if /i "%~1"=="/stop" (
   powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%ARGUS_CONTROL%" -StopAll
   exit /b
 )
+if /i "%~1"=="/stop-server" (
+  powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%ARGUS_CONTROL%" -StopServerOnly
+  exit /b
+)
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%ARGUS_CONTROL%"
 if errorlevel 1 (
   echo O controlador do ARGUS terminou com erro.
