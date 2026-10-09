@@ -1,3 +1,4 @@
+const crypto = require('node:crypto');
 const pool = require('../config/database');
 
 function parseJson(value, fallback = {}) {
@@ -117,9 +118,105 @@ async function reconhecerAlerta(req, res, next) {
 
 async function obterAssinatura(req, res, next) {
   try {
-    const [rows] = await pool.execute('SELECT plan, billing_cycle, status, started_at, updated_at FROM subscriptions WHERE user_id = ? LIMIT 1', [req.user.id]);
-    res.json({ assinatura: rows[0] ? { ...rows[0], plan: rows[0].plan } : { plan: 'Free', billing_cycle: 'monthly', status: 'active', started_at: null, updated_at: null } });
+    const [rows] = await pool.execute(
+      `SELECT s.plan, s.billing_cycle, s.status, s.started_at, s.updated_at,
+              p.payment_method, p.amount_cents, p.currency, p.status AS payment_status,
+              p.transaction_reference, p.card_brand, p.card_last4, p.plan AS payment_plan, p.created_at AS payment_created_at
+       FROM subscriptions s
+       LEFT JOIN payment_transactions p ON p.transaction_id = (
+         SELECT recent.transaction_id FROM payment_transactions recent
+         WHERE recent.user_id = s.user_id ORDER BY recent.created_at DESC LIMIT 1
+       )
+       WHERE s.user_id = ? LIMIT 1`,
+      [req.user.id],
+    );
+    const row = rows[0];
+    res.json({ assinatura: row ? {
+      plan: row.plan,
+      billing_cycle: row.billing_cycle,
+      status: row.status,
+      started_at: row.started_at,
+      updated_at: row.updated_at,
+      latest_payment: row.payment_method ? {
+        method: row.payment_method,
+        amount_cents: row.amount_cents,
+        currency: row.currency,
+        status: row.payment_status,
+        reference: row.transaction_reference,
+        plan: row.payment_plan,
+        card_brand: row.card_brand,
+        card_last4: row.card_last4,
+        created_at: row.payment_created_at,
+      } : null,
+    } : { plan: 'Free', billing_cycle: 'monthly', status: 'active', started_at: null, updated_at: null, latest_payment: null } });
   } catch (error) { next(error); }
+}
+
+async function concluirPagamentoSimulado(req, res, next) {
+  const allowedFields = new Set(['plan', 'billingCycle', 'paymentMethod', 'cardBrand', 'cardLast4']);
+  if (Object.keys(req.body || {}).some(key => !allowedFields.has(key))) {
+    return res.status(400).json({ error: 'Envie apenas os dados da simulação. Número completo, validade e CVV não são aceitos nem armazenados.' });
+  }
+
+  const body = req.body && typeof req.body === 'object' ? req.body : {};
+  const { plan, billingCycle, paymentMethod, cardBrand = null, cardLast4 = null } = body;
+  if (!['Pro', 'Business'].includes(plan) || !['monthly', 'annual'].includes(billingCycle)) {
+    return res.status(400).json({ error: 'Plano ou ciclo de cobrança inválido.' });
+  }
+  if (!['pix', 'credit_card', 'debit_card'].includes(paymentMethod)) {
+    return res.status(400).json({ error: 'Forma de pagamento inválida.' });
+  }
+  if (paymentMethod === 'pix' && (cardBrand !== null || cardLast4 !== null)) {
+    return res.status(400).json({ error: 'PIX não deve incluir dados de cartão.' });
+  }
+  if (paymentMethod !== 'pix' && (!['Visa', 'Mastercard', 'American Express', 'Elo', 'Discover', 'Outro'].includes(cardBrand) || !/^\d{4}$/.test(String(cardLast4)))) {
+    return res.status(400).json({ error: 'Para simular cartão, informe somente a bandeira e os quatro últimos dígitos.' });
+  }
+
+  const prices = { Pro: { monthly: 4900, annual: 46800 }, Business: { monthly: 14900, annual: 142800 } };
+  const amountCents = prices[plan][billingCycle];
+  const now = new Date();
+  const transactionId = crypto.randomUUID();
+  const reference = `ARG-${Date.now().toString(36).toUpperCase()}-${crypto.randomBytes(5).toString('hex').toUpperCase()}`;
+  let connection;
+  try {
+    connection = await pool.getConnection();
+    await connection.beginTransaction();
+    await connection.execute(
+      `INSERT INTO payment_transactions
+         (transaction_id, user_id, plan, billing_cycle, payment_method, amount_cents, currency, status, transaction_reference, card_brand, card_last4, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, 'BRL', 'approved', ?, ?, ?, ?)`,
+      [transactionId, req.user.id, plan, billingCycle, paymentMethod, amountCents, reference, cardBrand, cardLast4, now],
+    );
+    await connection.execute(
+      `INSERT INTO subscriptions (user_id, plan, billing_cycle, status, started_at, updated_at)
+       VALUES (?, ?, ?, 'active', ?, ?)
+       ON DUPLICATE KEY UPDATE plan = VALUES(plan), billing_cycle = VALUES(billing_cycle), status = 'active', updated_at = VALUES(updated_at)`,
+      [req.user.id, plan, billingCycle, now, now],
+    );
+    await connection.commit();
+    const payment = {
+      plan,
+      method: paymentMethod,
+      amount_cents: amountCents,
+      currency: 'BRL',
+      status: 'approved',
+      reference,
+      card_brand: cardBrand,
+      card_last4: cardLast4,
+      created_at: now,
+      simulated: true,
+    };
+    res.status(201).json({
+      assinatura: { plan, billing_cycle: billingCycle, status: 'active', started_at: now, updated_at: now, latest_payment: payment },
+      pagamento: payment,
+    });
+  } catch (error) {
+    if (connection) await connection.rollback().catch(() => {});
+    next(error);
+  } finally {
+    connection?.release();
+  }
 }
 
 async function salvarAssinatura(req, res, next) {
@@ -127,6 +224,9 @@ async function salvarAssinatura(req, res, next) {
   const billingCycle = String(req.body.billingCycle || 'monthly');
   if (!['Free', 'Pro', 'Business'].includes(plan) || !['monthly', 'annual'].includes(billingCycle)) {
     return res.status(400).json({ error: 'Plano ou ciclo de cobrança inválido.' });
+  }
+  if (plan !== 'Free') {
+    return res.status(409).json({ error: 'Planos pagos precisam ser confirmados pelo checkout simulado.' });
   }
   try {
     const now = new Date();
@@ -157,4 +257,4 @@ async function listarNotificacoes(req, res, next) {
   } catch (error) { next(error); }
 }
 
-module.exports = { listarMaquinas, obterMaquina, obterDashboard, listarAtividades, listarRelatorios, listarAlertas, reconhecerAlerta, obterAssinatura, salvarAssinatura, listarNotificacoes };
+module.exports = { listarMaquinas, obterMaquina, obterDashboard, listarAtividades, listarRelatorios, listarAlertas, reconhecerAlerta, obterAssinatura, salvarAssinatura, concluirPagamentoSimulado, listarNotificacoes };

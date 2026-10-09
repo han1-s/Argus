@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import type { BillingCycle, PlanType } from '../../types';
 import { CheckoutModal } from '../../components/CheckoutModal/CheckoutModal';
-import { getArgusSubscription, saveArgusSubscription } from '../../services/argusWebApi';
+import { getArgusSubscription, saveArgusSubscription, type ArgusPayment, type ArgusSubscription } from '../../services/argusWebApi';
 import { showArgusToast } from '../../services/argusToast';
 import './Monetizacao.css';
 
@@ -47,8 +47,8 @@ const comparison = [
 const faqs = [
   ['Posso cancelar meu plano?', 'Esta página é uma demonstração. Em uma oferta comercial, as condições de cancelamento seriam apresentadas antes da contratação.'],
   ['Como funciona a cobrança anual?', 'O valor anual é apresentado como equivalente mensal, com desconto demonstrativo de 20%. O pagamento seria anual; nenhum valor é cobrado nesta demonstração.'],
-  ['Quais formas de pagamento estão disponíveis?', 'O fluxo demonstrativo apresenta PIX e cartão apenas para ilustrar uma possível contratação.'],
-  ['Posso mudar de plano?', 'Os botões permitem percorrer o checkout simulado de cada plano. A seleção não altera uma conta nem ativa recursos.'],
+  ['Quais formas de pagamento estão disponíveis?', 'O checkout permite simular PIX, cartão de crédito ou cartão de débito. A confirmação e os metadados ficam no banco ARGUS; nenhuma cobrança é realizada.'],
+  ['Posso mudar de plano?', 'Sim. Ao concluir o checkout demonstrativo, o plano escolhido é salvo na conta e aparece nas configurações.'],
   ['O que acontece se eu ultrapassar o limite de computadores?', 'Os limites mostrados são ilustrativos. Esta página não monitora computadores nem verifica utilização.'],
   ['Os pagamentos são reais?', 'Não. Preços, planos e checkout são demonstrativos. Nenhuma transação ou cobrança real é realizada.'],
 ];
@@ -61,6 +61,7 @@ export const Monetizacao: React.FC = () => {
   const [selectedPlan, setSelectedPlan] = useState<PlanType | null>(null);
   const [currentPlan, setCurrentPlan] = useState<PlanType>('Free');
   const [planCycle, setPlanCycle] = useState<BillingCycle>('monthly');
+  const [latestPayment, setLatestPayment] = useState<ArgusPayment | null>(null);
   const [planError, setPlanError] = useState('');
   const activePlan = plans.find(plan => plan.id === currentPlan) || plans[0];
 
@@ -70,6 +71,7 @@ export const Monetizacao: React.FC = () => {
       if (!active) return;
       setCurrentPlan(subscription.plan);
       setPlanCycle(subscription.billing_cycle);
+      setLatestPayment(subscription.latest_payment ?? null);
     }).catch(error => {
       if (active) setPlanError(error instanceof Error ? error.message : 'Não foi possível carregar o plano atual.');
     });
@@ -88,10 +90,10 @@ export const Monetizacao: React.FC = () => {
     }
   };
 
-  const handlePlanSaved = () => {
-    if (selectedPlan) setCurrentPlan(selectedPlan);
-    setPlanCycle(cycle);
-    setSelectedPlan(null);
+  const handlePlanSaved = (subscription: ArgusSubscription, payment: ArgusPayment) => {
+    setCurrentPlan(subscription.plan);
+    setPlanCycle(subscription.billing_cycle);
+    setLatestPayment(payment);
     showArgusToast('Plano salvo na sua conta. A cobrança continua simulada.');
   };
 
@@ -109,6 +111,7 @@ export const Monetizacao: React.FC = () => {
           <div className="current-plan-name">{activePlan.name}</div>
           <p className="current-plan-description">Plano {planCycle === 'annual' ? 'anual' : 'mensal'} selecionado. Contratação e cobrança permanecem simuladas.</p>
           <ul>{activePlan.resources.slice(0, 4).map(({ icon: Icon, name, value }) => <li key={name}><Icon size={15} /><span>{name}</span><strong>{value}</strong></li>)}</ul>
+          {latestPayment && <p className="current-plan-payment">Último pagamento simulado: {latestPayment.plan} · {latestPayment.method === 'pix' ? 'PIX' : `${latestPayment.method === 'credit_card' ? 'Crédito' : 'Débito'} · ${latestPayment.card_brand || 'Cartão'} •••• ${latestPayment.card_last4 || ''}`} · R$ {(latestPayment.amount_cents / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>}
           {planError && <p role="alert" className="argus-auth-error">{planError}</p>}
           <button className="btn btn-secondary current-plan-button" disabled>{activePlan.name} ativo</button>
         </aside>

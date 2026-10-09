@@ -54,6 +54,22 @@ CREATE TABLE IF NOT EXISTS subscriptions (
   updated_at DATETIME(3) NOT NULL,
   CONSTRAINT fk_subscription_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
+CREATE TABLE IF NOT EXISTS payment_transactions (
+  transaction_id CHAR(36) PRIMARY KEY,
+  user_id CHAR(36) NOT NULL,
+  plan ENUM('Pro','Business') NOT NULL,
+  billing_cycle ENUM('monthly','annual') NOT NULL,
+  payment_method ENUM('pix','credit_card','debit_card') NOT NULL,
+  amount_cents INT UNSIGNED NOT NULL,
+  currency CHAR(3) NOT NULL DEFAULT 'BRL',
+  status ENUM('approved') NOT NULL DEFAULT 'approved',
+  transaction_reference VARCHAR(40) NOT NULL UNIQUE,
+  card_brand VARCHAR(24) NULL,
+  card_last4 CHAR(4) NULL,
+  created_at DATETIME(3) NOT NULL,
+  INDEX idx_payment_user_created (user_id, created_at),
+  CONSTRAINT fk_payment_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
 CREATE TABLE IF NOT EXISTS machines (
   id CHAR(36) PRIMARY KEY,
   user_id CHAR(36) NOT NULL,

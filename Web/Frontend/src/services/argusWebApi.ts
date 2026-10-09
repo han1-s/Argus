@@ -6,6 +6,30 @@ export interface ArgusSubscription {
   status: 'active' | 'canceled';
   started_at: string | null;
   updated_at: string | null;
+  latest_payment?: ArgusPayment | null;
+}
+
+export interface ArgusPayment {
+  plan: Exclude<PlanType, 'Free'>;
+  method: 'pix' | 'credit_card' | 'debit_card';
+  amount_cents: number;
+  currency: string;
+  status: 'approved';
+  reference: string;
+  card_brand: string | null;
+  card_last4: string | null;
+  created_at: string;
+  simulated?: boolean;
+}
+
+export interface ArgusCardSummary {
+  cardBrand: string;
+  cardLast4: string;
+}
+
+export interface ArgusCheckoutResult {
+  assinatura: ArgusSubscription;
+  pagamento: ArgusPayment;
 }
 
 export interface PlatformNotification {
@@ -41,6 +65,23 @@ export async function saveArgusSubscription(plan: PlanType, billingCycle: Billin
     body: JSON.stringify({ plan, billingCycle }),
   });
   return result.assinatura;
+}
+
+export async function completeArgusCheckout(
+  plan: Exclude<PlanType, 'Free'>,
+  billingCycle: BillingCycle,
+  paymentMethod: ArgusPayment['method'],
+  cardSummary?: ArgusCardSummary,
+): Promise<ArgusCheckoutResult> {
+  return request<ArgusCheckoutResult>('/api/assinatura/pagamentos-simulados', {
+    method: 'POST',
+    body: JSON.stringify({
+      plan,
+      billingCycle,
+      paymentMethod,
+      ...(cardSummary || {}),
+    }),
+  });
 }
 
 export async function getPlatformNotifications(): Promise<PlatformNotification[]> {

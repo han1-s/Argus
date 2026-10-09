@@ -1,6 +1,7 @@
 const path = require('node:path');
 const express = require('express');
 const pool = require('./config/database');
+const ensureBillingSchema = require('./config/ensureBillingSchema');
 const initializeAdmin = require('./config/initializeAdmin');
 const authRoutes = require('./routes/authRoutes');
 const argusDataRoutes = require('./routes/argusDataRoutes');
@@ -37,7 +38,7 @@ app.use((error, req, res, next) => {
 });
 
 let server;
-initializeAdmin().then(() => {
+ensureBillingSchema().then(initializeAdmin).then(() => {
   server = app.listen(PORT, '127.0.0.1', () => {
     console.log(`ARGUS Web API conectada ao banco compartilhado em http://127.0.0.1:${PORT}`);
   });

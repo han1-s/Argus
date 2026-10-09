@@ -46,7 +46,7 @@ No painel Platform, use **Adicionar computador**, baixe `ARGUS.cmd` e execute-o 
 
 - Cadastro, login e sessão por cookie HttpOnly no banco compartilhado.
 - Recuperação de senha demonstrativa: o sistema gera um código temporário e o mostra na interface como simulação de e-mail. Nenhuma mensagem é enviada por um provedor de e-mail.
-- Assinatura Free, Pro ou Business guardada na tabela `subscriptions`. A seleção é demonstrativa e não processa pagamentos.
+- Assinatura Free, Pro ou Business guardada na tabela `subscriptions`. O checkout demonstra PIX, crédito e débito e registra transações em `payment_transactions`; não há cobrança real. Do cartão, somente bandeira e quatro últimos dígitos são salvos. Nunca use dados financeiros reais neste modo.
 - Configurações da conta e preferências locais; a seção de notificações consulta eventos e alertas da Platform associados à conta.
 - Página de download gera o `ARGUS.cmd` pelo Web Backend. A Platform precisa estar ativa e acessível quando o instalador for executado para obter os componentes do agente.
 

@@ -1,6 +1,6 @@
 export type PlanType = 'Free' | 'Pro' | 'Business';
 export type BillingCycle = 'monthly' | 'annual';
-export type PaymentMethod = 'pix' | 'card';
+export type PaymentMethod = 'pix' | 'credit_card' | 'debit_card';
 export type SettingsTab = 'privacy' | 'notifications' | 'appearance' | 'system' | 'billing';
 
 export interface PlanFeature {

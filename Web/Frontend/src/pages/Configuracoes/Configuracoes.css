@@ -109,7 +109,7 @@
 .settings-plan-limits li { display: grid; grid-template-columns: 19px minmax(0,1fr) auto; align-items: center; gap: .5rem; color: var(--settings-muted); font-size: .78rem; }
 .settings-plan-limits li svg { color: #a78bfa; }
 .settings-plan-limits li strong { color: #f0edf5; font-size: .76rem; font-weight: 600; }
-.settings-billing-note { margin-bottom: 1rem; color: #928da0; font-size: .69rem; line-height: 1.5; }
+.settings-billing-note { margin-bottom: 1rem; color: #928da0; font-size: .69rem; line-height: 1.5; overflow-wrap: anywhere; }
 .settings-billing-card .settings-btn { width: fit-content; }
 .settings-dialog-backdrop { position: fixed; inset: 0; z-index: 1100; display: grid; place-items: center; padding: 1rem; background: rgba(3,4,8,.77); backdrop-filter: blur(6px); animation: settingsOverlayIn 140ms ease both; }
 .settings-confirm-dialog { position: relative; width: min(100%,460px); padding: 1.5rem; border: 1px solid rgba(248,113,113,.24); border-radius: 16px; background: linear-gradient(145deg,#1a1821,#111118); box-shadow: 0 24px 70px rgba(0,0,0,.5); animation: settingsDialogIn 180ms ease both; }

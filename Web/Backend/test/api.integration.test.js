@@ -59,6 +59,7 @@ test('Web API integration against MySQL (opt-in)', { skip: !enabled }, async t =
         '/api/notificacoes',
       ];
       for (const route of routes) assert.equal((await request(route, { session: null })).status, 401, route);
+      assert.equal((await request('/api/assinatura/pagamentos-simulados', { method: 'POST', body: {}, session: null })).status, 401);
     });
 
     await t.test('signup validates input, stores a disposable account, and sets a secure cookie policy', async () => {
@@ -149,12 +150,41 @@ test('Web API integration against MySQL (opt-in)', { skip: !enabled }, async t =
       assert.equal((await readJson(await request('/api/assinatura'))).assinatura.plan, 'Free');
       assert.equal((await request('/api/assinatura', { method: 'PUT', body: { plan: 'Invalid', billingCycle: 'monthly' } })).status, 400);
       assert.equal((await request('/api/assinatura', { method: 'PUT', body: { plan: 'Pro', billingCycle: 'invalid' } })).status, 400);
-      const saved = await request('/api/assinatura', { method: 'PUT', body: { plan: 'Pro', billingCycle: 'annual' } });
-      assert.equal(saved.status, 200);
-      assert.equal((await readJson(saved)).assinatura.plan, 'Pro');
+      const paidPlanWithoutCheckout = await request('/api/assinatura', { method: 'PUT', body: { plan: 'Pro', billingCycle: 'annual' } });
+      assert.equal(paidPlanWithoutCheckout.status, 409);
       const persisted = await readJson(await request('/api/assinatura'));
-      assert.equal(persisted.assinatura.plan, 'Pro');
-      assert.equal(persisted.assinatura.billing_cycle, 'annual');
+      assert.equal(persisted.assinatura.plan, 'Free');
+      assert.equal(persisted.assinatura.billing_cycle, 'monthly');
+    });
+
+    await t.test('simulated PIX, credit and debit checkout persist only safe payment metadata', async () => {
+      const endpoint = '/api/assinatura/pagamentos-simulados';
+      assert.equal((await request(endpoint, { method: 'POST', body: { plan: 'Pro', billingCycle: 'monthly', paymentMethod: 'cash' } })).status, 400);
+      assert.equal((await request(endpoint, { method: 'POST', body: { plan: 'Pro', billingCycle: 'monthly', paymentMethod: 'credit_card', cardNumber: '4242424242424242', cvv: '123' } })).status, 400);
+
+      const cases = [
+        { paymentMethod: 'pix', expectedAmount: 4900 },
+        { paymentMethod: 'credit_card', cardBrand: 'Visa', cardLast4: '4242', expectedAmount: 4900 },
+        { paymentMethod: 'debit_card', cardBrand: 'Mastercard', cardLast4: '4444', expectedAmount: 4900 },
+      ];
+      for (const payment of cases) {
+        const { expectedAmount, ...details } = payment;
+        const response = await request(endpoint, { method: 'POST', body: { plan: 'Pro', billingCycle: 'monthly', ...details } });
+        assert.equal(response.status, 201);
+        const result = await readJson(response);
+        assert.equal(result.pagamento.method, payment.paymentMethod);
+        assert.equal(result.pagamento.amount_cents, expectedAmount);
+        assert.equal(result.pagamento.status, 'approved');
+        assert.equal(result.assinatura.latest_payment.reference, result.pagamento.reference);
+        assert.ok(result.pagamento.reference);
+        assert.equal(JSON.stringify(result).includes('4242424242424242'), false);
+
+        const persisted = (await readJson(await request('/api/assinatura'))).assinatura;
+        assert.equal(persisted.plan, 'Pro');
+        assert.equal(persisted.latest_payment.method, payment.paymentMethod);
+        assert.equal(persisted.latest_payment.amount_cents, expectedAmount);
+        assert.equal(persisted.latest_payment.card_last4, details.cardLast4 || null);
+      }
     });
 
     await t.test('simulated recovery validates, resets credentials, and revokes sessions', async () => {

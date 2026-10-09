@@ -10,6 +10,7 @@
 .current-plan-status { display: inline-flex; align-items: center; gap: .3rem; color: #a7f3d0; font-size: .67rem; font-weight: 800; letter-spacing: .08em; }
 .current-plan-name { margin-top: .75rem; font: 700 1.8rem 'Outfit', sans-serif; }
 .current-plan-description { margin-top: .2rem; color: var(--money-muted); font-size: .82rem; }
+.current-plan-payment { margin-top: -.25rem; color: #b9aecf; font-size: .72rem; line-height: 1.55; overflow-wrap: anywhere; }
 .current-plan-card ul { display: grid; gap: .55rem; margin: 1.05rem 0; list-style: none; }
 .current-plan-card li { display: grid; grid-template-columns: 17px 1fr auto; align-items: center; gap: .5rem; color: var(--money-muted); font-size: .78rem; }
 .current-plan-card li svg { color: var(--money-purple); }
@@ -96,7 +97,7 @@
 .checkout-total strong { color: #fff; font-size: 1.2rem; }
 .checkout-total small { color: var(--money-muted); font-size: .69rem; font-weight: 500; }
 .checkout-annual-note { color: #888495; font-size: .68rem; }
-.checkout-tabs { display: grid; grid-template-columns: repeat(2,1fr); gap: .45rem; margin: 1rem 0 .8rem; }
+.checkout-tabs { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: .45rem; margin: 1rem 0 .8rem; }
 .checkout-tabs button { display: flex; align-items: center; justify-content: center; gap: .4rem; min-height: 40px; border: 1px solid var(--money-border); border-radius: 9px; color: var(--money-muted); background: rgba(7,8,13,.48); font: 600 .8rem Inter, sans-serif; cursor: pointer; transition: color 170ms ease, border-color 170ms ease, background 170ms ease; }
 .checkout-tabs button.active { border-color: rgba(167,139,250,.42); color: #fff; background: rgba(139,92,246,.18); }
 .checkout-payment-panel { display: flex; flex-direction: column; align-items: center; gap: .65rem; padding: .8rem .25rem .3rem; text-align: center; }
@@ -118,6 +119,7 @@
 .checkout-success { display: flex; flex-direction: column; align-items: center; padding: 1.4rem .35rem .45rem; text-align: center; }
 .checkout-success > span { display: grid; place-items: center; width: 60px; height: 60px; margin-bottom: 1rem; border: 1px solid rgba(167,243,208,.18); border-radius: 50%; color: #86efac; background: rgba(34,197,94,.1); }
 .checkout-success .section-label { font-size: .68rem; }
+.checkout-success .checkout-reference { margin: .7rem 0; color: #d7cafa; overflow-wrap: anywhere; }
 .checkout-success .btn { min-width: 150px; margin-top: 1.2rem; }
 @keyframes monetizationCardIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes moneyFadeIn { from { opacity: 0; } to { opacity: 1; } }
