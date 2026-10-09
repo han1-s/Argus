@@ -35,7 +35,7 @@ echo ==========================================
 echo             ARGUS - Ferramentas
 echo ==========================================
 echo.
-echo  1. Instalar dependencias
+echo  1. Preparar primeira instalacao (dependencias e .env)
 echo  2. Executar verificacoes e testes
 echo  3. Abrir README
 echo  4. Voltar

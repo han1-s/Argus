@@ -21,7 +21,7 @@ O agente nunca acessa o MySQL diretamente. A porta `3306` do banco deve ficar di
 ## Requisitos
 
 - Windows 10/11 no servidor e nos computadores que serão conectados pelo instalador guiado.
-- Node.js 18 ou superior no computador servidor. Nos endpoints, o instalador tenta instalar Node.js LTS usando `winget` se necessário.
+- Node.js 18 ou superior para executar somente a Platform. Para o projeto completo (incluindo Web Frontend), use Node.js 20.19+ ou 22.12+ LTS; o menu principal tenta instalar Node.js LTS via `winget` quando necessário. Nos endpoints, o instalador também tenta instalar Node.js LTS usando `winget`.
 - MySQL 8 ou superior instalado e em execução no computador servidor.
 - Rede local entre servidor e endpoints; permitir a porta `3000` no firewall do servidor.
 
@@ -54,6 +54,8 @@ O agente nunca acessa o MySQL diretamente. A porta `3306` do banco deve ficar di
 6. No próprio servidor, abra <http://localhost:3000>, crie a conta administradora e aceite os termos.
 
 Também é possível abrir `Platform/ARGUS.cmd` e escolher **Preparar servidor** e depois **Iniciar servidor e abrir o painel**. O MySQL precisa estar iniciado antes.
+
+Para preparar Platform, Web Backend e Web Frontend juntos em uma instalação nova do Windows, siga o guia principal em [`README.md`](../README.md). A preparação pelo menu da Platform instala somente as dependências da Platform.
 
 ## 2. Conectar um computador
 

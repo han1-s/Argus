@@ -4,16 +4,18 @@ ARGUS reúne um site de apresentação (`Web/`) e uma plataforma de monitorament
 
 ## Instalação completa no Windows
 
-### Requisitos
+### Pré-requisitos
 
 - Windows 10 ou 11.
-- Node.js 20.19 ou superior, ou 22.12 ou superior (inclui npm; exigido pelo Vite do Web Frontend).
-- MySQL 8 ou superior em execução no computador servidor.
+- MySQL Server 8 ou superior instalado no computador servidor. O [MySQL Installer oficial](https://dev.mysql.com/downloads/installer/) pode instalar o servidor e o MySQL Workbench; o Workbench é a interface gráfica usada nos passos abaixo.
 - Rede local entre o servidor e os computadores que serão monitorados.
+- O Node.js LTS é instalado pelo CMD principal com `winget` quando possível. Sem `winget`, instale [Node.js LTS](https://nodejs.org/) manualmente e abra um novo CMD. O Web requer Node.js 20.19+ ou 22.12+.
 
-### Preparar o banco
+### Instalação guiada em um Windows recém-instalado
 
-Crie a base e um usuário MySQL para o ARGUS. Execute no MySQL Workbench ou no console, trocando a senha:
+1. Baixe o projeto como ZIP do GitHub e extraia a pasta `Argus` para um local permanente, por exemplo `Documentos\Argus`. Não execute o projeto de dentro do ZIP.
+2. Instale o MySQL Server. Durante a configuração, anote a senha de `root`, mantenha o serviço MySQL iniciado e instale o Workbench para executar o SQL.
+3. Abra o Workbench, conecte-se ao servidor local usando a senha de `root` e abra uma aba SQL. Crie a base e um usuário exclusivo do ARGUS. Troque `SUA_SENHA_FORTE` por uma senha criada por você e execute:
 
 ```sql
 CREATE DATABASE IF NOT EXISTS argus CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -22,13 +24,17 @@ GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, ALTER, INDEX, REFERENCES ON argus.
 FLUSH PRIVILEGES;
 ```
 
-Ao iniciar o Web pelo `ARGUS.cmd`, se `Platform/.env` ainda não existir, o ARGUS cria uma cópia de `.env.example` e abre o arquivo para edição. Informe usuário e senha que tenham acesso ao MySQL e salve antes de iniciar. Mantenha o `.env` privado. O primeiro início prepara o administrador definido em `ARGUS_ADMIN_EMAIL` e `ARGUS_ADMIN_PASSWORD` (padrão local: `hanielshz@gmail.com` / `12345678`); altere esses valores antes de usar em rede compartilhada.
+4. Na pasta extraída, dê duplo clique em `ARGUS.cmd`. Abra **Ferramentas > Preparar primeira instalação**. O CMD tenta instalar Node.js LTS pelo `winget` se necessário, instala as dependências dos três projetos e cria `Platform/.env` a partir do modelo.
+5. Quando o Bloco de Notas abrir, confirme `MYSQL_HOST=127.0.0.1`, `MYSQL_PORT=3306`, `MYSQL_USER=argus_app`, `MYSQL_PASSWORD` com a mesma senha do SQL e `MYSQL_DATABASE=argus`. Salve e feche o arquivo. Não compartilhe `Platform/.env`; ele contém credenciais e é ignorado pelo Git. Se o CMD disser que Node.js foi recém-instalado mas não reconhece `node`, feche e abra `ARGUS.cmd` novamente.
+6. No menu principal, escolha **2 > 1 (Preparar servidor)**. Essa etapa também confirma/cria as dependências da Platform e preserva o `.env` configurado.
+7. Ainda no menu da Platform, escolha **2 (Iniciar servidor)**. O primeiro início cria as tabelas automaticamente no banco `argus` e abre o painel em `http://localhost:3000`. A conta inicial é definida por `ARGUS_ADMIN_EMAIL` e `ARGUS_ADMIN_PASSWORD` no `.env`; altere os valores padrão antes de usar em uma rede compartilhada.
+8. Volte ao menu principal e escolha **1** para iniciar o Web. Ele inicia API e frontend juntos e abre `http://localhost:5173/login`. O Web compartilha a mesma base MySQL e as tabelas criadas pela Platform.
 
-### Instalar dependências e iniciar
+Se `winget` não existir no Windows, instale Node.js LTS pelo site oficial, reabra o CMD e repita a etapa 4. Se a instalação do MySQL não estiver pronta, conclua a instalação, inicie o serviço MySQL e só então inicie a Platform ou o Web.
 
-Execute `ARGUS.cmd` na raiz. Para instalar os pacotes da Platform, Web Backend e Web Frontend em sequência, abra **Ferramentas** e escolha **Instalar dependências**. O comando informa qual etapa falhou caso ocorra um erro. Também é possível executar `scripts/install-dependencies.cmd` diretamente.
+### Menu principal e portas
 
-No menu principal, escolha **1** para iniciar e controlar o Web, **2** para abrir o menu da Platform, **3** para instalar dependências, executar verificações ou abrir este README, **4** para encerrar os serviços ARGUS desta máquina ou **5** para sair. O Web inicia backend e frontend em segundo plano e abre o login; seus logs ficam em uma única pasta. O início da Platform pelo CMD também abre o painel. Se o Edge não estiver instalado, o navegador padrão será usado. A Platform usa a porta `3000`; o Web Backend `3001` e o Vite `5173` durante o desenvolvimento. Para abrir manualmente:
+No menu principal, escolha **1** para iniciar/controlar o Web, **2** para abrir o menu da Platform, **3** para preparar dependências, executar testes ou abrir este README, **4** para encerrar os serviços ARGUS desta máquina ou **5** para sair. Os processos de servidor rodam em segundo plano; os logs ficam em `%LOCALAPPDATA%\ARGUS\Logs`. Se o Edge não estiver instalado, o navegador padrão será usado. A Platform usa a porta `3000`; o Web Backend `3001` e o Vite `5173` durante o desenvolvimento. O MySQL usa `3306` e deve permanecer em execução. Para iniciar manualmente, depois de instalar Node, dependências, banco e `.env`:
 
 ```powershell
 npm --prefix Platform start
