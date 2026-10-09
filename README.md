@@ -23,8 +23,8 @@ O ARGUS reúne um site e uma plataforma para acompanhar computadores autorizados
 
 3. Abra `ARGUS.cmd` e escolha **Ferramentas > Preparar primeira instalação**. O instalador prepara as dependências e cria `Platform/.env`.
 4. No arquivo `Platform/.env`, informe o usuário e a senha MySQL que você criou. Salve e feche o arquivo. Não compartilhe esse arquivo: ele contém credenciais.
-5. No menu principal, escolha **2 > 1** para preparar e iniciar a Platform. O painel abrirá em <http://localhost:3000>.
-6. Escolha **1** no menu principal para iniciar o site. Ele abrirá em <http://localhost:5173/login>.
+5. No menu principal, escolha **2 > 1** para abrir o controle da Platform. Escolha **1** para preparar o servidor e, depois, **2** para iniciar o painel em <http://localhost:3000>.
+6. Volte ao menu principal, escolha **1** e depois **1** para iniciar o site em <http://localhost:5173/login>.
 
 O MySQL precisa continuar ativo enquanto o ARGUS estiver em uso. O Web Backend usa a porta `3001`; o Vite usa `5173` durante o desenvolvimento.
 
