@@ -20,6 +20,11 @@
 @keyframes rotateRingRev { from { transform: rotate(360deg); } to { transform: rotate(0deg); } }
 @keyframes settingsSlideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 
+@keyframes argusSiteEnter {
+  from { opacity: 0; filter: blur(5px); }
+  to { opacity: 1; filter: blur(0); }
+}
+
 @keyframes spinSlow {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
