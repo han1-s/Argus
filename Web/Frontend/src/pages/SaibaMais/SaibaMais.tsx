@@ -56,6 +56,13 @@ const technologies = [
   { icon: Blocks, title: 'Prototipação', tags: ['Figma'] },
 ];
 
+const contributors = [
+  { name: 'Haniel', role: 'Frontend Web e desenvolvimento da Platform', icon: Code2 },
+  { name: 'Matheus', role: 'Backend Web', icon: Braces },
+  { name: 'Kaique', role: 'Banco de dados geral', icon: Database },
+  { name: 'Demais integrantes', role: 'Testes, validação e apoio ao projeto', icon: UsersRound },
+];
+
 const roadmap = [
   { label: 'Atual', title: 'Reconstrução da plataforma', icon: Check, text: 'A interface está sendo reconstruída em React e TypeScript, com nova identidade visual, navegação, perfil e configurações. A estrutura do frontend está preparada para a integração com o backend.', status: 'Em andamento' },
   { label: 'Próxima etapa', title: 'Integração', icon: Network, text: 'Conectar a interface à API e ao banco de dados, implementar autenticação integrada e estabelecer a comunicação com os computadores monitorados.', status: 'Planejado' },
@@ -188,6 +195,13 @@ export const SaibaMais: React.FC = () => (
         {roadmap.map(({ label, title, icon: Icon, text, status }, index) => <article className={`sm-roadmap-card${index === 0 ? ' is-current' : ''}`} key={label}><span className="sm-roadmap-index">0{index + 1}</span><span className="sm-icon"><Icon size={20} /></span><span className="sm-roadmap-label">{label}</span><h3>{title}</h3><p>{text}</p><span className="sm-status">{status}</span></article>)}
       </div>
       <p className="sm-future-note"><Sparkles size={16} /> Os itens em “Futuro” são possibilidades em avaliação, não funcionalidades já implementadas.</p>
+    </section>
+
+    <section className="sm-section" id="equipe">
+      <SectionHeading eyebrow="Equipe" title="Pessoas por trás do ARGUS." description="Créditos das principais frentes de desenvolvimento e validação do projeto." />
+      <div className="sm-card-grid sm-grid-4">
+        {contributors.map(({ name, role, icon: Icon }) => <article className="sm-card sm-principle-card" key={name}><span className="sm-icon"><Icon size={20} /></span><h3>{name}</h3><p>{role}</p></article>)}
+      </div>
     </section>
 
     <section className="sm-final-cta">

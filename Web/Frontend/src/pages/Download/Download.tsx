@@ -1,17 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
   Activity, ArrowDownToLine, CalendarDays, Check, Cpu, HardDrive, Monitor,
-  Network, Package, Shield, Sparkles,
+  Network, Package, Shield,
 } from 'lucide-react';
 import './Download.css';
-
-const agentRelease = {
-  name: 'ARGUS Agent',
-  version: 'v2.4.0',
-  date: '14/08/2026',
-  compatibility: ['Windows 10/11', 'Linux'],
-  size: '45,2 MB',
-};
 
 const releaseHistory = [
   {
@@ -35,27 +27,12 @@ const installationSteps = [
   { number: '04', title: 'Monitore', text: 'As informações coletadas ficam disponíveis para análise no ARGUS.', icon: <Activity size={18} /> },
 ];
 
-type DownloadState = 'idle' | 'preparing' | 'unavailable';
-
 export const Download: React.FC = () => {
-  const [downloadState, setDownloadState] = useState<DownloadState>('idle');
-
-  useEffect(() => {
-    if (downloadState !== 'preparing') return;
-    const timer = window.setTimeout(() => setDownloadState('unavailable'), 850);
-    return () => window.clearTimeout(timer);
-  }, [downloadState]);
-
-  const handleDownload = () => {
-    if (downloadState !== 'idle') return;
-    setDownloadState('preparing');
-  };
-
-  const buttonLabel = downloadState === 'preparing'
-    ? 'Preparando download...'
-    : downloadState === 'unavailable'
-      ? 'Download ainda não disponível'
-      : 'Baixar agora';
+  const defaultServerUrl = import.meta.env.VITE_PLATFORM_SERVER_URL
+    || `${window.location.protocol}//${window.location.hostname}:3000`;
+  const [platformServerUrl, setPlatformServerUrl] = useState(defaultServerUrl);
+  const serverUrlIsValid = /^https?:\/\/(?:[a-zA-Z0-9.-]+|\[[a-fA-F0-9:]+\])(?::[0-9]{1,5})?$/.test(platformServerUrl.trim());
+  const installerUrl = `/downloads/ARGUS.cmd?server=${encodeURIComponent(platformServerUrl.trim())}`;
 
   return (
     <div className="page-wrapper download-page">
@@ -67,19 +44,20 @@ export const Download: React.FC = () => {
       <section className="download-agent-card" aria-labelledby="agent-title">
         <div className="download-agent-main">
           <div className="download-agent-icon"><Package size={26} /></div>
-          <div className="download-agent-title-row"><div><span className="download-eyebrow">PACOTE DE INSTALAÇÃO</span><h2 id="agent-title">{agentRelease.name}</h2></div><span className="download-release-badge"><Sparkles size={13} /> Versão demonstrativa</span></div>
-          <p className="download-agent-description">O agente é a aplicação prevista para integrar os computadores à plataforma ARGUS.</p>
-          <div className="download-spec-grid" aria-label="Informações demonstrativas do pacote">
-            <div className="download-spec"><span><Package size={14} /> Versão</span><strong>{agentRelease.version}</strong></div>
-            <div className="download-spec"><span><CalendarDays size={14} /> Lançamento indicado</span><strong>{agentRelease.date}</strong></div>
-            <div className="download-spec"><span><Monitor size={14} /> Compatibilidade indicada</span><strong>{agentRelease.compatibility.join(' · ')}</strong></div>
-            <div className="download-spec"><span><HardDrive size={14} /> Tamanho indicado</span><strong>{agentRelease.size}</strong></div>
+          <div className="download-agent-title-row"><div><span className="download-eyebrow">INSTALADOR DA PLATFORM</span><h2 id="agent-title">ARGUS para Windows</h2></div><span className="download-release-badge"><Shield size={13} /> Instalador guiado</span></div>
+          <p className="download-agent-description">Baixe o instalador no computador que será conectado ao servidor Platform. O assistente configura o agente e solicita autenticação da conta ARGUS.</p>
+          <label className="download-server-field">Endereço do servidor Platform<input value={platformServerUrl} onChange={(event) => setPlatformServerUrl(event.target.value)} placeholder="http://192.168.1.10:3000" inputMode="url" aria-invalid={!serverUrlIsValid} /></label>
+          <div className="download-spec-grid" aria-label="Componentes do instalador">
+            <div className="download-spec"><span><Package size={14} /> Componentes</span><strong>Agente + assistente</strong></div>
+            <div className="download-spec"><span><CalendarDays size={14} /> Configuração</span><strong>Guiada no navegador</strong></div>
+            <div className="download-spec"><span><Monitor size={14} /> Compatibilidade</span><strong>Windows 10 / 11</strong></div>
+            <div className="download-spec"><span><HardDrive size={14} /> Distribuição</span><strong>Arquivo CMD</strong></div>
           </div>
-          <div className="download-action-row"><button className={`btn-download-pill download-demo-button ${downloadState === 'unavailable' ? 'download-not-available' : ''}`} type="button" onClick={handleDownload} disabled={downloadState !== 'idle'} aria-describedby="download-feedback"><ArrowDownToLine size={17} />{buttonLabel}</button><span className="download-action-caption">Instalador oficial ainda não conectado</span></div>
-          <p id="download-feedback" className={`download-feedback ${downloadState !== 'idle' ? 'visible' : ''}`} role="status" aria-live="polite">{downloadState === 'preparing' ? 'Esta demonstração não inicia transferência de arquivos.' : downloadState === 'unavailable' ? 'O instalador real ainda não está disponível nesta versão.' : ''}</p>
+          <div className="download-action-row">{serverUrlIsValid ? <a className="btn-download-pill download-demo-button" href={installerUrl}><ArrowDownToLine size={17} />Baixar instalador</a> : <button className="btn-download-pill download-demo-button download-not-available" type="button" disabled><ArrowDownToLine size={17} />Informe um endereço válido</button>}<span className="download-action-caption">Gera o instalador da Platform para este servidor</span></div>
+          <p className="download-feedback visible" role="status">O arquivo baixa os componentes do agente; ele não instala o servidor MySQL nem configura um servidor remoto.</p>
         </div>
-        <aside className="download-availability"><span className="availability-icon"><Shield size={17} /></span><div><strong>Download do agente em desenvolvimento</strong><p>A interface de download está preparada, mas o instalador oficial ainda não está conectado a esta versão do ARGUS.</p></div></aside>
-        <p className="download-data-note">Versão, data, compatibilidade e tamanho são informações demonstrativas até a publicação do pacote oficial.</p>
+        <aside className="download-availability"><span className="availability-icon"><Shield size={17} /></span><div><strong>Conexão autenticada e assistida</strong><p>Execute o arquivo no endpoint autorizado. O instalador obtém os componentes pela Platform e abre o assistente local para conectar a conta.</p></div></aside>
+        <p className="download-data-note">O servidor Platform e o MySQL devem estar previamente instalados e ativos na rede.</p>
       </section>
 
       <section className="section-block download-compatibility" aria-labelledby="compatibility-title">

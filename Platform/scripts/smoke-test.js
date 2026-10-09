@@ -10,8 +10,18 @@ const { spawn, execFileSync } = require('node:child_process');
 const Module = require('node:module');
 
 const db = { users: [], machines: [], pairings: [], events: [], alerts: [], webActivity: [], termAcceptances: [], sessions: [] };
+const resetCodes = new Map();
 const store = {
   initialize: async () => db,
+  refreshUsers: async () => {},
+  createPasswordReset: async email => { if (!db.users.some(user => user.email === email)) return null; resetCodes.set(email, '123456'); return '123456'; },
+  completePasswordReset: async (email, code, password) => {
+    if (resetCodes.get(email) !== code) return null;
+    const user = db.users.find(entry => entry.email === email);
+    if (!user) return null;
+    user.salt = crypto.randomBytes(16).toString('hex'); user.hash = crypto.scryptSync(password, user.salt, 64).toString('hex');
+    db.sessions = db.sessions.filter(session => session.userId !== user.id); resetCodes.delete(email); return user.id;
+  },
   save: async () => {},
   acknowledgeConsentRevocation: async () => {},
   deleteUser: async userId => {
@@ -87,6 +97,17 @@ async function stopSetup(child) {
     assert.equal(rejectedLogin.response.status, 428, 'login must require explicit terms confirmation');
     const successfulLogin = await responseJson(`${base}/api/auth/login`, { method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:'ValidPass123',termsVersion:'2026-09-v1',termsAccepted:true}) });
     assert.equal(successfulLogin.response.status,200,'accepted terms allow login');
+    const resetEmail = `argus-reset-${crypto.randomUUID()}@example.test`;
+    const resetSignup = await responseJson(`${base}/api/auth/signup`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:'Reset Test',email:resetEmail,password:'BeforeReset123',termsAccepted:true,termsVersion:'2026-09-v1'})});
+    assert.equal(resetSignup.response.status,201);
+    const recovery = await responseJson(`${base}/api/auth/forgot-password`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:resetEmail})});
+    assert.equal(recovery.response.status,200); assert.equal(recovery.body.simulatedEmail.code,'123456','simulated email exposes a usable demo code');
+    const wrongReset = await responseJson(`${base}/api/auth/reset-password`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:resetEmail,code:'000000',password:'AfterReset123'})});
+    assert.equal(wrongReset.response.status,400,'invalid reset code is rejected');
+    const completedReset = await responseJson(`${base}/api/auth/reset-password`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:resetEmail,code:recovery.body.simulatedEmail.code,password:'AfterReset123'})});
+    assert.equal(completedReset.response.status,200,'valid reset code changes the account password');
+    assert.equal((await responseJson(`${base}/api/auth/login`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:resetEmail,password:'BeforeReset123',termsAccepted:true,termsVersion:'2026-09-v1'})})).response.status,401,'old password is invalid after reset');
+    assert.equal((await responseJson(`${base}/api/auth/login`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:resetEmail,password:'AfterReset123',termsAccepted:true,termsVersion:'2026-09-v1'})})).response.status,200,'replacement password authenticates');
     const networkConfig = await responseJson(`${base}/api/config`, { headers:{Cookie:cookie} }); assert.equal(networkConfig.response.status,200); assert.equal(networkConfig.body.port,Number(process.env.PORT));
     assert.equal((await fetch(`${base}/downloads/ARGUS.cmd?server=${encodeURIComponent(base)}&code=ARG-AB12-CD34`)).status,400,'installer refuses an embedded pairing code');
     const setupCommandResponse = await fetch(`${base}/downloads/ARGUS.cmd?server=${encodeURIComponent(base)}`);
@@ -145,6 +166,13 @@ async function stopSetup(child) {
     assert.equal(appRecord.occurrences,0,'legacy process-session counts are not reported as foreground transitions');
     assert.equal(appDashboard.applications.find(a=>a.processName==='argus-smoke-app').durationMilliseconds,1234,'application overview aggregates observed foreground use');
     assert.equal(appDashboard.applications.find(a=>a.processName==='argus-smoke-app').machineCount,1,'dashboard aggregates application use by machine');
+    const namedProcessSamples = ['msedge','winword','idea64','telegram','vlc','explorer','svchost'].map(processName => ({ name: processName, processName, cpu: 0, memory: 0 }));
+    assert.equal((await appHeartbeat(namedProcessSamples)).response.status,200);
+    appDashboard = (await responseJson(`${base}/api/dashboard`,{headers:{Cookie:cookie}})).body;
+    const knownNames = new Map(appDashboard.machines[0].apps.map(app => [app.processName, app.name]));
+    for (const [processName, friendlyName] of [['msedge','Microsoft Edge'],['winword','Microsoft Word'],['idea64','IntelliJ IDEA'],['telegram','Telegram'],['vlc','VLC media player'],['explorer','Explorador de Arquivos'],['svchost','Host de Serviço do Windows']]) {
+      assert.equal(knownNames.get(processName),friendlyName,`${processName} is presented with its product name`);
+    }
     assert.equal((await appHeartbeat([])).response.status,200);
     appDashboard = (await responseJson(`${base}/api/dashboard`,{headers:{Cookie:cookie}})).body;
     assert.equal(appDashboard.machines[0].apps.find(a=>a.processName==='argus-smoke-app').status,'not_observed','missing process samples are not mislabeled as confirmed exits');

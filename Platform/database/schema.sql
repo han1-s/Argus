@@ -1,6 +1,11 @@
 CREATE DATABASE IF NOT EXISTS argus CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE argus;
 
+CREATE TABLE IF NOT EXISTS app_metadata (
+  `key` VARCHAR(100) PRIMARY KEY,
+  value VARCHAR(255) NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS users (
   id CHAR(36) PRIMARY KEY,
   name VARCHAR(120) NOT NULL,
@@ -29,6 +34,25 @@ CREATE TABLE IF NOT EXISTS sessions (
   expires_at DATETIME(3) NOT NULL,
   INDEX idx_session_expiry (expires_at),
   CONSTRAINT fk_session_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+CREATE TABLE IF NOT EXISTS password_reset_tokens (
+  id CHAR(36) PRIMARY KEY,
+  user_id CHAR(36) NOT NULL,
+  code_hash CHAR(64) NOT NULL,
+  requested_at DATETIME(3) NOT NULL,
+  expires_at DATETIME(3) NOT NULL,
+  UNIQUE KEY uq_password_reset_hash (code_hash),
+  INDEX idx_password_reset_user_expiry (user_id, expires_at),
+  CONSTRAINT fk_password_reset_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+CREATE TABLE IF NOT EXISTS subscriptions (
+  user_id CHAR(36) PRIMARY KEY,
+  plan ENUM('Free','Pro','Business') NOT NULL DEFAULT 'Free',
+  billing_cycle ENUM('monthly','annual') NOT NULL DEFAULT 'monthly',
+  status ENUM('active','canceled') NOT NULL DEFAULT 'active',
+  started_at DATETIME(3) NOT NULL,
+  updated_at DATETIME(3) NOT NULL,
+  CONSTRAINT fk_subscription_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 CREATE TABLE IF NOT EXISTS machines (
   id CHAR(36) PRIMARY KEY,

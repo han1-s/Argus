@@ -1,6 +1,6 @@
 # ARGUS Platform
 
-Este guia mostra como instalar e usar a **Platform**, o protótipo local do ARGUS. A pasta `Web/Frontend` é outro sistema: não compartilha contas, computadores ou dados com a Platform.
+Este guia mostra como instalar e usar a **Platform**, o protótipo local do ARGUS. `Web/Frontend` e `Web/Backend` são aplicações separadas do site. O Web Backend compartilha com a Platform a base MySQL `argus`, contas e sessões; as aplicações continuam sendo processos independentes.
 
 O ARGUS foi feito para computadores autorizados em uma rede local. Não o exponha diretamente à internet.
 
@@ -44,6 +44,7 @@ O agente nunca acessa o MySQL diretamente. A porta `3306` do banco deve ficar di
    ```
 
 4. Se ainda não existir, crie `Platform/.env` copiando `.env.example`. Configure nele `MYSQL_USER=argus_app`, `MYSQL_PASSWORD` com a senha que escolheu, `MYSQL_DATABASE=argus` e `MYSQL_AUTO_CREATE_DATABASE=false`. O arquivo `.env` contém segredos locais: não o publique nem o envie para outras pessoas.
+5. O primeiro início cria ou atualiza uma única vez o administrador inicial configurado por `ARGUS_ADMIN_EMAIL` e `ARGUS_ADMIN_PASSWORD` (padrão local: `hanielshz@gmail.com` / `12345678`). Um marcador no mesmo MySQL impede que reinícios restaurem a senha; altere os valores antes de usar em ambiente compartilhado.
 5. Inicie o servidor:
 
    ```powershell
@@ -106,7 +107,7 @@ npm --prefix Web/Frontend run lint
 npm --prefix Web/Frontend run build
 ```
 
-O teste da Platform usa uma base MySQL em memória e endpoints locais temporários. No Windows, também executa uma amostra do watcher foreground. Não modifica a base MySQL normal nem instala o agente no computador. `Web/Frontend` continua sendo um site separado.
+O teste da Platform usa uma base MySQL em memória e endpoints locais temporários. No Windows, também executa uma amostra do watcher foreground. Não modifica a base MySQL normal nem instala o agente no computador. `Web/Frontend` e `Web/Backend` são as camadas do site; inicie `npm --prefix Web/Backend start` e `npm --prefix Web/Frontend run dev`. O Vite encaminha `/api` para `http://127.0.0.1:3001`. A API Web e a API Platform usam as mesmas credenciais, sessões e tabelas no mesmo serviço e banco MySQL; veja `Web/Backend/README.md` para iniciar todas as partes.
 
 ## Problemas comuns
 
@@ -135,3 +136,12 @@ O teste da Platform usa uma base MySQL em memória e endpoints locais temporári
 | `browser-extension/` | Extensão opcional Chromium |
 | `scripts/` | Controlador Windows e smoke test |
 | `ARGUS.cmd` | Menu de instalação, início e parada |
+
+## Créditos
+
+- Haniel: frontend e Platform.
+- Matheus: backend Web.
+- Kaique: banco de dados geral.
+- Demais integrantes: testes e outras contribuições.
+
+Estimativa informada pela equipe: aproximadamente **53 horas** trabalhadas no projeto; confirmar com os registros da equipe.

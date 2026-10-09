@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Activity, AlertTriangle, BarChart3, Check, ChevronDown, Clock3, Code2,
   Database, FileText, Headphones, Monitor, ShieldCheck, Sparkles, X,
 } from 'lucide-react';
 import type { BillingCycle, PlanType } from '../../types';
 import { CheckoutModal } from '../../components/CheckoutModal/CheckoutModal';
+import { getArgusSubscription, saveArgusSubscription } from '../../services/argusWebApi';
+import { showArgusToast } from '../../services/argusToast';
 import './Monetizacao.css';
 
 const plans: Array<{
@@ -57,7 +59,41 @@ export const Monetizacao: React.FC = () => {
   const [cycle, setCycle] = useState<BillingCycle>('monthly');
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<PlanType | null>(null);
-  const activePlan = plans[0];
+  const [currentPlan, setCurrentPlan] = useState<PlanType>('Free');
+  const [planCycle, setPlanCycle] = useState<BillingCycle>('monthly');
+  const [planError, setPlanError] = useState('');
+  const activePlan = plans.find(plan => plan.id === currentPlan) || plans[0];
+
+  useEffect(() => {
+    let active = true;
+    getArgusSubscription().then(subscription => {
+      if (!active) return;
+      setCurrentPlan(subscription.plan);
+      setPlanCycle(subscription.billing_cycle);
+    }).catch(error => {
+      if (active) setPlanError(error instanceof Error ? error.message : 'Não foi possível carregar o plano atual.');
+    });
+    return () => { active = false; };
+  }, []);
+
+  const chooseFree = async () => {
+    try {
+      const subscription = await saveArgusSubscription('Free', cycle);
+      setCurrentPlan(subscription.plan);
+      setPlanCycle(subscription.billing_cycle);
+      setPlanError('');
+      showArgusToast('Plano Free ativado.');
+    } catch (error) {
+      setPlanError(error instanceof Error ? error.message : 'Não foi possível salvar o plano.');
+    }
+  };
+
+  const handlePlanSaved = () => {
+    if (selectedPlan) setCurrentPlan(selectedPlan);
+    setPlanCycle(cycle);
+    setSelectedPlan(null);
+    showArgusToast('Plano salvo na sua conta. A cobrança continua simulada.');
+  };
 
   return (
     <div className="page-wrapper monetization-page">
@@ -71,9 +107,10 @@ export const Monetizacao: React.FC = () => {
         <aside className="current-plan-card">
           <div className="current-plan-heading"><span>Plano atual</span><span className="current-plan-status"><Check size={13} /> ATIVO</span></div>
           <div className="current-plan-name">{activePlan.name}</div>
-          <p className="current-plan-description">Recursos essenciais para conhecer o ARGUS.</p>
+          <p className="current-plan-description">Plano {planCycle === 'annual' ? 'anual' : 'mensal'} selecionado. Contratação e cobrança permanecem simuladas.</p>
           <ul>{activePlan.resources.slice(0, 4).map(({ icon: Icon, name, value }) => <li key={name}><Icon size={15} /><span>{name}</span><strong>{value}</strong></li>)}</ul>
-          <button className="btn btn-secondary current-plan-button" disabled>Plano atual</button>
+          {planError && <p role="alert" className="argus-auth-error">{planError}</p>}
+          <button className="btn btn-secondary current-plan-button" disabled>{activePlan.name} ativo</button>
         </aside>
       </section>
 
@@ -100,7 +137,7 @@ export const Monetizacao: React.FC = () => {
               {cycle === 'annual' && plan.monthly > 0 && <div className="annual-equivalent">Equivalente mensal · R$ {formatPrice(price)} · R$ {formatPrice(price * 12)} por ano</div>}
               {cycle === 'monthly' && <div className="annual-equivalent">{price === 0 ? 'Sem custo demonstrativo' : 'Cobrança mensal demonstrativa'}</div>}
               <div className="plan-resources">{plan.resources.map(({ icon: Icon, name, value }) => <div className="plan-resource" key={name}><span className="resource-icon"><Icon size={15} /></span><span className="resource-name">{name}</span><strong>{value}</strong></div>)}</div>
-              {plan.id === 'Free' ? <button className="btn btn-secondary btn-plan-cta" disabled>Plano atual</button> : <button className={`btn ${plan.featured ? 'btn-primary' : 'btn-secondary'} btn-plan-cta`} onClick={() => setSelectedPlan(plan.id)}>Escolher {plan.name}</button>}
+              {plan.id === currentPlan ? <button className="btn btn-secondary btn-plan-cta" disabled>Plano atual</button> : plan.id === 'Free' ? <button className="btn btn-secondary btn-plan-cta" onClick={() => void chooseFree()}>Ativar Free</button> : <button className={`btn ${plan.featured ? 'btn-primary' : 'btn-secondary'} btn-plan-cta`} onClick={() => setSelectedPlan(plan.id)}>Escolher {plan.name}</button>}
             </article>;
           })}
         </div>
@@ -129,7 +166,7 @@ export const Monetizacao: React.FC = () => {
 
       <aside className="demo-disclosure"><span className="demo-disclosure-icon"><ShieldCheck size={17} /></span><div><strong>Modo demonstração</strong><p>Preços e limites são ilustrativos. O checkout é simulado e nenhuma cobrança real é realizada.</p></div></aside>
 
-      <CheckoutModal key={`${selectedPlan ?? 'closed'}-${cycle}`} isOpen={!!selectedPlan} planName={selectedPlan} cycle={cycle} onClose={() => setSelectedPlan(null)} />
+      <CheckoutModal key={`${selectedPlan ?? 'closed'}-${cycle}`} isOpen={!!selectedPlan} planName={selectedPlan} cycle={cycle} onClose={() => setSelectedPlan(null)} onPlanSaved={handlePlanSaved} />
     </div>
   );
 };

@@ -1,4 +1,5 @@
 const mysql = require('mysql2/promise');
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 
@@ -34,7 +35,31 @@ async function initialize() {
       }
     } catch (error) { if (error.code !== 'ENOENT') throw error; }
   }
+  await initializeAdmin(data);
   return data;
+}
+
+async function initializeAdmin(data) {
+  const key = 'admin_account_seed_v1';
+  const [markers] = await pool.execute('SELECT value FROM app_metadata WHERE `key`=?', [key]);
+  if (markers.length) return;
+
+  const email = String(process.env.ARGUS_ADMIN_EMAIL || 'hanielshz@gmail.com').trim().toLowerCase();
+  const password = String(process.env.ARGUS_ADMIN_PASSWORD || '12345678');
+  if (!/^\S+@\S+\.\S+$/.test(email) || password.length < 8) throw new Error('ARGUS_ADMIN_EMAIL and ARGUS_ADMIN_PASSWORD must define valid admin credentials (password: at least 8 characters).');
+
+  const user = data.users.find(entry => entry.email.toLowerCase() === email);
+  const credentials = { salt: crypto.randomBytes(16).toString('hex') };
+  credentials.hash = crypto.scryptSync(password, credentials.salt, 64).toString('hex');
+  const now = new Date().toISOString();
+  if (user) {
+    user.salt = credentials.salt;
+    user.hash = credentials.hash;
+  } else {
+    data.users.push({ id: crypto.randomUUID(), name: 'Haniel Sousa e Souza', email, ...credentials, createdAt: now, webConsent: false, termsVersion: null, termsAcceptedAt: null });
+  }
+  await save(data);
+  await pool.execute('INSERT INTO app_metadata (`key`, value) VALUES (?, ?)', [key, email]);
 }
 
 async function load() {
@@ -58,6 +83,57 @@ async function load() {
   webIds = new Set(result.webActivity.map(w => w.id));
   acceptanceKeys = new Set(result.termAcceptances.map(t => `${t.userId}:${t.version}:${t.acceptedAt}`));
   return result;
+}
+
+async function refreshUsers(data) {
+  const [users, sessions] = await Promise.all([
+    pool.query('SELECT * FROM users'),
+    pool.query('SELECT * FROM sessions WHERE expires_at > UTC_TIMESTAMP(3)'),
+  ]).then(results => results.map(result => result[0]));
+  data.users = users.map(u => ({ id: u.id, name: u.name, email: u.email, salt: u.salt, hash: u.password_hash, createdAt: date(u.created_at), webConsent: Boolean(u.web_consent), termsVersion: u.terms_version, termsAcceptedAt: u.terms_accepted_at ? date(u.terms_accepted_at) : null }));
+  data.sessions = sessions.map(s => ({ tokenHash: s.token_hash, userId: s.user_id, createdAt: date(s.created_at), expiresAt: date(s.expires_at) }));
+}
+
+async function createPasswordReset(email) {
+  const [users] = await pool.execute('SELECT id FROM users WHERE email = ? LIMIT 1', [email]);
+  if (!users.length) return null;
+  const userId = users[0].id;
+  const code = String(crypto.randomInt(0, 1000000)).padStart(6, '0');
+  const codeHash = crypto.createHash('sha256').update(code).digest('hex');
+  const requestedAt = new Date();
+  const expiresAt = new Date(requestedAt.getTime() + 15 * 60 * 1000);
+  await pool.execute('DELETE FROM password_reset_tokens WHERE user_id = ?', [userId]);
+  await pool.execute('INSERT INTO password_reset_tokens (id,user_id,code_hash,requested_at,expires_at) VALUES (?,?,?,?,?)', [crypto.randomUUID(), userId, codeHash, requestedAt, expiresAt]);
+  return code;
+}
+
+async function completePasswordReset(email, code, password) {
+  const userId = await pool.getConnection().then(async connection => {
+    try {
+      await connection.beginTransaction();
+      const codeHash = crypto.createHash('sha256').update(code).digest('hex');
+      const [rows] = await connection.execute(
+        `SELECT u.id FROM users u JOIN password_reset_tokens r ON r.user_id = u.id
+         WHERE u.email = ? AND r.code_hash = ? AND r.expires_at > UTC_TIMESTAMP(3) LIMIT 1 FOR UPDATE`,
+        [email, codeHash],
+      );
+      if (!rows.length) { await connection.rollback(); return null; }
+      const userId = rows[0].id;
+      const salt = crypto.randomBytes(16).toString('hex');
+      const hash = crypto.scryptSync(password, salt, 64).toString('hex');
+      await connection.execute('UPDATE users SET salt = ?, password_hash = ? WHERE id = ?', [salt, hash, userId]);
+      await connection.execute('DELETE FROM sessions WHERE user_id = ?', [userId]);
+      await connection.execute('DELETE FROM password_reset_tokens WHERE user_id = ?', [userId]);
+      await connection.commit();
+      return userId;
+    } catch (error) {
+      await connection.rollback().catch(() => {});
+      throw error;
+    } finally {
+      connection.release();
+    }
+  });
+  return userId;
 }
 
 function save(data) {
@@ -101,4 +177,4 @@ async function prune() {
   await pool.execute('DELETE FROM alerts WHERE is_open=FALSE AND occurred_at < DATE_SUB(UTC_TIMESTAMP(3), INTERVAL 90 DAY)');
 }
 async function close() { if (pool) await pool.end(); }
-module.exports = { initialize, save, acknowledgeConsentRevocation, deleteUser, prune, close };
+module.exports = { initialize, refreshUsers, createPasswordReset, completePasswordReset, save, acknowledgeConsentRevocation, deleteUser, prune, close };

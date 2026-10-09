@@ -16,6 +16,13 @@ export const Footer: React.FC = () => {
           <Link to="/monetizacao">Planos</Link>
           <Link to="/download">Download</Link>
         </div>
+        <section className="footer-creators" aria-label="Criadores do ARGUS">
+          <strong>Equipe ARGUS</strong>
+          <span>Haniel · frontend e Platform</span>
+          <span>Matheus · backend Web</span>
+          <span>Kaique · banco de dados geral</span>
+          <span>Demais integrantes · testes e apoio</span>
+        </section>
       </div>
       <div className="footer-bottom">
         <p>&copy; 2026 ARGUS. Todos os direitos reservados.</p>

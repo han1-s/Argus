@@ -19,7 +19,9 @@ function setAuthMode(mode) {
   $('#authSubtitle').textContent = signup ? 'Configure seu acesso ao console ARGUS.' : 'Entre para monitorar os dispositivos da sua rede.';
   $('#nameWrap').classList.toggle('hidden', !signup); $('#confirmWrap').classList.toggle('hidden', !signup);
   $('#confirmInput').required = signup; $('#nameInput').required = signup;
+  $('#passwordInput').minLength = signup ? 10 : 8; $('#passwordInput').placeholder = signup ? 'Mínimo 10 caracteres' : 'Senha da conta';
   $('#webConsentWrap').classList.toggle('hidden', !signup);
+  $('#forgotPasswordButton').classList.toggle('hidden', signup); $('#forgotPasswordForm').classList.add('hidden');
   $('#termsAccepted').checked = false; $('#webConsent').checked = false;
   $('#authSubmit').innerHTML = signup ? 'Criar conta <span>→</span>' : 'Entrar no console <span>→</span>';
   $('#switchText').textContent = signup ? 'Já possui acesso?' : 'Ainda não tem acesso?'; $('#authSwitch').textContent = signup ? 'Fazer login' : 'Criar conta'; $('#authError').classList.add('hidden');
@@ -34,6 +36,31 @@ $('#authForm').onsubmit = async e => {
     const result = await api(`/api/auth/${state.authMode}`, { method: 'POST', body: JSON.stringify(body) });
     state.user = result.user; enterApp();
   } catch (err) { $('#authError').textContent = err.message; $('#authError').classList.remove('hidden'); }
+};
+$('#forgotPasswordButton').onclick = () => {
+  $('#resetEmailInput').value = $('#emailInput').value;
+  $('#resetStatus').textContent = '';
+  $('#resetStatus').classList.add('hidden');
+  $('#forgotPasswordForm').classList.toggle('hidden');
+};
+$('#forgotPasswordForm').onsubmit = async event => {
+  event.preventDefault();
+  const status = $('#resetStatus'); status.textContent = 'Preparando a simulação de envio…'; status.classList.remove('hidden'); status.classList.remove('is-error');
+  try {
+    const result = await api('/api/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email: $('#resetEmailInput').value }) });
+    if (!result.simulatedEmail) { status.textContent = result.message; return; }
+    status.textContent = `E-mail simulado para ${result.simulatedEmail.to}. Código: ${result.simulatedEmail.code}. Válido por ${result.simulatedEmail.expiresInMinutes} minutos.`;
+    $('#resetCodeWrap').classList.remove('hidden'); $('#resetNewPasswordWrap').classList.remove('hidden'); $('#completeResetButton').classList.remove('hidden');
+    $('#resetCodeInput').required = true; $('#resetNewPasswordInput').required = true;
+  } catch (error) { status.textContent = error.message; status.classList.add('is-error'); }
+};
+$('#completeResetButton').onclick = async () => {
+  const status = $('#resetStatus'); status.classList.remove('is-error');
+  try {
+    const result = await api('/api/auth/reset-password', { method: 'POST', body: JSON.stringify({ email: $('#resetEmailInput').value, code: $('#resetCodeInput').value, password: $('#resetNewPasswordInput').value }) });
+    status.textContent = result.message; $('#passwordInput').value = ''; $('#resetCodeInput').value = ''; $('#resetNewPasswordInput').value = '';
+    $('#resetCodeWrap').classList.add('hidden'); $('#resetNewPasswordWrap').classList.add('hidden'); $('#completeResetButton').classList.add('hidden');
+  } catch (error) { status.textContent = error.message; status.classList.add('is-error'); }
 };
 function enterApp() {
   showApp(); $('#userName').textContent = state.user.name; $('#avatar').textContent = state.user.name.slice(0, 1).toUpperCase();
@@ -97,7 +124,7 @@ function renderWeb() {
   $('#pageContent').innerHTML=`${pageHead('DOMÍNIOS E TEMPO APROXIMADO','Navegação web','A extensão registra domínios de abas ativas, somente com consentimento.',action)}<section class="panel full-panel"><div class="notice">O protótipo armazena o domínio, dispositivo, duração aproximada e horário. Não armazena URL completa, caminho, busca ou conteúdo da página. A extensão precisa estar instalada e ativada em cada navegador monitorado.</div>${items.length?`<div class="table-wrap"><table><thead><tr><th>DOMÍNIO</th><th>COMPUTADOR</th><th>TEMPO ATIVO</th><th>AMOSTRAS</th><th>ÚLTIMA ATIVIDADE</th></tr></thead><tbody>${items.map(w=>`<tr><td><b>${esc(w.domain)}</b></td><td>${esc(w.machineName)}</td><td>${durationLabel(w.durationSeconds)}</td><td>${w.visits}</td><td>${fmtDate(w.lastSeen)}</td></tr>`).join('')}</tbody></table></div>`:'<div class="empty-state"><div class="empty-icon">◎</div><b>Nenhuma atividade web recebida</b><p>Ative o consentimento em Configurações e instale a extensão autorizada no navegador do endpoint.</p><button class="button quiet" data-page="settings">Configurar coleta →</button></div>'}</section>`;bindPageActions();
 }
 function renderSettings() {
-  $('#pageContent').innerHTML=`${pageHead('PRIVACIDADE E AMBIENTE','Configurações','Gerencie consentimento, dados e conexão do protótipo.')}<div class="lower-grid"><section class="panel settings-panel"><div class="panel-heading"><div><h2>Coleta de navegação web</h2><p>Preferência e revogação de consentimento</p></div></div><label class="toggle-row"><span><b>Permitir coleta web</b><small>Domínios e duração aproximada das abas ativas, via extensão.</small></span><input id="webConsentToggle" type="checkbox" ${state.user.webConsent?'checked':''}></label><p class="privacy-help">Ao desativar, o agente deixa de aceitar novos dados e o histórico de navegação guardado será eliminado.</p><div class="notice">Em cada navegador: abra <b>chrome://extensions</b> → ative o modo do desenvolvedor → carregue sem compactação a pasta <code>browser-extension</code>. Depois abra a extensão, cole o <code>bridgeKey</code> mostrado em <code>agent/config.json</code>, confirme que os titulares foram informados e ative a coleta. Repita em cada PC monitorado.</div></section><section class="panel settings-panel"><div class="panel-heading"><div><h2>Seus dados</h2><p>Exportação e exclusão local</p></div></div><p class="privacy-help">Exporte uma cópia dos registros da sua conta ou remova a conta e seus dispositivos do banco MySQL.</p><div class="settings-actions"><button id="exportData" class="button quiet">Baixar meus dados (JSON)</button><button id="deleteAccount" class="button danger">Excluir conta e dados</button></div><a class="terms-link" href="/terms.html" target="_blank">Ler Termos de Uso e Aviso de Privacidade ↗</a></section></div>`;
+  $('#pageContent').innerHTML=`${pageHead('PRIVACIDADE E AMBIENTE','Configurações','Gerencie consentimento, dados e conexão do servidor.')}<div class="lower-grid"><section class="panel settings-panel"><div class="panel-heading"><div><h2>Coleta de navegação web</h2><p>Preferência e revogação de consentimento</p></div></div><label class="toggle-row"><span><b>Permitir coleta web</b><small>Domínios e duração aproximada das abas ativas, via extensão.</small></span><input id="webConsentToggle" type="checkbox" ${state.user.webConsent?'checked':''}></label><p class="privacy-help">Ao desativar, o agente deixa de aceitar novos dados e o histórico de navegação guardado será eliminado.</p><div class="notice">Em cada navegador: abra <b>chrome://extensions</b> → ative o modo do desenvolvedor → carregue sem compactação a pasta <code>browser-extension</code>. Depois abra a extensão, cole o <code>bridgeKey</code> mostrado em <code>agent/config.json</code>, confirme que os titulares foram informados e ative a coleta. Repita em cada PC monitorado.</div></section><section class="panel settings-panel"><div class="panel-heading"><div><h2>Seus dados</h2><p>Exportação e exclusão da conta</p></div></div><p class="privacy-help">Exporte uma cópia dos registros da sua conta ou remova a conta e seus dispositivos do banco MySQL.</p><div class="settings-actions"><button id="exportData" class="button quiet">Baixar meus dados (JSON)</button><button id="deleteAccount" class="button danger">Excluir conta e dados</button></div><a class="terms-link" href="/terms.html" target="_blank">Ler Termos de Uso e Aviso de Privacidade ↗</a></section></div><section class="panel settings-panel" style="margin-top:18px"><div class="panel-heading"><div><h2>Criadores do ARGUS</h2><p>Contribuições de desenvolvimento e validação</p></div></div><div class="settings-actions"><span><b>Haniel</b> · Frontend Web e Platform</span><span><b>Matheus</b> · Backend Web</span><span><b>Kaique</b> · Banco de dados geral</span><span><b>Demais integrantes</b> · Testes, validação e apoio</span></div></section>`;
   $('#webConsentToggle').onchange=async e=>{try{const result=await api('/api/privacy/web-consent',{method:'POST',body:JSON.stringify({enabled:e.target.checked})});state.user.webConsent=result.webConsent;await refresh();toast(result.webConsent?'Coleta web habilitada. Configure a extensão nos endpoints.':'Consentimento revogado e histórico web eliminado.');render();}catch(error){e.target.checked=state.user.webConsent;toast(error.message);}};
   $('#exportData').onclick=async()=>{try{const data=await api('/api/privacy/export');const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const link=document.createElement('a');link.href=URL.createObjectURL(blob);link.download='argus-meus-dados.json';link.click();URL.revokeObjectURL(link.href);}catch(e){toast(e.message);}};
   $('#deleteAccount').onclick=async()=>{if(!confirm('Excluir sua conta e todos os dispositivos e registros associados? Esta ação não pode ser desfeita.'))return;try{await api('/api/privacy/delete-account',{method:'POST',body:'{}'});state.user=null;state.data=null;if(socket)socket.disconnect();showAuth();toast('Conta e dados excluídos.');}catch(e){toast(e.message);}};

@@ -1,0 +1,19 @@
+{
+  "name": "argus-web-backend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "ARGUS Web API using the shared Platform MySQL database",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "mysql2": "^3.14.0"
+  }
+}

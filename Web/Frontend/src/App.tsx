@@ -12,11 +12,13 @@ import { Configuracoes } from './pages/Configuracoes/Configuracoes';
 import { Login } from './pages/Login/Login';
 import { Cadastro } from './pages/Cadastro/Cadastro';
 import { applyArgusPreferences } from './services/argusPreferences';
+import { restoreArgusSession } from './services/argusAuth';
 import { AuthGate } from './components/AuthGate/AuthGate';
 
 export const App: React.FC = () => {
   useEffect(() => {
     applyArgusPreferences();
+    void restoreArgusSession();
     const handleStorage = () => applyArgusPreferences();
     window.addEventListener('storage', handleStorage);
     return () => window.removeEventListener('storage', handleStorage);

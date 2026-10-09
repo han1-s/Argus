@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { LockKeyhole } from 'lucide-react';
 import { isArgusAuthenticated } from '../../services/argusAuth';
@@ -9,8 +9,15 @@ interface AuthGateProps {
 
 export const AuthGate: React.FC<AuthGateProps> = ({ children }) => {
   const location = useLocation();
+  const [authenticated, setAuthenticated] = useState(isArgusAuthenticated);
 
-  if (isArgusAuthenticated()) return <>{children}</>;
+  useEffect(() => {
+    const refresh = () => setAuthenticated(isArgusAuthenticated());
+    window.addEventListener('argus-auth-changed', refresh);
+    return () => window.removeEventListener('argus-auth-changed', refresh);
+  }, []);
+
+  if (authenticated) return <>{children}</>;
 
   return (
     <section className="access-gate">

@@ -13,6 +13,7 @@ body{background:radial-gradient(ellipse at 76% -15%,#48287930,transparent 36%),v
 .sidebar{background:#0e0b14;border-color:#27202f}.topbar{background:#0e0b14e8;border-color:#27202f}
 .brand-mark{border-color:#7050ad;background:linear-gradient(145deg,#392558,#171020);color:#d6c4ff;box-shadow:0 0 25px #8055c52b}
 .nav-item:hover,.nav-item.active{background:#21182e;border-color:#3b2b50}.nav-item.active>span,.eyebrow,.text-button{color:#bd9cff}
+.auth-forgot{display:block;margin:12px auto 0;background:none;border:0;cursor:pointer;font-size:12px}.forgot-password{display:grid;gap:8px;margin-top:12px;padding:12px;border:1px solid #263446;border-radius:8px;background:#0a1119}.forgot-password .field{margin-top:4px}.forgot-password .button{margin-top:5px}.forgot-password #resetStatus{color:#8fd9c3;font-size:12px;line-height:1.5;overflow-wrap:anywhere}.forgot-password #resetStatus.is-error{color:#ff9c9c}
 .button.primary{background:#7041b8;border-color:#966bd4;box-shadow:0 5px 18px #7041b833}.button.primary:hover{background:#8050ca}
 .metric-icon,.device-icon{background:#261b35;color:#c2a4fb}.metric-icon.green{background:#123128;color:#48d0a0}.metric-icon.amber{background:#332a1a;color:#f3c366}.metric-icon.blue{background:#261b35;color:#c2a4fb}
 .field input:focus{border-color:#9a71d2;box-shadow:0 0 0 3px #8653c222}.status.online,.tiny-live{color:#6bd7b1}.status.online i{background:#47cda2;box-shadow:0 0 8px #47cda2}

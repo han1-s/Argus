@@ -10,6 +10,7 @@ import {
   resetArgusPreferences, setArgusPreference, setArgusTheme,
 } from '../../services/argusPreferences';
 import { showArgusToast } from '../../services/argusToast';
+import { getArgusSubscription, getPlatformNotifications, type ArgusSubscription, type PlatformNotification } from '../../services/argusWebApi';
 import './Configuracoes.css';
 
 const SETTINGS_KEY = 'argusSettings';
@@ -46,7 +47,30 @@ export const Configuracoes: React.FC = () => {
   const [hasCustomAvatar, setHasCustomAvatar] = useState(() => Boolean(localStorage.getItem(ARGUS_KEYS.AVATAR)));
   const [avatarError, setAvatarError] = useState('');
   const [clearDialogOpen, setClearDialogOpen] = useState(false);
+  const [subscription, setSubscription] = useState<ArgusSubscription | null>(null);
+  const [platformNotifications, setPlatformNotifications] = useState<PlatformNotification[]>([]);
+  const [notificationError, setNotificationError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    let active = true;
+    if (activeTab === 'billing') {
+      getArgusSubscription().then(value => { if (active) setSubscription(value); }).catch(error => {
+        if (active) setNotificationError(error instanceof Error ? error.message : 'Não foi possível carregar a assinatura.');
+      });
+    }
+    if (activeTab === 'notifications') {
+      const refresh = () => getPlatformNotifications().then(value => {
+        if (active) { setPlatformNotifications(value); setNotificationError(''); }
+      }).catch(error => {
+        if (active) setNotificationError(error instanceof Error ? error.message : 'Não foi possível carregar notificações.');
+      });
+      void refresh();
+      const interval = window.setInterval(refresh, 30000);
+      return () => { active = false; window.clearInterval(interval); };
+    }
+    return () => { active = false; };
+  }, [activeTab]);
 
   useEffect(() => {
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
@@ -205,12 +229,16 @@ export const Configuracoes: React.FC = () => {
 
           {activeTab === 'notifications' && <div className="settings-tab-content">
             <div className="settings-section-heading"><span className="settings-section-icon"><Bell size={19} /></span><div><h2>Notificações</h2><p>Escolha quais categorias de aviso prefere ver na interface.</p></div></div>
-            <div className="settings-info-note"><CircleHelp size={16} /><p>Esses controles salvam preferências locais. Eles não ativam o envio real de notificações ou alertas de IA.</p></div>
+            <div className="settings-info-note"><CircleHelp size={16} /><p>Preferências desta interface ficam neste navegador. Alertas e eventos abaixo são lidos diretamente do Platform e atualizados a cada 30 segundos.</p></div>
             <div className="settings-toggle-list">
               {renderToggle('notifSystem', 'Notificações do sistema', 'Alertas gerais relacionados ao desempenho e ao funcionamento do ARGUS.', settings.notifSystem, (value) => updateSetting('notifSystem', value))}
               {renderToggle('notifAi', 'Alertas preditivos de IA', 'Preferência para alertas relacionados às análises e previsões do sistema.', settings.notifAi, (value) => updateSetting('notifAi', value))}
               {renderToggle('notifUpdates', 'Novidades e atualizações', 'Novidades, atualizações e avisos importantes de segurança do ARGUS.', settings.notifUpdates, (value) => updateSetting('notifUpdates', value))}
             </div>
+            <section className="settings-subsection"><div className="settings-subsection-heading"><h3>Atividade do Platform</h3><p>{platformNotifications.length} notificações recentes da sua conta</p></div>
+              {notificationError && <p className="settings-inline-error" role="alert">{notificationError}</p>}
+              {platformNotifications.length ? <div className="settings-toggle-list">{platformNotifications.map(item => <article className="settings-toggle-row" key={`${item.category}-${item.id}`}><div className="settings-toggle-copy"><h3>{item.category === 'alert' ? `Alerta · ${item.type}` : `Evento · ${item.type}`}</h3><p>{item.message} · {item.machine_name} · {new Date(item.created_at).toLocaleString('pt-BR')}</p></div><span className={`settings-plan-status ${item.active ? '' : 'is-muted'}`}>{item.active ? 'Ativo' : 'Reconhecido'}</span></article>)}</div> : !notificationError ? <p className="settings-accessibility-note">Nenhum evento ou alerta recebido do Platform.</p> : null}
+            </section>
           </div>}
 
           {activeTab === 'appearance' && <div className="settings-tab-content">
@@ -230,8 +258,9 @@ export const Configuracoes: React.FC = () => {
           </div>}
 
           {activeTab === 'billing' && <div className="settings-tab-content">
-            <div className="settings-section-heading"><span className="settings-section-icon"><CreditCard size={19} /></span><div><h2>Planos e Cobrança</h2><p>Consulte o plano e os limites demonstrativos associados à sua conta.</p></div></div>
-            <div className="settings-billing-card"><div className="settings-billing-heading"><div><span className="settings-plan-tag">PLANO ATUAL</span><h3>Argus Free</h3><p>Recursos essenciais para começar.</p></div><span className="settings-plan-status"><Check size={14} /> Ativo</span></div><ul className="settings-plan-limits"><li><Check size={16} /><span>Limite de computadores</span><strong>Até 10</strong></li><li><Check size={16} /><span>Retenção de métricas</span><strong>7 dias</strong></li><li><Check size={16} /><span>Renovação automática</span><strong>Desativada</strong></li></ul><p className="settings-billing-note">Os limites exibidos são informativos; esta página não apresenta utilização ou dispositivos conectados.</p><Link to="/monetizacao" className="settings-btn settings-btn-primary">Gerenciar assinatura <ChevronRight size={16} /></Link></div>
+            <div className="settings-section-heading"><span className="settings-section-icon"><CreditCard size={19} /></span><div><h2>Planos e Cobrança</h2><p>Consulte a assinatura persistida na sua conta.</p></div></div>
+            {notificationError && <p className="settings-inline-error" role="alert">{notificationError}</p>}
+            <div className="settings-billing-card"><div className="settings-billing-heading"><div><span className="settings-plan-tag">PLANO ATUAL</span><h3>Argus {subscription?.plan || 'Free'}</h3><p>{subscription?.billing_cycle === 'annual' ? 'Ciclo anual demonstrativo.' : 'Ciclo mensal demonstrativo.'} Nenhuma cobrança real é processada.</p></div><span className="settings-plan-status"><Check size={14} /> {subscription?.status === 'canceled' ? 'Encerrado' : 'Ativo'}</span></div><ul className="settings-plan-limits"><li><Check size={16} /><span>Limite de computadores</span><strong>{subscription?.plan === 'Business' ? 'Ilimitado' : subscription?.plan === 'Pro' ? 'Até 50' : 'Até 10'}</strong></li><li><Check size={16} /><span>Retenção de métricas</span><strong>{subscription?.plan === 'Business' ? 'Ampliada' : subscription?.plan === 'Pro' ? '90 dias' : '7 dias'}</strong></li><li><Check size={16} /><span>Pagamento</span><strong>Simulado</strong></li></ul><p className="settings-billing-note">A seleção do plano é salva na sua conta compartilhada com o banco ARGUS. Esta integração não cobra pagamentos.</p><Link to="/monetizacao" className="settings-btn settings-btn-primary">Gerenciar assinatura <ChevronRight size={16} /></Link></div>
           </div>}
         </section>
       </div>
