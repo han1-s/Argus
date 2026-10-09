@@ -16,7 +16,10 @@ export const DashboardLayout: React.FC = () => {
 
     if (reducedMotion || !('IntersectionObserver' in window)) return;
 
-    targets.forEach((target) => target.classList.add('scroll-reveal-pending'));
+    targets.forEach((target, index) => {
+      target.style.setProperty('--reveal-order', String(index % 5));
+      target.classList.add('scroll-reveal-pending');
+    });
     const observer = new IntersectionObserver((entries) => {
       entries.forEach((entry) => {
         if (!entry.isIntersecting) return;

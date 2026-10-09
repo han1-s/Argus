@@ -81,10 +81,31 @@ $('#mobileMenu').onclick = () => $('.sidebar').classList.toggle('open');
 function render() {
   if (!state.data) { $('#pageContent').innerHTML = '<div class="loading">Conectando ao servidor local…</div>'; return; }
   $('#navComputerCount').textContent = state.data.summary.total; $('#navAlertCount').textContent = state.data.summary.alerts;
-  if (state.detailId) return renderDetail(state.detailId);
+  if (state.detailId) { renderDetail(state.detailId); revealPlatformPage(`detail:${state.detailId}`); return; }
   $('#pageCrumb').textContent = pages[state.page];
   const renderPage = { dashboard: renderDashboard, computers: renderComputers, activity: renderActivity, applications: renderApplications, web: renderWeb, reports: renderReports, alerts: renderAlerts, settings: renderSettings }[state.page] || renderDashboard;
   renderPage();
+  revealPlatformPage(state.page);
+}
+let revealedPageKey = '';
+function revealPlatformPage(pageKey) {
+  if (revealedPageKey === pageKey || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  revealedPageKey = pageKey;
+  requestAnimationFrame(() => {
+    const targets = [...document.querySelectorAll('#pageContent .page-heading, #pageContent .metric-card, #pageContent .panel')];
+    if (!('IntersectionObserver' in window)) return;
+    const observer = new IntersectionObserver(entries => entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      entry.target.classList.remove('platform-reveal-pending');
+      entry.target.classList.add('platform-revealed');
+      observer.unobserve(entry.target);
+    }), { threshold: 0.08, rootMargin: '0px 0px -4% 0px' });
+    targets.forEach((target, index) => {
+      target.style.setProperty('--platform-reveal-order', String(index % 6));
+      target.classList.add('platform-reveal-pending');
+      observer.observe(target);
+    });
+  });
 }
 function pageHead(kicker, title, desc, action = '') { return `<div class="page-heading"><div><div class="eyebrow">${kicker}</div><h1>${title}</h1><p>${desc}</p></div>${action}</div>`; }
 function statusBadge(m) { return `<span class="status ${m.status}"><i></i>${m.status === 'online' ? 'Online' : 'Offline'}</span>`; }

@@ -21,6 +21,19 @@ body{background:radial-gradient(ellipse at 76% -15%,#48287930,transparent 36%),v
 .app-overview{margin-top:14px}.app-summary-row{display:grid;grid-template-columns:minmax(150px,1fr) minmax(80px,.5fr) minmax(120px,.6fr);gap:14px;align-items:center;border-bottom:1px solid #27202f;padding:11px 2px;color:#a99eb5;font-size:10px}.app-summary-row:last-child{border-bottom:0}.app-summary-row b{color:#e9e1f0;font-size:11px}.app-summary-row small{color:#8f849a;font-size:9px}.process-subtitle{display:block;color:#9588a3;font:9px var(--mono);margin-top:4px}.app-state{color:#a79bb4;font-size:10px}.app-state.is-running{color:#6bd7b1}.app-history-heading{margin-top:20px;padding-top:16px;border-top:1px solid #2a2236}.installer-actions{display:flex;flex-wrap:wrap;gap:9px;margin:17px 0 5px}.advanced-setup{margin-top:15px;color:#958ba0;font-size:10px}.advanced-setup summary{cursor:pointer}.advanced-setup pre{margin-top:10px}.modal{border-color:#46345c;background:#15111e}.modal-footer{border-color:#2c2338}
 @media(max-width:760px){.app-summary-row{grid-template-columns:1fr auto;gap:5px}.app-summary-row span:last-child{grid-column:1/-1}.installer-actions{display:grid}}
 
+/* ARGUS identity with restrained entrance and scroll motion. */
+body{background-image:radial-gradient(ellipse at 78% -12%,#7041b833,transparent 37%),radial-gradient(ellipse at 12% 42%,#3d28651c,transparent 36%);background-attachment:fixed}
+html{scroll-behavior:smooth;scrollbar-color:#7956a7 #100d18;scrollbar-width:thin}
+html::-webkit-scrollbar{width:10px}html::-webkit-scrollbar-track{background:#100d18}html::-webkit-scrollbar-thumb{border:2px solid #100d18;border-radius:999px;background:linear-gradient(180deg,#a78bfa,#68439b)}html::-webkit-scrollbar-thumb:hover{background:#c4a9ff}
+#appView:not(.hidden){animation:platformSiteEnter 760ms cubic-bezier(.2,.65,.3,1) both}
+.platform-reveal-pending{opacity:0;transform:translateY(18px) scale(.99);will-change:transform,opacity}
+.platform-revealed{animation:platformScrollReveal 560ms cubic-bezier(.2,.65,.3,1) both;animation-delay:calc(var(--platform-reveal-order,0)*48ms)}
+.metric-card,.panel,.page-heading{transition:transform 220ms ease,border-color 220ms ease,box-shadow 220ms ease}
+.metric-card:hover,.panel:hover{transform:translateY(-2px);border-color:#46345c;box-shadow:0 14px 34px #0003,0 0 20px #7041b80d}
+@keyframes platformSiteEnter{from{opacity:0;filter:blur(5px);transform:translateY(8px)}to{opacity:1;filter:blur(0);transform:translateY(0)}}
+@keyframes platformScrollReveal{from{opacity:0;transform:translateY(18px) scale(.99)}to{opacity:1;transform:translateY(0) scale(1)}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}#appView:not(.hidden){animation:none}.platform-reveal-pending{opacity:1;transform:none}.platform-revealed{animation:none}.metric-card,.panel,.page-heading{transition:none}.metric-card:hover,.panel:hover{transform:none}}
+
 /* Default visual scale targets the readability of a browser at 125% zoom. */
 html{zoom:1.25}
 @media(max-width:760px){html{zoom:1.08}}

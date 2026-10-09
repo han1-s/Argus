@@ -8,32 +8,26 @@ echo ==========================================
 echo            ARGUS - Platform
 echo ==========================================
 echo.
-echo  1. Abrir painel de controle (servidor e agentes)
-echo  2. Iniciar somente a API Platform
-echo  3. Parar o servidor da Platform
-echo  4. Abrir logs do servidor
-echo  5. Voltar ao menu principal
+echo  1. Iniciar somente a API Platform
+echo  2. Parar o servidor da Platform
+echo  3. Abrir logs do servidor
+echo  4. Voltar ao menu principal
 echo.
-choice /c 12345 /n /m "Escolha: "
-if errorlevel 5 exit /b 0
-if errorlevel 4 goto logs
-if errorlevel 3 goto stopserver
-if errorlevel 2 goto api
-if errorlevel 1 goto control
+choice /c 1234 /n /m "Escolha: "
+if errorlevel 4 exit /b 0
+if errorlevel 3 goto logs
+if errorlevel 2 goto stopserver
+if errorlevel 1 goto api
 
 :api
-where node >nul 2>nul || (echo Node.js nao encontrado. Execute a preparacao pelo painel de controle.& pause & goto menu)
+where node >nul 2>nul || (echo Node.js nao encontrado. Use Ferramentas no menu principal para preparar a instalacao.& pause & goto menu)
 if not exist "%~dp0node_modules\express\package.json" (
-  echo Dependencias da Platform nao encontradas. Escolha Preparar servidor no painel de controle.
+  echo Dependencias da Platform nao encontradas. Use Ferramentas no menu principal para preparar a instalacao.
   pause
   goto menu
 )
 call "%~dp0ARGUS.cmd" /start-server
 pause
-goto menu
-
-:control
-call "%~dp0ARGUS.cmd"
 goto menu
 
 :stopserver

@@ -53,9 +53,7 @@ O agente nunca acessa o MySQL diretamente. A porta `3306` do banco deve ficar di
 
 6. No próprio servidor, abra <http://localhost:3000>, crie a conta administradora e aceite os termos.
 
-Também é possível abrir `Platform/ARGUS.cmd` e escolher **Preparar servidor** e depois **Iniciar servidor e abrir o painel**. O MySQL precisa estar iniciado antes.
-
-Para preparar Platform, Web Backend e Web Frontend juntos em uma instalação nova do Windows, siga o guia principal em [`README.md`](../README.md). A preparação pelo menu da Platform instala somente as dependências da Platform.
+Para uma instalação nova no Windows, use o preparo guiado do menu principal em [`README.md`](../README.md). Ele instala as dependências e cria `Platform/.env` a partir do modelo. Depois, no menu principal, escolha **Platform > Iniciar somente a API Platform**. Esse menu também permite parar o servidor e abrir os logs, sem abrir um segundo menu de controle. O MySQL precisa estar iniciado antes.
 
 ## 2. Conectar um computador
 
@@ -72,7 +70,7 @@ Repita estes passos em cada endpoint autorizado:
 
 O endereço `127.0.0.1` do assistente é local ao endpoint; ele **não** é o endereço do servidor. Use o IP LAN do computador que executa a Platform. O botão **Cancelar instalação** encerra o assistente sem conectar o PC.
 
-Após conectar, o agente inicia com o Windows. Para parar ou iniciar o agente, use o `ARGUS.cmd` de controle no próprio endpoint. A opção de parar encerra também o observador foreground.
+Após conectar, o agente inicia em segundo plano quando o usuário entra no Windows. O assistente de instalação pode ser fechado; o agente e o observador foreground continuam rodando sem uma janela de terminal.
 
 ## 3. Ver computadores e uso de aplicações
 
@@ -137,7 +135,7 @@ O teste da Platform usa uma base MySQL em memória e endpoints locais temporári
 | `frontend/` | Painel administrativo da Platform |
 | `browser-extension/` | Extensão opcional Chromium |
 | `scripts/` | Controlador Windows e smoke test |
-| `ARGUS.cmd` | Menu de instalação, início e parada |
+| `ARGUS.cmd` | Inicialização direta da API Platform e comandos internos de serviço |
 
 ## Créditos
 

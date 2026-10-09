@@ -21,7 +21,8 @@ if /i "%~1"=="/start-server" (
   powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%ARGUS_CONTROL%" -StartServerOnly
   exit /b
 )
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%ARGUS_CONTROL%"
+rem Starting this command directly starts the server; controls live in ARGUS-Platform.cmd.
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%ARGUS_CONTROL%" -StartServerOnly
 if errorlevel 1 (
   echo O controlador do ARGUS terminou com erro.
   pause

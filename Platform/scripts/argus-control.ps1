@@ -10,33 +10,6 @@ $AgentDir = Join-Path $env:LOCALAPPDATA 'ARGUS\Agent'
 $AgentScript = Join-Path $AgentDir 'agent.js'
 $AgentStartup = Join-Path ([Environment]::GetFolderPath('Startup')) 'ARGUS Agent.lnk'
 
-function Pause-Menu { Read-Host 'Pressione Enter para voltar ao menu' | Out-Null }
-function Show-MoreInfo {
-  param([switch]$AgentOnly)
-  Clear-Host
-  if ($AgentOnly) {
-    Write-Host 'SAIBA MAIS - CONTROLE DO AGENTE' -ForegroundColor Magenta
-    Write-Host ''
-    Write-Host '1 - Instalar/configurar: baixa o agente e abre o assistente local no navegador.'
-    Write-Host '    No assistente, informe o servidor LAN, nome do PC e autentique sua conta ARGUS.'
-    Write-Host '2 - Iniciar: inicia o agente ja configurado e habilita seu inicio ao entrar no Windows.'
-    Write-Host '3 - Parar: encerra o agente deste computador e remove o inicio automatico.'
-    Write-Host '4 - Sair: fecha este menu sem alterar o agente.'
-  } else {
-    Write-Host 'SAIBA MAIS - CENTRAL ARGUS' -ForegroundColor Magenta
-    Write-Host ''
-    Write-Host '1 - Preparar servidor: instala Node.js se faltar, baixa dependencias e cria/abre .env para configurar o MySQL.'
-    Write-Host '    Inicie o MySQL antes de continuar. Esta opcao nao inicia o painel.'
-    Write-Host '2 - Iniciar servidor: executa a API em segundo plano e abre o painel no navegador.'
-    Write-Host '3 - Instalar/configurar agente: abre o assistente local para informar servidor, nome e conta ARGUS.'
-    Write-Host '4 - Iniciar agente: inicia o agente ja configurado neste computador.'
-    Write-Host '5 - Parar locais: encerra o servidor e o agente deste computador e remove a inicializacao automatica do agente.'
-    Write-Host '    Agentes em outros computadores devem ser parados em cada endpoint.'
-    Write-Host '6 - Sair: fecha o menu sem alterar os processos.'
-  }
-  Write-Host ''
-  Pause-Menu
-}
 function Find-Node {
   $node = Get-Command node -ErrorAction SilentlyContinue
   if ($node) { return $node.Source }
@@ -203,53 +176,9 @@ if ($env:ARGUS_AGENT_ONLY -eq '1' -and $env:ARGUS_INSTALL_ONLY -eq '1') {
   catch { Write-Host "Falha: $($_.Exception.Message)" -ForegroundColor Red; exit 1 }
   exit 0
 } elseif ($env:ARGUS_AGENT_ONLY -eq '1') {
-  do {
-    Clear-Host
-    Write-Host 'ARGUS — Controle do agente' -ForegroundColor Magenta
-    Write-Host ''
-    Write-Host '  1. Instalar/conectar este computador'
-    Write-Host '  2. Iniciar agente instalado'
-    Write-Host '  3. Parar agente neste computador'
-    Write-Host '  4. Sair'
-    Write-Host '  5. Saiba mais'
-    Write-Host ''
-    $choice = Read-Host 'Escolha uma opção'
-    try {
-      switch ($choice) {
-        '1' { if (Install-Agent) { Stop-Agent; Start-Agent }; Pause-Menu }
-        '2' { Start-Agent; Pause-Menu }
-        '3' { Stop-Agent; Pause-Menu }
-        '4' { break }
-        '5' { Show-MoreInfo -AgentOnly }
-        default { Write-Host 'Opção inválida.'; Pause-Menu }
-      }
-    } catch { Write-Host "Falha: $($_.Exception.Message)" -ForegroundColor Red; Pause-Menu }
-  } while ($choice -ne '4')
+  try { Start-Agent }
+  catch { Write-Host "Falha: $($_.Exception.Message)" -ForegroundColor Red; exit 1 }
 } else {
-  do {
-    Clear-Host
-    Write-Host 'ARGUS — Central de instalação e execução' -ForegroundColor Magenta
-    Write-Host ''
-    Write-Host '  1. Preparar servidor (Node.js, dependências e .env)'
-    Write-Host '  2. Iniciar servidor e abrir o painel'
-    Write-Host '  3. Instalar/conectar o agente neste computador'
-    Write-Host '  4. Iniciar agente instalado neste computador'
-    Write-Host '  5. Parar servidor e agente deste computador'
-    Write-Host '  6. Sair'
-    Write-Host '  7. Saiba mais'
-    Write-Host ''
-    $choice = Read-Host 'Escolha uma opção'
-    try {
-      switch ($choice) {
-        '1' { Prepare-Server; Pause-Menu }
-        '2' { Start-Server; Pause-Menu }
-        '3' { if (Install-Agent) { Stop-Agent; Start-Agent }; Pause-Menu }
-        '4' { Start-Agent; Pause-Menu }
-        '5' { Stop-Server; Stop-Agent; Pause-Menu }
-        '6' { break }
-        '7' { Show-MoreInfo }
-        default { Write-Host 'Opção inválida.'; Pause-Menu }
-      }
-    } catch { Write-Host "Falha: $($_.Exception.Message)" -ForegroundColor Red; Pause-Menu }
-  } while ($choice -ne '6')
+  try { Start-Server }
+  catch { Write-Host "Falha: $($_.Exception.Message)" -ForegroundColor Red; exit 1 }
 }
