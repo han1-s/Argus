@@ -15,22 +15,21 @@ const html = `<!doctype html>
 #cancelSetup{width:100%;height:38px;margin-top:8px;border:1px solid #cbd5dc;border-radius:5px;background:white;color:#586772;font-size:13px;cursor:pointer}
 </style>
 </head>
-<body><main class="setup"><div class="brand">ARGUS · CONFIGURAÇÃO LOCAL</div><div class="eyebrow">VINCULAR COMPUTADOR</div><h1>Configurar este computador</h1><p>Informe o servidor ARGUS da rede e os dados da sua conta administradora. O código de autenticação será criado pelo servidor e usado uma única vez para vincular este computador.</p>
+<body><main class="setup"><div class="brand">ARGUS · CONFIGURAÇÃO LOCAL</div><div class="eyebrow">VINCULAR COMPUTADOR</div><h1>Configurar este computador</h1><p>Informe o endereço do servidor, o nome deste computador e o código de conexão gerado no painel ARGUS.</p>
 <form id="setupForm">
 <label class="field">Endereço LAN do servidor ARGUS<input name="serverUrl" type="url" placeholder="http://192.168.1.10:3000" required autocomplete="url"></label>
 <label class="field">Nome deste computador<input name="deviceName" maxlength="80" required autocomplete="off"></label>
-<label class="field">E-mail da conta ARGUS<input name="email" type="email" required autocomplete="username"></label>
-<label class="field">Senha da conta ARGUS<input name="password" type="password" required autocomplete="current-password"></label>
-<label class="terms"><input name="termsAccepted" type="checkbox" required><span>Li e aceito os termos atuais do ARGUS para autenticar esta conexão. <a id="termsLink" target="_blank" rel="noopener" hidden>Consultar termos</a></span></label>
-<button class="submit" type="submit">Autenticar e conectar computador</button>
+<label class="field">Código de conexão<input name="pairingCode" type="text" placeholder="ARG-XXXX-XXXX" required autocomplete="off" minlength="13" maxlength="13" pattern="ARG-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}"></label>
+<label class="terms"><input name="termsAccepted" type="checkbox" required><span>Li e aceito os termos atuais do ARGUS para conectar este computador. <a id="termsLink" target="_blank" rel="noopener" hidden>Consultar termos</a></span></label>
+<button class="submit" type="submit">Conectar computador</button>
 <button id="cancelSetup" type="button">Cancelar instalação</button>
-</form><div id="status" class="status" role="status" aria-live="polite"></div><div class="foot">A senha é usada somente para autenticar esta solicitação e não é salva neste computador.</div></main>
+</form><div id="status" class="status" role="status" aria-live="polite"></div><div class="foot">O código é de uso único e expira em 15 minutos. Gere um novo no painel se necessário.</div></main>
 <script>
 const form=document.querySelector('#setupForm');const statusNode=document.querySelector('#status');const button=form.querySelector('.submit');const termsLink=document.querySelector('#termsLink');const updateTermsLink=()=>{try{termsLink.href=new URL('/terms.html',form.elements.serverUrl.value).href;termsLink.hidden=false}catch{termsLink.removeAttribute('href');termsLink.hidden=true}};
 form.elements.deviceName.value=(()=>{const name=location.hostname;return name==='127.0.0.1'||name==='localhost'?'${process.env.COMPUTERNAME || 'Meu computador'}':name})();
 form.elements.serverUrl.addEventListener('input',updateTermsLink);updateTermsLink();
 document.querySelector('#cancelSetup').onclick=async()=>{await fetch('/api/cancel',{method:'POST'});form.hidden=true;statusNode.className='status';statusNode.textContent='Instalação cancelada. Nenhuma conexão foi criada.'};
-form.onsubmit=async event=>{event.preventDefault();statusNode.className='status';statusNode.textContent='Autenticando e vinculando computador…';button.disabled=true;const values=Object.fromEntries(new FormData(form));values.termsAccepted=form.elements.termsAccepted.checked;try{const response=await fetch('/api/setup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(values)});const result=await response.json();if(!response.ok)throw new Error(result.error||'Não foi possível configurar o computador.');form.hidden=true;statusNode.className='status success';statusNode.innerHTML='Computador conectado como <b></b>. O assistente pode ser fechado.';statusNode.querySelector('b').textContent=result.deviceName;statusNode.insertAdjacentHTML('beforeend','<br>Código de autenticação usado: <code></code>');statusNode.querySelector('code').textContent=result.pairingCode;}catch(error){statusNode.className='status error';statusNode.textContent=error.message;button.disabled=false;}};
+form.onsubmit=async event=>{event.preventDefault();statusNode.className='status';statusNode.textContent='Conectando computador…';button.disabled=true;const values=Object.fromEntries(new FormData(form));values.pairingCode=values.pairingCode.trim().toUpperCase();values.termsAccepted=form.elements.termsAccepted.checked;try{const response=await fetch('/api/setup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(values)});const result=await response.json();if(!response.ok)throw new Error(result.error||'Não foi possível configurar o computador.');form.hidden=true;statusNode.className='status success';statusNode.innerHTML='Computador conectado como <b></b>. O assistente pode ser fechado.';statusNode.querySelector('b').textContent=result.deviceName;}catch(error){statusNode.className='status error';statusNode.textContent=error.message;button.disabled=false;}};
 </script></body></html>`;
 
 function sendJson(res, statusCode, body) {
@@ -95,22 +94,12 @@ const server = http.createServer(async (req, res) => {
     const input = await readJson(req);
     const serverUrl = normalizeServerUrl(input.serverUrl);
     const deviceName = String(input.deviceName || '').trim();
-    const email = String(input.email || '').trim().toLowerCase();
-    const password = String(input.password || '');
+    const pairingCode = String(input.pairingCode || '').trim().toUpperCase();
     if (deviceName.length < 2 || deviceName.length > 80) return sendJson(res, 400, { error: 'O nome do computador deve ter de 2 a 80 caracteres.' });
-    if (!/^\S+@\S+\.\S+$/.test(email) || password.length < 10) return sendJson(res, 400, { error: 'Informe o e-mail e a senha válidos da conta ARGUS.' });
+    if (!/^ARG-[A-F0-9]{4}-[A-F0-9]{4}$/.test(pairingCode)) return sendJson(res, 400, { error: 'Informe um código de conexão válido, gerado no painel ARGUS.' });
     if (input.termsAccepted !== true) return sendJson(res, 400, { error: 'Aceite os termos atuais para continuar.' });
 
-    const termsResponse = await fetch(`${serverUrl}/api/legal/terms`, { signal: AbortSignal.timeout(10000) });
-    if (!termsResponse.ok) throw new Error('Não foi possível consultar os termos no servidor informado. Confira o endereço LAN.');
-    const terms = await termsResponse.json();
-    const { response: loginResponse } = await apiRequest(serverUrl, '/api/auth/login', {
-      email, password, termsVersion: terms.version, termsAccepted: true
-    });
-    const cookie = loginResponse.headers.get('set-cookie')?.split(';', 1)[0];
-    if (!cookie) throw new Error('O servidor autenticou a conta, mas não retornou uma sessão válida.');
-    const { result: pairing } = await apiRequest(serverUrl, '/api/pairings', {}, cookie);
-    const { result: connection } = await apiRequest(serverUrl, '/api/agent/connect', { code: pairing.code, name: deviceName });
+    const { result: connection } = await apiRequest(serverUrl, '/api/agent/connect', { code: pairingCode, name: deviceName });
     const config = {
       serverUrl,
       deviceName,
@@ -123,7 +112,7 @@ const server = http.createServer(async (req, res) => {
     fs.writeFileSync(temporaryPath, JSON.stringify(config, null, 2), { mode: 0o600 });
     fs.renameSync(temporaryPath, configPath);
     fs.writeFileSync(path.join(__dirname, 'setup-complete'), new Date().toISOString());
-    sendJson(res, 200, { ok: true, deviceName, pairingCode: pairing.code });
+    sendJson(res, 200, { ok: true, deviceName });
     setTimeout(() => { server.close(); server.closeAllConnections?.(); }, 300);
   } catch (error) {
     sendJson(res, error.name === 'TimeoutError' ? 504 : error.statusCode || 400, { error: error.name === 'TimeoutError' ? 'O servidor não respondeu a tempo. Confira o IP LAN e tente novamente.' : error.message });
