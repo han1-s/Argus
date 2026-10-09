@@ -8,7 +8,7 @@ echo ==========================================
 echo              ARGUS - Inicial
 echo ==========================================
 echo.
-echo  1. Iniciar ARGUS Web (volta a este menu ao iniciar)
+echo  1. Iniciar ARGUS Web e abrir seu menu de controle
 echo  2. Abrir menu da Platform
 echo  3. Gerenciar ou parar o Web
 echo  4. Instalar todas as dependencias
