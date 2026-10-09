@@ -38,5 +38,11 @@
       <div id="pageContent" class="page-content"></div>
     </main>
   </div>
+  <button id="helpBotToggle" class="help-bot-toggle hidden" type="button" aria-label="Abrir ajuda do ARGUS" aria-expanded="false"><span aria-hidden="true">🤖</span><span>Ajuda</span></button>
+  <section id="helpBotPanel" class="help-bot-panel hidden" role="dialog" aria-label="Ajuda do ARGUS">
+    <header class="help-bot-header"><div><b>ARGUS</b><small>Ajuda rápida da Platform</small></div><button id="helpBotClose" type="button" aria-label="Fechar ajuda">×</button></header>
+    <div id="helpBotMessages" class="help-bot-messages" aria-live="polite"></div>
+    <div id="helpBotTopics" class="help-bot-topics"></div>
+  </section>
   <div id="toast" class="toast"></div>
 </body></html>

@@ -24,3 +24,11 @@ body{background:radial-gradient(ellipse at 76% -15%,#48287930,transparent 36%),v
 /* Default visual scale targets the readability of a browser at 125% zoom. */
 html{zoom:1.25}
 @media(max-width:760px){html{zoom:1.08}}
+
+.help-bot-toggle{position:fixed;right:24px;bottom:24px;z-index:25;display:flex;align-items:center;gap:8px;padding:10px 13px;border:1px solid #684b91;border-radius:24px;background:#21172e;color:#e2d2f7;box-shadow:0 8px 28px #0008;font-weight:700;font-size:11px}.help-bot-toggle span:first-child{font-size:16px;line-height:1}
+.help-bot-panel{position:fixed;right:24px;bottom:76px;z-index:25;width:min(360px,calc(100vw - 30px));max-height:min(490px,calc(100vh - 110px));display:flex;flex-direction:column;border:1px solid #46345c;border-radius:12px;background:#15111e;box-shadow:0 22px 70px #000b;overflow:hidden}
+.help-bot-header{display:flex;justify-content:space-between;align-items:center;padding:13px 15px;border-bottom:1px solid #2c2338;background:#100d18}
+.help-bot-header b,.help-bot-header small{display:block}.help-bot-header b{font-size:12px;letter-spacing:.08em}.help-bot-header small{margin-top:4px;color:#958ba0;font-size:9px}.help-bot-header button{border:0;background:none;color:#a99eb5;font-size:21px}
+.help-bot-messages{display:grid;gap:9px;overflow:auto;padding:13px;min-height:120px}.help-bot-message{max-width:92%;padding:10px 11px;border:1px solid #30263d;border-radius:9px;background:#1b1525;color:#d4cadf;font-size:10px;line-height:1.65;white-space:pre-line}.help-bot-message.user{justify-self:end;background:#2b1d3e;border-color:#4c3569;color:#eadfff}
+.help-bot-topics{display:flex;flex-wrap:wrap;gap:7px;padding:11px 13px;border-top:1px solid #2c2338}.help-bot-topic{padding:7px 9px;border:1px solid #49355e;border-radius:16px;background:#1b1525;color:#c5a9ec;font-size:9px}.help-bot-topic:hover{background:#2b1d3e}
+@media(max-width:760px){.help-bot-toggle{right:15px;bottom:15px}.help-bot-panel{right:15px;bottom:67px}}

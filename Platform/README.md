@@ -27,35 +27,34 @@ O agente nunca acessa o MySQL diretamente. A porta `3306` do banco deve ficar di
 
 ## 1. Preparar o servidor
 
-1. Instale e inicie o MySQL no computador que será o servidor.
-2. Crie uma base e um usuário exclusivos para o ARGUS. No MySQL Workbench ou console MySQL, execute:
+1. Instale e inicie o MySQL no computador servidor.
+2. No MySQL Workbench, abra `Platform/database/schema.sql`. Copie o arquivo inteiro, cole em uma nova consulta SQL e clique em **Executar**. O script cria o banco `argus` e suas tabelas.
+3. Crie um usuário para a Platform. Troque `SUA_SENHA_FORTE` por uma senha sua:
 
-   ```sql
-   CREATE DATABASE IF NOT EXISTS argus CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-   CREATE USER IF NOT EXISTS 'argus_app'@'127.0.0.1' IDENTIFIED BY 'SUA_SENHA_FORTE';
-   GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, ALTER, INDEX, REFERENCES ON argus.* TO 'argus_app'@'127.0.0.1';
-   FLUSH PRIVILEGES;
-   ```
+```sql
+CREATE USER IF NOT EXISTS 'argus_app'@'127.0.0.1' IDENTIFIED BY 'SUA_SENHA_FORTE';
+GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, ALTER, INDEX, REFERENCES ON argus.* TO 'argus_app'@'127.0.0.1';
+FLUSH PRIVILEGES;
+```
 
-3. Abra PowerShell na pasta `Platform` e instale as dependências:
+4. Abra PowerShell na pasta `Platform` e instale as dependências:
 
-   ```powershell
-   npm install
-   ```
+```powershell
+npm install
+```
 
-4. Se ainda não existir, crie `Platform/.env` copiando `.env.example`. Configure nele `MYSQL_USER=argus_app`, `MYSQL_PASSWORD` com a senha que escolheu, `MYSQL_DATABASE=argus` e `MYSQL_AUTO_CREATE_DATABASE=false`. O arquivo `.env` contém segredos locais: não o publique nem o envie para outras pessoas.
-5. O primeiro início cria ou atualiza uma única vez o administrador inicial configurado por `ARGUS_ADMIN_EMAIL` e `ARGUS_ADMIN_PASSWORD` (padrão local: `hanielshz@gmail.com` / `12345678`). Um marcador no mesmo MySQL impede que reinícios restaurem a senha; altere os valores antes de usar em ambiente compartilhado.
-5. Inicie o servidor:
+5. Copie `.env.example` para `.env`. Configure `MYSQL_USER=argus_app`, `MYSQL_PASSWORD` com a senha criada e `MYSQL_DATABASE=argus`. Esse arquivo contém segredos; não o publique.
+6. Inicie o servidor:
 
-   ```powershell
-   npm start
-   ```
+```powershell
+npm start
+```
 
-6. No próprio servidor, abra <http://localhost:3000>, crie a conta administradora e aceite os termos.
+7. No servidor, abra <http://localhost:3000> e crie a conta administradora.
 
 Também é possível abrir `Platform/ARGUS.cmd` e escolher **Preparar servidor** e depois **Iniciar servidor e abrir o painel**. O MySQL precisa estar iniciado antes.
 
-Para preparar Platform, Web Backend e Web Frontend juntos em uma instalação nova do Windows, siga o guia principal em [`README.md`](../README.md). A preparação pelo menu da Platform instala somente as dependências da Platform.
+Para instalar o site completo, siga também o guia principal em [`README.md`](../README.md).
 
 ## 2. Conectar um computador
 
