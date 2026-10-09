@@ -20,24 +20,27 @@ if not exist "%ARGUS_ROOT%\Web\Frontend\node_modules\vite\package.json" (
   pause
   exit /b 1
 )
-powershell.exe -NoProfile -Command "$busy=@(); foreach($port in @(3001,5173)){$client=[Net.Sockets.TcpClient]::new();try{$client.Connect('127.0.0.1',$port);$busy+=$port}catch{}finally{$client.Dispose()}}; if($busy.Count){Write-Output ('Portas ja ocupadas: '+($busy -join ', '));exit 1}"
+
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%ARGUS_ROOT%\scripts\start-web.ps1"
 if errorlevel 1 (
-  echo Feche as janelas de servico ARGUS ja abertas e tente novamente.
   pause
   exit /b 1
 )
 
-echo Iniciando o backend e o frontend do Web...
-start "ARGUS Web Backend" /D "%ARGUS_ROOT%\Web\Backend" cmd /k "npm start"
-start "ARGUS Web Frontend" /D "%ARGUS_ROOT%\Web\Frontend" cmd /k "npm run dev -- --host 127.0.0.1 --strictPort"
-timeout /t 5 /nobreak >nul
-start "ARGUS Web" http://127.0.0.1:5173/login
+:menu
 echo.
-echo Web iniciado. Esta janela pode ser fechada; mantenha as duas janelas de servico abertas.
-echo.
-echo  1. Encerrar o Web (frontend e backend)
-echo  2. Deixar o Web em execucao e fechar este menu
-choice /c 12 /n /m "Escolha: "
-if errorlevel 2 exit /b 0
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0..\scripts\stop-web.ps1"
+echo ARGUS Web esta rodando em segundo plano.
+echo 1. Parar Web
+echo 2. Abrir logs
+echo 3. Voltar ao menu principal (mantendo Web ligado)
+choice /c 123 /n /m "Escolha: "
+if errorlevel 3 exit /b 0
+if errorlevel 2 goto logs
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%ARGUS_ROOT%\scripts\stop-web.ps1"
 pause
+exit /b 0
+
+:logs
+set "ARGUS_LOGS=%LOCALAPPDATA%\ARGUS\Logs"
+for %%L in (web-Web-Backend.out.log web-Web-Backend.err.log web-Web-Frontend.out.log web-Web-Frontend.err.log) do if exist "%ARGUS_LOGS%\%%L" start "ARGUS logs - %%L" notepad.exe "%ARGUS_LOGS%\%%L"
+goto menu

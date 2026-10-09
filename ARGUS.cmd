@@ -35,8 +35,8 @@ call "%~dp0scripts\test-all.cmd"
 pause
 goto menu
 :platform
-start "ARGUS Platform" cmd /k call "%~dp0Platform\ARGUS-Platform.cmd"
+call "%~dp0Platform\ARGUS-Platform.cmd"
 goto menu
 :web
-start "ARGUS Web" cmd /k call "%~dp0Web\ARGUS-Web.cmd"
+call "%~dp0Web\ARGUS-Web.cmd"
 goto menu

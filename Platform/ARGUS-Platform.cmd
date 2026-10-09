@@ -11,28 +11,37 @@ echo.
 echo  1. Abrir painel de controle (servidor e agentes)
 echo  2. Iniciar somente a API Platform
 echo  3. Parar o servidor da Platform
-echo  4. Fechar este menu
+echo  4. Abrir logs do servidor
+echo  5. Voltar ao menu principal
 echo.
-choice /c 1234 /n /m "Escolha: "
-if errorlevel 4 exit /b 0
+choice /c 12345 /n /m "Escolha: "
+if errorlevel 5 exit /b 0
+if errorlevel 4 goto logs
 if errorlevel 3 goto stopserver
 if errorlevel 2 goto api
 if errorlevel 1 goto control
 
 :api
-where node >nul 2>nul || (echo Node.js 18+ nao encontrado. Instale o Node.js LTS e tente novamente.& pause & goto menu)
-where npm >nul 2>nul || (echo npm nao encontrado no PATH.& pause & goto menu)
+where node >nul 2>nul || (echo Node.js nao encontrado. Execute a preparacao pelo painel de controle.& pause & goto menu)
 if not exist "%~dp0node_modules\express\package.json" (
-  echo Dependencias da Platform nao encontradas. Execute a instalacao pelo ARGUS.cmd.
+  echo Dependencias da Platform nao encontradas. Escolha Preparar servidor no painel de controle.
   pause
   goto menu
 )
-start "ARGUS Platform API" /D "%~dp0" cmd /k "npm start"
+call "%~dp0ARGUS.cmd" /start-server
+pause
 goto menu
+
 :control
 call "%~dp0ARGUS.cmd"
 goto menu
+
 :stopserver
 call "%~dp0ARGUS.cmd" /stop-server
 pause
+goto menu
+
+:logs
+set "ARGUS_LOGS=%LOCALAPPDATA%\ARGUS\Logs"
+for %%L in (server.out.log server.err.log) do if exist "%ARGUS_LOGS%\%%L" start "ARGUS logs - %%L" notepad.exe "%ARGUS_LOGS%\%%L"
 goto menu

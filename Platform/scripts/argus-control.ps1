@@ -1,4 +1,4 @@
-﻿param([switch]$StopAll, [switch]$StopServerOnly, [string]$ServerUrl = $env:ARGUS_SERVER_URL)
+﻿param([switch]$StopAll, [switch]$StopServerOnly, [switch]$StartServerOnly, [string]$ServerUrl = $env:ARGUS_SERVER_URL)
 $ErrorActionPreference = 'Stop'
 $ParentRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $ProjectRoot = if (Test-Path (Join-Path $ParentRoot 'backend\server.js')) { $ParentRoot } else { $PSScriptRoot }
@@ -122,6 +122,7 @@ function Install-Agent {
   return $true
 }
 function Start-Server {
+  param([switch]$NoBrowser)
   $node = Find-Node
   if (-not $node) { Write-Host 'Node.js não encontrado. Escolha Preparar servidor primeiro.' -ForegroundColor Yellow; return }
   if (-not (Test-Path (Join-Path $ProjectRoot '.env'))) { Write-Host 'Arquivo .env ausente. Escolha Preparar servidor primeiro.' -ForegroundColor Yellow; return }
@@ -140,8 +141,8 @@ function Start-Server {
   $portLine = Get-Content $envFile | Where-Object { $_ -match '^\s*PORT\s*=\s*\d+' } | Select-Object -First 1
   if ($portLine -match '^\s*PORT\s*=\s*(\d+)') { $port = [int]$Matches[1] }
   $address = "http://localhost:$port"
-  Write-Host "Servidor ARGUS iniciado (PID $($process.Id)). Abrindo o painel em $address." -ForegroundColor Green
-  Start-Process $address
+  if ($NoBrowser) { Write-Host "Servidor ARGUS iniciado em segundo plano (PID $($process.Id)) em $address." -ForegroundColor Green }
+  else { Write-Host "Servidor ARGUS iniciado (PID $($process.Id)). Abrindo o painel em $address." -ForegroundColor Green; Start-Process $address }
 }
 function Stop-Server {
   $entry = Join-Path $ProjectRoot 'backend\server.js'
@@ -190,6 +191,7 @@ function Stop-Agent {
 
 if ($StopAll) { Stop-Server; Stop-Agent; exit 0 }
 if ($StopServerOnly) { Stop-Server; exit 0 }
+if ($StartServerOnly) { Start-Server -NoBrowser; exit 0 }
 
 if ($env:ARGUS_AGENT_ONLY -eq '1' -and $env:ARGUS_INSTALL_ONLY -eq '1') {
   Clear-Host

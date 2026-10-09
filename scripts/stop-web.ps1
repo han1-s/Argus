@@ -1,6 +1,26 @@
 $ErrorActionPreference = 'Stop'
 $titles = @('ARGUS Web Backend', 'ARGUS Web Frontend')
 $stopped = 0
+$controlDir = Join-Path $env:LOCALAPPDATA 'ARGUS\Control'
+$tracked = @(
+  @{ File = 'web-Web-Backend.pid'; Pattern = '(?i)src[\\/]server\.js' },
+  @{ File = 'web-Web-Frontend.pid'; Pattern = '(?i)vite[\\/]bin[\\/]vite\.js' }
+)
+
+# Prefer the recorded PIDs, but confirm that each process is Node and runs the expected entry point.
+foreach ($item in $tracked) {
+  $pidFile = Join-Path $controlDir $item.File
+  if (-not (Test-Path $pidFile)) { continue }
+  $id = 0
+  if ([int]::TryParse((Get-Content -Raw $pidFile).Trim(), [ref]$id)) {
+    $process = Get-CimInstance Win32_Process -Filter "ProcessId = $id" -ErrorAction SilentlyContinue
+    if ($process -and $process.Name -eq 'node.exe' -and $process.CommandLine -match $item.Pattern) {
+      Stop-Process -Id $id -Force -ErrorAction SilentlyContinue
+      $stopped++
+    }
+  }
+  Remove-Item $pidFile -Force -ErrorAction SilentlyContinue
+}
 
 # Close only the two consoles created by ARGUS-Web.cmd, including npm and Node children.
 foreach ($window in @(Get-Process -Name cmd -ErrorAction SilentlyContinue | Where-Object { $titles -contains $_.MainWindowTitle })) {
