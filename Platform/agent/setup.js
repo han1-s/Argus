@@ -106,7 +106,7 @@ const server = http.createServer(async (req, res) => {
       deviceToken: connection.token,
       bridgeKey: crypto.randomBytes(32).toString('hex'),
       heartbeatSeconds: 5,
-      bridgePort: 43172
+      bridgePort: Number(process.env.ARGUS_AGENT_BRIDGE_PORT) || 43172
     };
     const temporaryPath = `${configPath}.tmp`;
     fs.writeFileSync(temporaryPath, JSON.stringify(config, null, 2), { mode: 0o600 });

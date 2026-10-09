@@ -64,8 +64,8 @@ function launchAgent(folder) {
   child.stdout.on('data', chunk => process.stdout.write(`[agent] ${chunk}`)); child.stderr.on('data', chunk => process.stderr.write(`[agent] ${chunk}`));
   return child;
 }
-function launchSetup(folder, port) {
-  const child = spawn(process.execPath, ['setup.js'], { cwd: folder, env:{...process.env,ARGUS_SETUP_PORT:String(port),COMPUTERNAME:'ARGUS-SMOKE-PC'}, windowsHide: true, stdio: ['ignore','pipe','pipe'] });
+function launchSetup(folder, port, bridgePort) {
+  const child = spawn(process.execPath, ['setup.js'], { cwd: folder, env:{...process.env,ARGUS_SETUP_PORT:String(port),ARGUS_AGENT_BRIDGE_PORT:String(bridgePort),COMPUTERNAME:'ARGUS-SMOKE-PC'}, windowsHide: true, stdio: ['ignore','pipe','pipe'] });
   child.stdout.on('data', chunk => process.stdout.write(`[setup] ${chunk}`)); child.stderr.on('data', chunk => process.stderr.write(`[setup] ${chunk}`));
   return child;
 }
@@ -150,13 +150,13 @@ async function removeSmokeDirectory(folder) {
       assert.match(watcherSample,/^(FOCUS\t\d+\t.+|IDLE)$/,'foreground watcher reports the current app or idle state');
     }
     agentDir = fs.mkdtempSync(path.join(os.tmpdir(),'argus-agent-smoke-')); fs.copyFileSync(path.resolve(__dirname,'..','agent','agent.js'),path.join(agentDir,'agent.js')); fs.copyFileSync(path.resolve(__dirname,'..','agent','setup.js'),path.join(agentDir,'setup.js')); fs.copyFileSync(path.resolve(__dirname,'..','agent','foreground-watcher.ps1'),path.join(agentDir,'foreground-watcher.ps1'));
-    let setupPort=await availablePort(); let setupBase=`http://127.0.0.1:${setupPort}`; setup=launchSetup(agentDir,setupPort);
+    let setupPort=await availablePort(); const bridgePort=await availablePort(); let setupBase=`http://127.0.0.1:${setupPort}`; setup=launchSetup(agentDir,setupPort,bridgePort);
     const setupPage=await waitFor(async()=>{const response=await fetch(setupBase);return response.ok?response:null;},'assistente local abrir');
     const setupHtml=await setupPage.text(); assert.match(setupHtml,/Endereço LAN do servidor ARGUS/); assert.match(setupHtml,/Nome deste computador/); assert.match(setupHtml,/Código de conexão/); assert.doesNotMatch(setupHtml,/E-mail da conta ARGUS|Senha da conta ARGUS/);
     assert.match(setupHtml,/Cancelar instalação/);
     assert.equal((await fetch(`${setupBase}/api/cancel`,{method:'POST'})).status,200,'setup can be canceled');
     await waitFor(async()=>setup.exitCode!==null,'assistente encerrar após cancelamento'); assert.equal(db.pairings.length,0); assert.equal(fs.existsSync(path.join(agentDir,'config.json')),false,'canceling setup does not create an agent config');
-    setupPort=await availablePort(); setupBase=`http://127.0.0.1:${setupPort}`; setup=launchSetup(agentDir,setupPort);
+    setupPort=await availablePort(); setupBase=`http://127.0.0.1:${setupPort}`; setup=launchSetup(agentDir,setupPort,bridgePort);
     await waitFor(async()=>{const response=await fetch(setupBase);return response.ok?response:null;},'assistente local reabrir após cancelamento');
     const badSetup=await responseJson(`${setupBase}/api/setup`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({serverUrl:base,deviceName:'ARGUS-SMOKE-PC',email,password:'ValidPass123',termsAccepted:false})}); assert.equal(badSetup.response.status,400,'setup requires terms acceptance');
     const badSetupCode=await responseJson(`${setupBase}/api/setup`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({serverUrl:base,deviceName:'ARGUS-SMOKE-PC',pairingCode:'ARG-0000-0000',termsAccepted:true})}); assert.equal(badSetupCode.response.status,400,'setup rejects invalid pairing codes'); assert.equal(db.pairings.length,0,'invalid code cannot create a connection');

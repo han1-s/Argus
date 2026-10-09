@@ -10,7 +10,7 @@ $edgePath = if ($edge) { $edge.Source } else { $candidates | Select-Object -Firs
 
 try {
   if ($edgePath) {
-    Start-Process -FilePath $edgePath -ArgumentList @('--new-window', $Url) -ErrorAction Stop | Out-Null
+    Start-Process -FilePath $edgePath -ArgumentList @($Url) -ErrorAction Stop | Out-Null
   } else {
     Write-Warning 'Microsoft Edge não encontrado; abrindo o navegador padrão.'
     Start-Process $Url -ErrorAction Stop | Out-Null

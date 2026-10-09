@@ -43,5 +43,5 @@ goto menu
 
 :logs
 set "ARGUS_LOGS=%LOCALAPPDATA%\ARGUS\Logs"
-for %%L in (server.out.log server.err.log) do if exist "%ARGUS_LOGS%\%%L" start "ARGUS logs - %%L" notepad.exe "%ARGUS_LOGS%\%%L"
+if exist "%ARGUS_LOGS%" (start "ARGUS logs" explorer.exe "%ARGUS_LOGS%") else echo Nenhum log da Platform foi criado ainda.
 goto menu

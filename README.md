@@ -22,13 +22,13 @@ GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, ALTER, INDEX, REFERENCES ON argus.
 FLUSH PRIVILEGES;
 ```
 
-Copie `Platform/.env.example` para `Platform/.env` e configure `MYSQL_USER=argus_app`, `MYSQL_PASSWORD`, `MYSQL_DATABASE=argus` e `MYSQL_AUTO_CREATE_DATABASE=false`. Mantenha o `.env` privado. O primeiro início prepara o administrador definido em `ARGUS_ADMIN_EMAIL` e `ARGUS_ADMIN_PASSWORD` (padrão local: `hanielshz@gmail.com` / `12345678`); altere esses valores antes de usar em rede compartilhada.
+Ao iniciar o Web pelo `ARGUS.cmd`, se `Platform/.env` ainda não existir, o ARGUS cria uma cópia de `.env.example` e abre o arquivo para edição. Informe usuário e senha que tenham acesso ao MySQL e salve antes de iniciar. Mantenha o `.env` privado. O primeiro início prepara o administrador definido em `ARGUS_ADMIN_EMAIL` e `ARGUS_ADMIN_PASSWORD` (padrão local: `hanielshz@gmail.com` / `12345678`); altere esses valores antes de usar em rede compartilhada.
 
 ### Instalar dependências e iniciar
 
-Execute `ARGUS.cmd` na raiz. Na primeira execução, escolha **Instalar todas as dependências** para instalar os pacotes da Platform, Web Backend e Web Frontend em sequência. O comando informa qual etapa falhou caso ocorra um erro. Também é possível executar `scripts/install-dependencies.cmd` diretamente.
+Execute `ARGUS.cmd` na raiz. Para instalar os pacotes da Platform, Web Backend e Web Frontend em sequência, abra **Ferramentas** e escolha **Instalar dependências**. O comando informa qual etapa falhou caso ocorra um erro. Também é possível executar `scripts/install-dependencies.cmd` diretamente.
 
-No menu principal, escolha **Iniciar ARGUS Web** para iniciar backend e frontend em segundo plano e abrir o login no Microsoft Edge da máquina servidor. O menu de controle do Web permanece aberto: escolha **3** para voltar ao menu principal sem desligar o Web e então abrir a Platform. Use a opção **Gerenciar ou parar o Web** no menu principal para iniciar/parar serviços ou abrir logs. O início do servidor Platform pelo CMD também abre o painel no Edge local. Se o Edge não estiver instalado, o navegador padrão será usado. A Platform usa a porta `3000`; o Web Backend `3001` e o Vite `5173` durante o desenvolvimento. Para abrir manualmente:
+No menu principal, escolha **1** para iniciar e controlar o Web, **2** para abrir o menu da Platform, **3** para instalar dependências, executar verificações ou abrir este README, **4** para encerrar os serviços ARGUS desta máquina ou **5** para sair. O Web inicia backend e frontend em segundo plano e abre o login; seus logs ficam em uma única pasta. O início da Platform pelo CMD também abre o painel. Se o Edge não estiver instalado, o navegador padrão será usado. A Platform usa a porta `3000`; o Web Backend `3001` e o Vite `5173` durante o desenvolvimento. Para abrir manualmente:
 
 ```powershell
 npm --prefix Platform start

@@ -19,19 +19,6 @@ if errorlevel 1 (
   set "ARGUS_WEB_RUNNING=0"
   goto menu
 )
-if not exist "%ARGUS_ROOT%\Web\Backend\node_modules\express\package.json" (
-  echo Dependencias do Web nao encontradas. Execute a opcao de instalar dependencias no ARGUS.cmd.
-  pause
-  set "ARGUS_WEB_RUNNING=0"
-  goto menu
-)
-if not exist "%ARGUS_ROOT%\Web\Frontend\node_modules\vite\package.json" (
-  echo Dependencias do Web nao encontradas. Execute a opcao de instalar dependencias no ARGUS.cmd.
-  pause
-  set "ARGUS_WEB_RUNNING=0"
-  goto menu
-)
-
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%ARGUS_ROOT%\scripts\start-web.ps1"
 if errorlevel 2 (set "ARGUS_WEB_RUNNING=1" & goto menu)
 if errorlevel 1 (
@@ -74,5 +61,5 @@ goto menu
 
 :logs
 set "ARGUS_LOGS=%LOCALAPPDATA%\ARGUS\Logs"
-for %%L in (web-Web-Backend.out.log web-Web-Backend.err.log web-Web-Frontend.out.log web-Web-Frontend.err.log) do if exist "%ARGUS_LOGS%\%%L" start "ARGUS logs - %%L" notepad.exe "%ARGUS_LOGS%\%%L"
+if exist "%ARGUS_LOGS%" (start "ARGUS logs" explorer.exe "%ARGUS_LOGS%") else echo Nenhum log do Web foi criado ainda.
 goto menu

@@ -1,10 +1,20 @@
 const path = require('node:path');
+const fs = require('node:fs');
 const mysql = require('mysql2/promise');
 const dotenv = require('dotenv');
 
+const envPath = process.env.ARGUS_ENV_FILE || path.resolve(__dirname, '../../../../Platform/.env');
+if (!fs.existsSync(envPath)) {
+  throw new Error(`ARGUS environment file not found: ${envPath}. Start Web from ARGUS.cmd to create and configure it.`);
+}
+
 dotenv.config({
-  path: process.env.ARGUS_ENV_FILE || path.resolve(__dirname, '../../../../Platform/.env'),
+  path: envPath,
 });
+
+if (process.env.MYSQL_PASSWORD === 'change-this-password') {
+  throw new Error('Configure MYSQL_PASSWORD in Platform/.env before starting Web.');
+}
 
 const database = process.env.MYSQL_DATABASE || 'argus';
 if (!/^[a-zA-Z0-9_]+$/.test(database)) {
