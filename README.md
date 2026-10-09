@@ -7,7 +7,7 @@ ARGUS reúne um site de apresentação (`Web/`) e uma plataforma de monitorament
 ### Requisitos
 
 - Windows 10 ou 11.
-- Node.js 18 ou superior (inclui npm).
+- Node.js 20.19 ou superior, ou 22.12 ou superior (inclui npm; exigido pelo Vite do Web Frontend).
 - MySQL 8 ou superior em execução no computador servidor.
 - Rede local entre o servidor e os computadores que serão monitorados.
 
@@ -26,9 +26,9 @@ Copie `Platform/.env.example` para `Platform/.env` e configure `MYSQL_USER=argus
 
 ### Instalar dependências e iniciar
 
-Execute `ARGUS.cmd` na raiz e escolha **Instalar dependências**. Essa opção instala os pacotes de Platform, Web Backend e Web Frontend. Também é possível executar `scripts/install-dependencies.cmd` diretamente.
+Execute `ARGUS.cmd` na raiz. Na primeira execução, escolha **Instalar todas as dependências** para instalar os pacotes da Platform, Web Backend e Web Frontend em sequência. O comando informa qual etapa falhou caso ocorra um erro. Também é possível executar `scripts/install-dependencies.cmd` diretamente.
 
-No `ARGUS.cmd`, escolha **Platform** ou **Web** para abrir o menu próprio em outro CMD. A Platform usa a porta `3000`; o Web Backend usa `3001` e o Vite usa `5173` durante o desenvolvimento. Para abrir manualmente:
+No menu principal, escolha **Iniciar ARGUS Web** para abrir o backend e o frontend em janelas separadas e acessar a tela de login. Para a Platform, abra seu menu e escolha o painel de controle ou somente a API. A Platform usa a porta `3000`; o Web Backend usa `3001` e o Vite usa `5173` durante o desenvolvimento. Para abrir manualmente:
 
 ```powershell
 npm --prefix Platform start
