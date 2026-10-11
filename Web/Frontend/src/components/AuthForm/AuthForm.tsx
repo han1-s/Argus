@@ -4,7 +4,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { getArgusTerms, loginArgus, registerArgus, requestArgusPasswordReset, resetArgusPassword, signInArgus } from '../../services/argusAuth';
 
 type AuthMode = 'login' | 'register';
-type FieldName = 'name' | 'email' | 'password';
+type FieldName = 'name' | 'email' | 'password' | 'confirmPassword';
 type AuthErrors = Partial<Record<FieldName, string>>;
 
 interface AuthFormProps { mode: AuthMode }
@@ -16,6 +16,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode }) => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<AuthErrors>({});
   const [submitting, setSubmitting] = useState(false);
@@ -71,6 +72,8 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode }) => {
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) nextErrors.email = 'Digite um e-mail válido.';
     if (!password) nextErrors.password = isRegister ? 'Crie uma senha para continuar.' : 'Digite uma senha.';
     else if (isRegister && password.length < 10) nextErrors.password = 'Use uma senha com pelo menos 10 caracteres.';
+    if (isRegister && !confirmPassword) nextErrors.confirmPassword = 'Confirme sua senha.';
+    else if (isRegister && confirmPassword !== password) nextErrors.confirmPassword = 'As senhas não coincidem.';
     setErrors(nextErrors);
     setTermsError(termsAccepted ? '' : 'Aceite os termos atuais para continuar.');
     if (!termsVersion) setTermsLoadError('Os termos ainda não foram carregados. Tente novamente antes de continuar.');
@@ -132,6 +135,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode }) => {
     if (field === 'name') setName(value);
     if (field === 'email') setEmail(value);
     if (field === 'password') setPassword(value);
+    if (field === 'confirmPassword') setConfirmPassword(value);
     setErrors((current) => ({ ...current, [field]: undefined }));
     if (feedback && !feedbackSuccess) setFeedback('');
   };
@@ -142,7 +146,8 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode }) => {
       <form className="argus-auth-form" onSubmit={handleSubmit} noValidate>
         {isRegister && <div className="argus-auth-field"><label htmlFor="signup-name">Nome completo</label><div className={`argus-auth-input-wrap ${errors.name ? 'has-error' : ''}`}><UserRound size={17} aria-hidden="true" /><input id="signup-name" name="name" type="text" placeholder="Seu nome completo" autoComplete="name" value={name} onChange={(event) => updateField('name', event.target.value)} aria-invalid={Boolean(errors.name)} aria-describedby={errors.name ? 'signup-name-error' : undefined} /></div>{errors.name && <p className="argus-auth-error" id="signup-name-error" role="alert">{errors.name}</p>}</div>}
         <div className="argus-auth-field"><label htmlFor={`${mode}-email`}>E-mail corporativo</label><div className={`argus-auth-input-wrap ${errors.email ? 'has-error' : ''}`}><Mail size={17} aria-hidden="true" /><input id={`${mode}-email`} name="email" type="email" placeholder="seu.email@empresa.com" autoComplete="email" value={email} onChange={(event) => updateField('email', event.target.value)} aria-invalid={Boolean(errors.email)} aria-describedby={errors.email ? `${mode}-email-error` : undefined} /></div>{errors.email && <p className="argus-auth-error" id={`${mode}-email-error`} role="alert">{errors.email}</p>}</div>
-        <div className="argus-auth-field"><label htmlFor={`${mode}-password`}>Senha</label><div className={`argus-auth-input-wrap ${errors.password ? 'has-error' : ''}`}><KeyRound size={17} aria-hidden="true" /><input id={`${mode}-password`} name="password" type={showPassword ? 'text' : 'password'} placeholder="Digite sua senha" autoComplete={isRegister ? 'new-password' : 'current-password'} value={password} onChange={(event) => updateField('password', event.target.value)} aria-invalid={Boolean(errors.password)} aria-describedby={errors.password ? `${mode}-password-error` : undefined} /><button className="auth-password-toggle" type="button" onClick={() => setShowPassword((visible) => !visible)} aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'} aria-pressed={showPassword}>{showPassword ? <EyeOff size={17} /> : <Eye size={17} />}</button></div>{errors.password && <p className="argus-auth-error" id={`${mode}-password-error`} role="alert">{errors.password}</p>}</div>
+        <div className="argus-auth-field"><label htmlFor={`${mode}-password`}>Senha</label><div className={`argus-auth-input-wrap ${errors.password ? 'has-error' : ''}`}><KeyRound size={17} aria-hidden="true" /><input id={`${mode}-password`} name="password" type={showPassword ? 'text' : 'password'} placeholder={isRegister ? 'Mínimo 10 caracteres' : 'Digite sua senha'} autoComplete={isRegister ? 'new-password' : 'current-password'} value={password} onChange={(event) => updateField('password', event.target.value)} aria-invalid={Boolean(errors.password)} aria-describedby={errors.password ? `${mode}-password-error` : undefined} /><button className="auth-password-toggle" type="button" onClick={() => setShowPassword((visible) => !visible)} aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'} aria-pressed={showPassword}>{showPassword ? <EyeOff size={17} /> : <Eye size={17} />}</button></div>{errors.password && <p className="argus-auth-error" id={`${mode}-password-error`} role="alert">{errors.password}</p>}</div>
+        {isRegister && <div className="argus-auth-field"><label htmlFor="signup-confirm-password">Confirmar senha</label><div className={`argus-auth-input-wrap ${errors.confirmPassword ? 'has-error' : ''}`}><KeyRound size={17} aria-hidden="true" /><input id="signup-confirm-password" name="confirmPassword" type="password" placeholder="Repita sua senha" autoComplete="new-password" value={confirmPassword} onChange={(event) => updateField('confirmPassword', event.target.value)} aria-invalid={Boolean(errors.confirmPassword)} aria-describedby={errors.confirmPassword ? 'signup-confirm-password-error' : undefined} /></div>{errors.confirmPassword && <p className="argus-auth-error" id="signup-confirm-password-error" role="alert">{errors.confirmPassword}</p>}</div>}
         <label className="auth-terms-check"><input type="checkbox" checked={termsAccepted} onChange={(event) => setTermsAccepted(event.target.checked)} /><span>Li e aceito os <a href="/terms.html" target="_blank" rel="noreferrer">Termos de Uso e Aviso de Privacidade</a>.</span></label>
         {isRegister && <label className="auth-terms-check"><input type="checkbox" checked={webConsent} onChange={(event) => setWebConsent(event.target.checked)} /><span>Opcional: autorizo a coleta de domínios de navegação.</span></label>}
         {termsError && <p className="argus-auth-error" role="alert">{termsError}</p>}

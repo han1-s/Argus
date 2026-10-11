@@ -57,7 +57,7 @@ export const Header: React.FC = () => {
         <Link to="/" className="logo-top" aria-label="ARGUS — página inicial" onClick={() => setOpenLocationKey(null)}><ArgusBrand /></Link>
       </div>
       <nav className="nav-right" aria-label="Navegação principal">
-        <Link to="/monetizacao" className="btn-upgrade-nav" onClick={() => setOpenLocationKey(null)}><Zap size={16} aria-hidden="true" /> <span>Upgrade</span></Link>
+        <Link to="/monetizacao" className="btn-upgrade-nav" aria-label="Ver planos e fazer upgrade" onClick={() => setOpenLocationKey(null)}><Zap size={16} aria-hidden="true" /> <span>Upgrade</span></Link>
         <div className="profile-container" ref={profileRef}>
           {signedIn ? (
             <>

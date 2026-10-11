@@ -163,7 +163,7 @@
   .home-preview-layout { grid-template-columns: 39px minmax(0, 1fr); }
   .home-preview-main { padding: 0.75rem; }
   .home-preview-panels { grid-template-columns: 1fr; }
-  .home-device-panel { display: none; }
+  .home-device-panel { display: block; }
   .home-preview-bottom { gap: 0.45rem; }
   .home-process-flow { grid-template-columns: minmax(0, 1fr) 22px minmax(0, 1fr) 22px minmax(0, 1fr) 22px minmax(0, 1fr); gap: 0.3rem; }
 }
@@ -201,18 +201,24 @@
   .home-preview-sidebar { padding-inline: 0.15rem; }
   .home-preview-main { padding: 0.6rem; }
   .home-preview-date { font-size: 0.52rem; }
-  .home-scene-caption { font-size: 0.55rem; }
-  .home-scene-caption .home-caption-divider, .home-scene-caption > span:last-child { display: none; }
+  .home-scene-caption { align-items: flex-start; flex-wrap: wrap; font-size: 0.55rem; }
+  .home-scene-caption > span:nth-child(2) { white-space: normal; }
+  .home-scene-caption > span:last-child { min-width: 0; }
   .home-preview-metrics { gap: 0.3rem; }
   .home-preview-metrics article { padding: 0.45rem; }
   .home-preview-metrics article > span { font-size: 0.51rem; }
   .home-preview-metrics article > strong { font-size: 1rem; }
   .home-preview-metrics article > small { font-size: 0.45rem; }
-  .home-preview-panels { grid-template-columns: 1fr; }
-  .home-device-panel { display: none; }
+  .home-preview-panels { grid-template-columns: minmax(0, 1fr); }
+  .home-device-panel { display: block; }
   .home-chart { height: 70px; }
-  .home-preview-bottom { gap: 0.4rem; font-size: 0.46rem; }
-  .home-carousel-count { display: none; }
+  .home-preview-bottom { align-items: flex-start; flex-wrap: wrap; gap: 0.4rem; font-size: 0.46rem; white-space: normal; }
+  .home-preview-bottom > span { min-width: 0; overflow-wrap: anywhere; }
+  .home-preview-carousel { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 0.25rem; padding-inline: 0.6rem; }
+  .home-carousel-current { min-width: 0; font-size: 0.57rem; }
+  .home-carousel-indicators { gap: 0.05rem; }
+  .home-carousel-indicators button { width: 20px; }
+  .home-carousel-count { font-size: 0.5rem; }
   .home-capabilities-grid, .home-differentiators-grid { grid-template-columns: 1fr; }
   .home-capability-card { min-height: 0; }
   .home-showcase-header { align-items: flex-start; }

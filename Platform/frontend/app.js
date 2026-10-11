@@ -11,20 +11,22 @@ async function api(url, options = {}) {
   if (!res.ok) { if (res.status === 401 && !url.startsWith('/api/auth/')) showAuth(); throw new Error(data.error || 'Não foi possível concluir a solicitação.'); }
   return data;
 }
-function showAuth() { $('#authView').classList.remove('hidden'); $('#appView').classList.add('hidden'); $('#helpBotToggle').classList.add('hidden'); $('#helpBotPanel').classList.add('hidden'); }
-function showApp() { $('#authView').classList.add('hidden'); $('#appView').classList.remove('hidden'); $('#helpBotToggle').classList.remove('hidden'); }
+function showAuth() { document.documentElement.classList.add('auth-view'); $('#authView').classList.remove('hidden'); $('#appView').classList.add('hidden'); $('#helpBotToggle').classList.add('hidden'); $('#helpBotPanel').classList.add('hidden'); }
+function showApp() { document.documentElement.classList.remove('auth-view'); $('#authView').classList.add('hidden'); $('#appView').classList.remove('hidden'); $('#helpBotToggle').classList.remove('hidden'); }
+$('#passwordToggle').onclick = () => { const input = $('#passwordInput'), visible = input.type === 'password'; input.type = visible ? 'text' : 'password'; $('#passwordToggle').setAttribute('aria-label', visible ? 'Ocultar senha' : 'Mostrar senha'); $('#passwordToggle').setAttribute('aria-pressed', String(visible)); };
 function setAuthMode(mode) {
   state.authMode = mode; const signup = mode === 'signup';
-  $('#authTitle').textContent = signup ? 'Criar sua conta' : 'Acesso seguro';
-  $('#authSubtitle').textContent = signup ? 'Configure seu acesso ao console ARGUS.' : 'Entre para monitorar os dispositivos da sua rede.';
+  $('#authTitle').textContent = signup ? 'Criar conta no ARGUS' : 'Acessar o ARGUS';
+  $('#authSubtitle').textContent = signup ? 'Crie sua conta para começar a utilizar a plataforma.' : 'Entre na sua conta para acessar sua experiência no ARGUS.';
   $('#nameWrap').classList.toggle('hidden', !signup); $('#confirmWrap').classList.toggle('hidden', !signup);
   $('#confirmInput').required = signup; $('#nameInput').required = signup;
-  $('#passwordInput').minLength = signup ? 10 : 8; $('#passwordInput').placeholder = signup ? 'Mínimo 10 caracteres' : 'Senha da conta';
+  $('#passwordInput').minLength = signup ? 10 : 8; $('#passwordInput').placeholder = signup ? 'Mínimo 10 caracteres' : 'Digite sua senha'; $('#passwordInput').autocomplete = signup ? 'new-password' : 'current-password';
+  $('#confirmInput').autocomplete = 'new-password';
   $('#webConsentWrap').classList.toggle('hidden', !signup);
   $('#forgotPasswordButton').classList.toggle('hidden', signup); $('#forgotPasswordForm').classList.add('hidden');
   $('#termsAccepted').checked = false; $('#webConsent').checked = false;
-  $('#authSubmit').innerHTML = signup ? 'Criar conta <span>→</span>' : 'Entrar no console <span>→</span>';
-  $('#switchText').textContent = signup ? 'Já possui acesso?' : 'Ainda não tem acesso?'; $('#authSwitch').textContent = signup ? 'Fazer login' : 'Criar conta'; $('#authError').classList.add('hidden');
+  $('#authSubmit').innerHTML = signup ? 'Criar conta <span>→</span>' : 'Entrar <span>→</span>';
+  $('#switchText').textContent = signup ? 'Já possui uma conta?' : 'Ainda não possui uma conta?'; $('#authSwitch').textContent = signup ? 'Fazer login' : 'Cadastre-se'; $('#authError').classList.add('hidden');
 }
 $('#authSwitch').onclick = () => setAuthMode(state.authMode === 'login' ? 'signup' : 'login');
 $('#authForm').onsubmit = async e => {
@@ -67,9 +69,18 @@ function enterApp() {
   refresh().then(render); connectSocket(); loadNetworkConfig(); render();
 }
 let socket;
+function sameDashboardSummary(previous, next) {
+  return previous && next && ['total', 'online', 'offline', 'alerts'].every(key => previous[key] === next[key]);
+}
 function connectSocket() {
   if (!window.io) return;
-  if (socket) socket.disconnect(); socket = io(); socket.on('update', () => { refresh().then(render); if (state.detailId) renderDetail(state.detailId); });
+  if (socket) socket.disconnect(); socket = io(); socket.on('update', async () => {
+    const previousSummary = state.data?.summary;
+    await refresh();
+    if (state.detailId) return renderDetail(state.detailId);
+    if (state.page === 'dashboard' && sameDashboardSummary(previousSummary, state.data?.summary)) return;
+    render();
+  });
 }
 async function refresh() { try { state.data = await api('/api/dashboard'); } catch {} }
 async function loadNetworkConfig() {
