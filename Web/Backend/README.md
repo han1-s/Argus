@@ -2,23 +2,25 @@
 
 API Express do site em `Web/Frontend`. Este backend usa as variáveis MySQL de `Platform/.env` por padrão e opera sobre o schema `argus` da Platform: contas, hashes de senha, sessões, máquinas, eventos, alertas e atividade web. Não mantém um schema nem usuários paralelos.
 
-## Iniciar localmente
+## Instalar e iniciar
 
-1. Inicie o serviço MySQL uma vez.
-2. Configure `Platform/.env` como descrito em `Platform/README.md`.
-3. Em um terminal, inicie a API do console/agente:
+Para instalar e iniciar o sistema completo no Windows, use `ARGUS.cmd` na raiz do projeto: escolha **Instalar ou atualizar** e depois **Iniciar Web + Platform**. O instalador configura as dependências e o banco compartilhado; não é necessário rodar o schema manualmente.
+
+Para desenvolvimento, inicie o MySQL e configure o projeto pelo assistente antes de iniciar os processos manualmente:
+
+1. Inicie a API do console/agente:
 
 ```powershell
 npm --prefix Platform start
 ```
 
-4. Em outro terminal, inicie a API do site:
+2. Em outro terminal, inicie a API do site:
 
 ```powershell
 npm --prefix Web/Backend start
 ```
 
-5. Em um terceiro terminal, inicie o frontend:
+3. Em um terceiro terminal, inicie o frontend:
 
 ```powershell
 npm --prefix Web/Frontend run dev

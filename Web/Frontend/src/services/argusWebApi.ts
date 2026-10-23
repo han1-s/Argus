@@ -7,6 +7,17 @@ export interface ArgusSubscription {
   started_at: string | null;
   updated_at: string | null;
   latest_payment?: ArgusPayment | null;
+  limits?: ArgusPlanLimits;
+  usage?: { computers: number };
+}
+
+export interface ArgusPlanLimits {
+  name: PlanType;
+  computers: number | null;
+  retentionDays: number;
+  reports: boolean;
+  alerts: boolean;
+  advancedMetrics: boolean;
 }
 
 export interface ArgusPayment {
@@ -55,16 +66,16 @@ async function request<T>(route: string, options: RequestInit = {}): Promise<T> 
 }
 
 export async function getArgusSubscription(): Promise<ArgusSubscription> {
-  const result = await request<{ assinatura: ArgusSubscription }>('/api/assinatura');
-  return result.assinatura;
+  const result = await request<{ assinatura: ArgusSubscription; limites?: ArgusPlanLimits; uso?: { computadores: number } }>('/api/assinatura');
+  return { ...result.assinatura, limits: result.limites, usage: { computers: result.uso?.computadores ?? 0 } };
 }
 
 export async function saveArgusSubscription(plan: PlanType, billingCycle: BillingCycle): Promise<ArgusSubscription> {
-  const result = await request<{ assinatura: ArgusSubscription }>('/api/assinatura', {
+  const result = await request<{ assinatura: ArgusSubscription; limites?: ArgusPlanLimits; uso?: { computadores: number } }>('/api/assinatura', {
     method: 'PUT',
     body: JSON.stringify({ plan, billingCycle }),
   });
-  return result.assinatura;
+  return { ...result.assinatura, limits: result.limites, usage: { computers: result.uso?.computadores ?? 0 } };
 }
 
 export async function completeArgusCheckout(
@@ -73,7 +84,7 @@ export async function completeArgusCheckout(
   paymentMethod: ArgusPayment['method'],
   cardSummary?: ArgusCardSummary,
 ): Promise<ArgusCheckoutResult> {
-  return request<ArgusCheckoutResult>('/api/assinatura/pagamentos-simulados', {
+  const result = await request<ArgusCheckoutResult & { limites?: ArgusPlanLimits; uso?: { computadores: number } }>('/api/assinatura/pagamentos-simulados', {
     method: 'POST',
     body: JSON.stringify({
       plan,
@@ -82,6 +93,7 @@ export async function completeArgusCheckout(
       ...(cardSummary || {}),
     }),
   });
+  return { ...result, assinatura: { ...result.assinatura, limits: result.limites, usage: { computers: result.uso?.computadores ?? 0 } } };
 }
 
 export async function getPlatformNotifications(): Promise<PlatformNotification[]> {

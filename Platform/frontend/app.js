@@ -1,14 +1,43 @@
 const $ = s => document.querySelector(s);
-const state = { user: null, data: null, page: 'dashboard', detailId: null, authMode: 'login', reportDays: 7, machineReportDays: 7 };
+const state = { user: null, data: null, subscription: null, page: 'dashboard', detailId: null, authMode: 'login', reportDays: 7, machineReportDays: 7, planCycle: 'monthly' };
+const LOCAL_SETTINGS_KEY = 'argusPlatformSettings';
+const DEFAULT_LOCAL_SETTINGS = { theme: 'dark', refreshSeconds: 10, reduceMotion: false, compact: false, timeZone: 'local' };
+let localSettings = (() => { try { return { ...DEFAULT_LOCAL_SETTINGS, ...JSON.parse(localStorage.getItem(LOCAL_SETTINGS_KEY) || '{}') }; } catch { return { ...DEFAULT_LOCAL_SETTINGS }; } })();
+if (!['dark', 'gray', 'light'].includes(localSettings.theme)) localSettings.theme = DEFAULT_LOCAL_SETTINGS.theme;
+if (![5, 10, 30, 60].includes(Number(localSettings.refreshSeconds))) localSettings.refreshSeconds = DEFAULT_LOCAL_SETTINGS.refreshSeconds;
+if (!['local', 'utc'].includes(localSettings.timeZone)) localSettings.timeZone = DEFAULT_LOCAL_SETTINGS.timeZone;
+let dashboardRefreshTimer;
+function applyLocalSettings() {
+  document.body.dataset.theme = ['dark', 'gray', 'light'].includes(localSettings.theme) ? localSettings.theme : 'dark';
+  document.body.classList.toggle('reduce-animations', localSettings.reduceMotion === true);
+  document.body.classList.toggle('compact-ui', localSettings.compact === true);
+  const themeColor = document.querySelector('meta[name="theme-color"]');
+  if (themeColor) themeColor.content = localSettings.theme === 'light' ? '#f3f5f8' : localSettings.theme === 'gray' ? '#22252c' : '#0b0911';
+}
+function saveLocalSettings(changes) {
+  localSettings = { ...localSettings, ...changes };
+  localStorage.setItem(LOCAL_SETTINGS_KEY, JSON.stringify(localSettings));
+  applyLocalSettings();
+  if (Object.hasOwn(changes, 'refreshSeconds')) configureDashboardRefresh();
+}
+function configureDashboardRefresh() {
+  clearInterval(dashboardRefreshTimer);
+  if (!state.user) return;
+  dashboardRefreshTimer = setInterval(async () => {
+    await refresh();
+    if (state.detailId) renderDetail(state.detailId); else render();
+  }, Math.max(5, Number(localSettings.refreshSeconds) || 10) * 1000);
+}
+applyLocalSettings();
 const TERMS_VERSION = '2026-09-v1';
-const pages = { dashboard: 'Visão geral', computers: 'Computadores', activity: 'Atividades', applications: 'Aplicações', web: 'Navegação web', reports: 'Relatórios', alerts: 'Alertas', settings: 'Configurações' };
+const pages = { dashboard: 'Visão geral', computers: 'Computadores', activity: 'Atividades', applications: 'Aplicações', web: 'Navegação web', reports: 'Relatórios', alerts: 'Alertas', plans: 'Planos e cobrança', settings: 'Configurações' };
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const fmtDate = value => value ? new Date(value).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '—';
+const fmtDate = value => value ? new Date(value).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short', ...(localSettings.timeZone === 'utc' ? { timeZone: 'UTC' } : {}) }) : '—';
 const fmtUptime = sec => { const h = Math.floor((Number(sec) || 0) / 3600), d = Math.floor(h / 24); return d ? `${d}d ${h % 24}h` : `${h}h ${Math.floor((sec % 3600) / 60)}min`; };
 async function api(url, options = {}) {
   const res = await fetch(url, { ...options, headers: { 'Content-Type': 'application/json', ...(options.headers || {}) } });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) { if (res.status === 401 && !url.startsWith('/api/auth/')) showAuth(); throw new Error(data.error || 'Não foi possível concluir a solicitação.'); }
+  if (!res.ok) { if (res.status === 401 && !url.startsWith('/api/auth/')) showAuth(); const error = new Error(data.error || 'Não foi possível concluir a solicitação.'); error.upgradeRequired = data.upgradeRequired === true; throw error; }
   return data;
 }
 function showAuth() { document.documentElement.classList.add('auth-view'); $('#authView').classList.remove('hidden'); $('#appView').classList.add('hidden'); $('#helpBotToggle').classList.add('hidden'); $('#helpBotPanel').classList.add('hidden'); }
@@ -66,7 +95,7 @@ $('#completeResetButton').onclick = async () => {
 };
 function enterApp() {
   showApp(); $('#userName').textContent = state.user.name; $('#avatar').textContent = state.user.name.slice(0, 1).toUpperCase();
-  refresh().then(render); connectSocket(); loadNetworkConfig(); render();
+  refresh().then(render); connectSocket(); loadNetworkConfig(); configureDashboardRefresh(); render();
 }
 let socket;
 function sameDashboardSummary(previous, next) {
@@ -82,11 +111,11 @@ function connectSocket() {
     render();
   });
 }
-async function refresh() { try { state.data = await api('/api/dashboard'); } catch {} }
+async function refresh() { try { const [dashboard, subscription] = await Promise.all([api('/api/dashboard'), api('/api/assinatura')]); state.data = dashboard; state.subscription = subscription; } catch {} }
 async function loadNetworkConfig() {
   try { const c = await api('/api/config'); $('#serverAddress').textContent = c.ips[0] ? `${c.ips[0]}:${c.port}` : `localhost:${c.port}`; } catch {}
 }
-$('#logoutButton').onclick = async () => { await api('/api/auth/logout', { method: 'POST' }).catch(() => {}); state.user = null; if (socket) socket.disconnect(); showAuth(); };
+$('#logoutButton').onclick = async () => { await api('/api/auth/logout', { method: 'POST' }).catch(() => {}); state.user = null; clearInterval(dashboardRefreshTimer); if (socket) socket.disconnect(); showAuth(); };
 document.querySelectorAll('.nav-item').forEach(button => button.onclick = () => { state.page = button.dataset.page; state.detailId = null; document.querySelectorAll('.nav-item').forEach(b => b.classList.toggle('active', b === button)); $('#pageCrumb').textContent = pages[state.page]; render(); document.querySelector('.sidebar').classList.remove('open'); });
 $('#mobileMenu').onclick = () => $('.sidebar').classList.toggle('open');
 function render() {
@@ -94,7 +123,7 @@ function render() {
   $('#navComputerCount').textContent = state.data.summary.total; $('#navAlertCount').textContent = state.data.summary.alerts;
   if (state.detailId) return renderDetail(state.detailId);
   $('#pageCrumb').textContent = pages[state.page];
-  const renderPage = { dashboard: renderDashboard, computers: renderComputers, activity: renderActivity, applications: renderApplications, web: renderWeb, reports: renderReports, alerts: renderAlerts, settings: renderSettings }[state.page] || renderDashboard;
+  const renderPage = { dashboard: renderDashboard, computers: renderComputers, activity: renderActivity, applications: () => state.data.plan?.advancedMetrics ? renderApplications() : renderPlanLocked('Aplicações', 'Métricas avançadas de aplicativos ficam disponíveis nos planos Pro e Business.'), web: renderWeb, reports: () => state.data.plan?.reports ? renderReports() : renderPlanLocked('Relatórios', 'Histórico detalhado fica disponível nos planos Pro e Business.'), alerts: () => state.data.plan?.alerts ? renderAlerts() : renderPlanLocked('Alertas', 'Alertas de CPU e memória ficam disponíveis nos planos Pro e Business.'), plans: renderPlans, settings: renderSettings }[state.page] || renderDashboard;
   renderPage();
 }
 function pageHead(kicker, title, desc, action = '') { return `<div class="page-heading"><div><div class="eyebrow">${kicker}</div><h1>${title}</h1><p>${desc}</p></div>${action}</div>`; }
@@ -130,26 +159,114 @@ function renderWeb() {
   $('#pageContent').innerHTML=`${pageHead('DOMÍNIOS E TEMPO APROXIMADO','Navegação web','A extensão registra domínios de abas ativas, somente com consentimento.',action)}<section class="panel full-panel"><div class="notice">O protótipo armazena o domínio, dispositivo, duração aproximada e horário. Não armazena URL completa, caminho, busca ou conteúdo da página. A extensão precisa estar instalada e ativada em cada navegador monitorado.</div>${items.length?`<div class="table-wrap"><table><thead><tr><th>DOMÍNIO</th><th>COMPUTADOR</th><th>TEMPO ATIVO</th><th>AMOSTRAS</th><th>ÚLTIMA ATIVIDADE</th></tr></thead><tbody>${items.map(w=>`<tr><td><b>${esc(w.domain)}</b></td><td>${esc(w.machineName)}</td><td>${durationLabel(w.durationSeconds)}</td><td>${w.visits}</td><td>${fmtDate(w.lastSeen)}</td></tr>`).join('')}</tbody></table></div>`:'<div class="empty-state"><div class="empty-icon">◎</div><b>Nenhuma atividade web recebida</b><p>Ative o consentimento em Configurações e instale a extensão autorizada no navegador do endpoint.</p><button class="button quiet" data-page="settings">Configurar coleta →</button></div>'}</section>`;bindPageActions();
 }
 function renderSettings() {
-  $('#pageContent').innerHTML=`${pageHead('PRIVACIDADE E AMBIENTE','Configurações','Gerencie consentimento, dados e conexão do servidor.')}<div class="lower-grid"><section class="panel settings-panel"><div class="panel-heading"><div><h2>Coleta de navegação web</h2><p>Preferência e revogação de consentimento</p></div></div><label class="toggle-row"><span><b>Permitir coleta web</b><small>Domínios e duração aproximada das abas ativas, via extensão.</small></span><input id="webConsentToggle" type="checkbox" ${state.user.webConsent?'checked':''}></label><p class="privacy-help">Ao desativar, o agente deixa de aceitar novos dados e o histórico de navegação guardado será eliminado.</p><div class="notice">Em cada navegador: abra <b>chrome://extensions</b> → ative o modo do desenvolvedor → carregue sem compactação a pasta <code>browser-extension</code>. Depois abra a extensão, cole o <code>bridgeKey</code> mostrado em <code>agent/config.json</code>, confirme que os titulares foram informados e ative a coleta. Repita em cada PC monitorado.</div></section><section class="panel settings-panel"><div class="panel-heading"><div><h2>Seus dados</h2><p>Exportação e exclusão da conta</p></div></div><p class="privacy-help">Exporte uma cópia dos registros da sua conta ou remova a conta e seus dispositivos do banco MySQL.</p><div class="settings-actions"><button id="exportData" class="button quiet">Baixar meus dados (JSON)</button><button id="deleteAccount" class="button danger">Excluir conta e dados</button></div><a class="terms-link" href="/terms.html" target="_blank">Ler Termos de Uso e Aviso de Privacidade ↗</a></section></div>`;
-  $('#webConsentToggle').onchange=async e=>{try{const result=await api('/api/privacy/web-consent',{method:'POST',body:JSON.stringify({enabled:e.target.checked})});state.user.webConsent=result.webConsent;await refresh();toast(result.webConsent?'Coleta web habilitada. Configure a extensão nos endpoints.':'Consentimento revogado e histórico web eliminado.');render();}catch(error){e.target.checked=state.user.webConsent;toast(error.message);}};
-  $('#exportData').onclick=async()=>{try{const data=await api('/api/privacy/export');const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const link=document.createElement('a');link.href=URL.createObjectURL(blob);link.download='argus-meus-dados.json';link.click();URL.revokeObjectURL(link.href);}catch(e){toast(e.message);}};
-  $('#deleteAccount').onclick=async()=>{if(!confirm('Excluir sua conta e todos os dispositivos e registros associados? Esta ação não pode ser desfeita.'))return;try{await api('/api/privacy/delete-account',{method:'POST',body:'{}'});state.user=null;state.data=null;if(socket)socket.disconnect();showAuth();toast('Conta e dados excluídos.');}catch(e){toast(e.message);}};
+  const themeOptions = [
+    ['dark', 'Escuro', 'Contraste alto para ambientes pouco iluminados.'],
+    ['gray', 'Cinza', 'Tons neutros com contraste moderado.'],
+    ['light', 'Claro', 'Fundo claro para ambientes iluminados.'],
+  ];
+  $('#pageContent').innerHTML = `${pageHead('PREFERÊNCIAS E PRIVACIDADE', 'Configurações', 'Personalize a interface, a atualização dos dados e suas preferências de privacidade.')}
+    <div class="settings-grid">
+      <section class="panel settings-panel"><div class="panel-heading"><div><h2>Aparência</h2><p>Preferências aplicadas neste navegador.</p></div></div>
+        <div class="settings-field"><label for="platformTheme">Tema da Platform</label><select id="platformTheme" class="select">${themeOptions.map(([value, label]) => `<option value="${value}" ${localSettings.theme === value ? 'selected' : ''}>${label}</option>`).join('')}</select><small>O tema é salvo neste navegador.</small></div>
+        <label class="toggle-row"><span><b>Movimento reduzido</b><small>Reduz transições e animações da interface.</small></span><input id="reduceMotion" type="checkbox" ${localSettings.reduceMotion ? 'checked' : ''}></label>
+        <label class="toggle-row"><span><b>Layout compacto</b><small>Reduz espaçamentos para mostrar mais conteúdo por tela.</small></span><input id="compactUi" type="checkbox" ${localSettings.compact ? 'checked' : ''}></label>
+      </section>
+      <section class="panel settings-panel"><div class="panel-heading"><div><h2>Atualização e horário</h2><p>Controle a consulta de dados e a exibição de datas.</p></div></div>
+        <div class="settings-field"><label for="refreshSeconds">Atualização automática</label><select id="refreshSeconds" class="select"><option value="5" ${Number(localSettings.refreshSeconds) === 5 ? 'selected' : ''}>A cada 5 segundos</option><option value="10" ${Number(localSettings.refreshSeconds) === 10 ? 'selected' : ''}>A cada 10 segundos</option><option value="30" ${Number(localSettings.refreshSeconds) === 30 ? 'selected' : ''}>A cada 30 segundos</option><option value="60" ${Number(localSettings.refreshSeconds) === 60 ? 'selected' : ''}>A cada 60 segundos</option></select><small>Também consulta o servidor se a conexão em tempo real for interrompida.</small></div>
+        <div class="settings-field"><label for="timeZone">Fuso horário das datas</label><select id="timeZone" class="select"><option value="local" ${localSettings.timeZone === 'local' ? 'selected' : ''}>Automático do computador</option><option value="utc" ${localSettings.timeZone === 'utc' ? 'selected' : ''}>UTC</option></select><small>Afeta os horários exibidos em atividades, alertas e relatórios.</small></div>
+      </section>
+      <section class="panel settings-panel"><div class="panel-heading"><div><h2>Coleta de navegação web</h2><p>Preferência e revogação de consentimento</p></div></div>
+        <label class="toggle-row"><span><b>Permitir coleta web</b><small>Domínios e duração aproximada das abas ativas, via extensão.</small></span><input id="webConsentToggle" type="checkbox" ${state.user.webConsent ? 'checked' : ''}></label>
+        <p class="privacy-help">Ao desativar, o agente deixa de aceitar novos dados e o histórico de navegação guardado será eliminado.</p>
+        <div class="notice">A extensão registra somente o domínio e a duração aproximada. Configure-a apenas em navegadores autorizados e informe as pessoas monitoradas.</div>
+      </section>
+      <section class="panel settings-panel"><div class="panel-heading"><div><h2>Termos e uso responsável</h2><p>Versão aceita e documento vigente.</p></div></div>
+        <p class="privacy-help">Versão aceita nesta conta: <b>${esc(state.user.termsVersion || 'não informada')}</b></p>
+        <p class="privacy-help">Versão vigente no servidor: <b id="currentTermsVersion">Carregando…</b></p>
+        <a class="terms-link" href="/terms.html" target="_blank" rel="noreferrer">Ler Termos de Uso e Aviso de Privacidade ↗</a>
+      </section>
+      <section class="panel settings-panel"><div class="panel-heading"><div><h2>Seus dados</h2><p>Exportação e exclusão da conta</p></div></div>
+        <p class="privacy-help">Exporte uma cópia dos registros da conta ou remova a conta e seus dispositivos do banco do servidor principal.</p>
+        <div class="settings-actions"><button id="exportData" class="button quiet">Baixar meus dados (JSON)</button><button id="deleteAccount" class="button danger">Excluir conta e dados</button></div>
+        <p class="privacy-help">A exclusão também encerra a sessão da Platform e da Web.</p>
+      </section>
+    </div>`;
+  $('#platformTheme').onchange = event => { saveLocalSettings({ theme: event.target.value }); render(); toast(`Tema ${event.target.selectedOptions[0].textContent.toLocaleLowerCase('pt-BR')} aplicado.`); };
+  $('#reduceMotion').onchange = event => { saveLocalSettings({ reduceMotion: event.target.checked }); toast('Preferência de movimento atualizada.'); };
+  $('#compactUi').onchange = event => { saveLocalSettings({ compact: event.target.checked }); toast('Densidade da interface atualizada.'); };
+  $('#refreshSeconds').onchange = event => { saveLocalSettings({ refreshSeconds: Number(event.target.value) }); toast('Frequência de atualização atualizada.'); };
+  $('#timeZone').onchange = event => { saveLocalSettings({ timeZone: event.target.value }); render(); toast('Fuso horário atualizado.'); };
+  api('/api/legal/terms').then(terms => { const node = $('#currentTermsVersion'); if (node) node.textContent = terms.version; }).catch(() => { const node = $('#currentTermsVersion'); if (node) node.textContent = 'indisponível'; });
+  $('#webConsentToggle').onchange = async event => {
+    try {
+      const result = await api('/api/privacy/web-consent', { method: 'POST', body: JSON.stringify({ enabled: event.target.checked }) });
+      state.user.webConsent = result.webConsent; await refresh();
+      toast(result.webConsent ? 'Coleta web habilitada. Configure a extensão nos endpoints.' : 'Consentimento revogado e histórico web eliminado.'); render();
+    } catch (error) { event.target.checked = state.user.webConsent; toast(error.message); }
+  };
+  $('#exportData').onclick = async () => {
+    try {
+      const data = await api('/api/privacy/export'); data.preferences = { ...localSettings };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }); const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob); link.download = 'argus-meus-dados.json'; link.click(); URL.revokeObjectURL(link.href);
+    } catch (error) { toast(error.message); }
+  };
+  $('#deleteAccount').onclick = async () => {
+    if (!confirm('Excluir sua conta e todos os dispositivos e registros associados? Esta ação não pode ser desfeita.')) return;
+    try { await api('/api/privacy/delete-account', { method: 'POST', body: '{}' }); state.user = null; state.data = null; clearInterval(dashboardRefreshTimer); if (socket) socket.disconnect(); showAuth(); toast('Conta e dados excluídos.'); }
+    catch (error) { toast(error.message); }
+  };
 }
 function alertLine(a) { return `<div class="alert-row"><span class="alert-symbol ${esc(a.kind)}">${a.kind === 'cpu' ? '↗' : a.kind === 'offline' ? '⌁' : '◇'}</span><div><b>${esc(a.message)}</b><small>${esc(a.machineName)} · ${fmtDate(a.at)}</small></div><button class="text-button" data-ack="${esc(a.id)}">Reconhecer</button></div>`; }
 function renderAlerts() { $('#pageContent').innerHTML = `${pageHead('SAÚDE DO AMBIENTE', 'Alertas', 'Limites de recursos e mudanças no estado de conexão.')}<section class="panel full-panel">${state.data.alerts.length ? state.data.alerts.map(alertLine).join('') : '<div class="empty-state"><div class="empty-icon">◇</div><b>Nenhum alerta ativo</b><p>Alertas aparecerão aqui quando a CPU superar 85%, a RAM 90% ou um dispositivo ficar offline.</p></div>'}</section>`; bindPageActions(); document.querySelectorAll('[data-ack]').forEach(b => b.onclick = async () => { await api(`/api/alerts/${b.dataset.ack}/ack`, { method: 'POST' }); await refresh(); render(); }); }
+function renderPlanLocked(title, message) {
+  $('#pageContent').innerHTML = pageHead('RECURSO DO PLANO', title, message) + '<section class="panel full-panel plan-locked"><b>Faça upgrade para liberar este recurso.</b><p>Os pagamentos são simulados; a alteração do plano é aplicada à conta Web e Platform.</p><button class="button quiet" data-page="plans">Ver planos</button></section>';
+  bindPageActions();
+}
+function renderPlans() {
+  const subscription = state.subscription?.assinatura || { plan: 'Free', billing_cycle: 'monthly' };
+  const limits = state.subscription?.limites || state.data.plan || { computers: 10, retentionDays: 7, reports: false, alerts: false };
+  const used = Number(state.subscription?.uso?.computadores ?? state.data.usage?.computers ?? 0);
+  const cards = [
+    { id: 'Free', price: 0, computers: '10', retention: '7 dias', reports: false, alerts: false },
+    { id: 'Pro', price: state.planCycle === 'annual' ? 39 : 49, computers: '50', retention: '90 dias', reports: true, alerts: true },
+    { id: 'Business', price: state.planCycle === 'annual' ? 119 : 149, computers: 'Ilimitados', retention: '365 dias', reports: true, alerts: true },
+  ];
+  const cardMarkup = cards.map(card => {
+    const current = card.id === subscription.plan;
+    const action = current ? '<button class="button quiet" disabled>Plano atual</button>' : '<button class="button ' + (card.id === 'Pro' ? 'primary' : 'quiet') + '" data-plan-buy="' + card.id + '">' + (card.id === 'Free' ? 'Ativar Free' : 'Simular compra PIX') + '</button>';
+    return '<article class="panel plan-card ' + (current ? 'is-current' : '') + '"><span class="eyebrow">ARGUS</span><h2>' + card.id + '</h2><p class="plan-price">R$ ' + card.price + '<small>/mês</small></p><ul><li>' + card.computers + ' computadores</li><li>Retenção ' + card.retention + '</li><li>' + (card.reports ? 'Relatórios completos' : 'Sem relatórios avançados') + '</li><li>' + (card.alerts ? 'Alertas de recursos' : 'Sem alertas Pro') + '</li><li>Conta única Web + Platform</li></ul>' + action + '</article>';
+  }).join('');
+  $('#pageContent').innerHTML = pageHead('ARGUS · PLANOS', 'Planos e cobrança', 'Uma assinatura compartilhada controla a Web e a Platform. Compras e preços são simulados.')
+    + '<section class="panel plan-current"><div><span class="eyebrow">PLANO ATIVO</span><h2>' + esc(subscription.plan) + '</h2><p>' + used + ' computador(es) vinculados · limite ' + (limits.computers === null ? 'ilimitado' : limits.computers) + ' · retenção ' + limits.retentionDays + ' dias.</p></div><div class="plan-cycle-switch"><button class="button ' + (state.planCycle === 'monthly' ? 'primary' : 'quiet') + '" data-cycle="monthly">Mensal</button><button class="button ' + (state.planCycle === 'annual' ? 'primary' : 'quiet') + '" data-cycle="annual">Anual · 20% demo</button></div></section>'
+    + '<div class="plan-cards">' + cardMarkup + '</div><p class="notice">O limite de computadores é verificado ao gerar o código e ao conectar o agente. Planos pagos liberam relatórios, alertas de recursos e maior retenção. Nenhuma cobrança real é feita.</p>';
+  document.querySelectorAll('[data-cycle]').forEach(button => button.onclick = () => { state.planCycle = button.dataset.cycle; renderPlans(); });
+  document.querySelectorAll('[data-plan-buy]').forEach(button => button.onclick = async () => {
+    const plan = button.dataset.planBuy;
+    try {
+      if (plan === 'Free') await api('/api/assinatura', { method: 'PUT', body: JSON.stringify({ plan, billingCycle: state.planCycle }) });
+      else await api('/api/assinatura/pagamentos-simulados', { method: 'POST', body: JSON.stringify({ plan, billingCycle: state.planCycle, paymentMethod: 'pix' }) });
+      await refresh(); render(); toast(plan === 'Free' ? 'Plano Free ativado.' : 'Compra simulada concluída.');
+    } catch (error) { toast(error.message); }
+  });
+}
 async function renderReports() {
-  $('#pageContent').innerHTML = `${pageHead('DADOS DO AMBIENTE', 'Relatórios', 'Resumo do histórico realmente armazenado pelo servidor.', `<select id="reportRange" class="select"><option value="1">Hoje</option><option value="7" selected>Últimos 7 dias</option><option value="30">Últimos 30 dias</option></select>`)}<div id="reportBody" class="loading">Carregando histórico…</div>`;
+  $('#pageContent').innerHTML = `${pageHead('DADOS DO AMBIENTE', 'Relatórios', 'Resumo do histórico realmente armazenado pelo servidor.', `<select id="reportRange" class="select"><option value="1">Hoje</option><option value="7" selected>Últimos 7 dias</option><option value="30">Últimos 30 dias</option><option value="90">Últimos 90 dias</option><option value="365">Últimos 365 dias</option></select>`)}<div id="reportBody" class="loading">Carregando histórico…</div>`;
+  const maxRetention = Number(state.data.plan?.retentionDays) || 7;
+  [...$('#reportRange').options].forEach(option => { if (Number(option.value) > maxRetention) option.remove(); });
   const load = async days => {
     state.reportDays = days;
     try {
       const report = await api(`/api/reports?days=${days}`), online = report.machines.filter(m => m.status === 'online').length;
       $('#reportBody').innerHTML = `<div class="metric-grid">${metricCard('Computadores', report.machines.length, 'registrados', '▣', 'No ambiente')}${metricCard('Eventos', report.events.length, 'registrados', '◷', `Nos últimos ${days} dia(s)`, 'blue')}${metricCard('Alertas', report.alerts.length, 'ocorrências', '◇', 'No período', 'amber')}${metricCard('Ativos agora', online, 'online', '●', 'Heartbeat recente', 'green')}</div><div class="lower-grid"><section class="panel"><div class="panel-heading"><div><h2>Resumo por computador</h2><p>Status e última comunicação</p></div></div>${computerRows(report.machines)}</section><section class="panel"><div class="panel-heading"><div><h2>Eventos do período</h2><p>Histórico recebido e persistido</p></div></div><div class="event-list">${eventMarkup(report.events)}</div></section></div><section class="panel web-note"><div class="panel-heading"><div><h2>Atividade web</h2><p>Domínios e tempo em abas ativas</p></div></div>${report.webActivity.length ? `<div class="table-wrap"><table><thead><tr><th>DOMÍNIO</th><th>DISPOSITIVO</th><th>TEMPO ATIVO</th><th>AMOSTRAS</th></tr></thead><tbody>${report.webActivity.map(w => `<tr><td><b>${esc(w.domain)}</b></td><td>${esc(w.machineName)}</td><td>${durationLabel(w.durationSeconds)}</td><td>${w.visits}</td></tr>`).join('')}</tbody></table></div>` : '<div class="subtle-empty">Nenhuma atividade web no período.</div>'}</section>`; bindPageActions();
+      const sampleRows = (report.metricSamples || []).slice(0, 30).map(sample => '<tr><td>' + esc(sample.machineName) + '</td><td>' + fmtDate(sample.sampledAt) + '</td><td>' + (Number(sample.metrics?.cpu) || 0) + '%</td><td>' + (Number(sample.metrics?.ram) || 0) + '%</td><td>' + (Number(sample.metrics?.disk) || 0) + '%</td><td>' + (Array.isArray(sample.apps) ? sample.apps.length : 0) + '</td></tr>').join('');
+      $('#reportBody').insertAdjacentHTML('beforeend', '<section class="panel full-panel"><div class="panel-heading"><div><h2>Amostras históricas</h2><p>Leituras guardadas por computador dentro da retenção do plano (até 30 mais recentes).</p></div></div>' + (sampleRows ? '<div class="table-wrap"><table><thead><tr><th>COMPUTADOR</th><th>COLETADO EM</th><th>CPU</th><th>RAM</th><th>DISCO</th><th>PROCESSOS</th></tr></thead><tbody>' + sampleRows + '</tbody></table></div>' : '<div class="subtle-empty">Nenhuma amostra histórica no período.</div>') + '</section>');
     } catch (e) { $('#reportBody').textContent = e.message; }
   };
   $('#reportRange').value = String(state.reportDays); $('#reportRange').onchange = e => load(Number(e.target.value)); load(state.reportDays);
 }
 function bindPageActions() {
-  document.querySelectorAll('[data-pair]').forEach(b => b.onclick = showPairModal);
+  document.querySelectorAll('[data-pair]').forEach(b => b.onclick = () => showPairModal().catch(error => { toast(error.message); if (error.upgradeRequired) { state.page = 'plans'; render(); } }));
   document.querySelectorAll('[data-page]').forEach(b => { if (b.classList.contains('quiet')) b.onclick = () => { state.page = b.dataset.page; state.detailId = null; document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.page === state.page)); render(); }; });
   document.querySelectorAll('[data-machine]').forEach(row => row.onclick = () => { state.detailId = row.dataset.machine; renderDetail(state.detailId); });
 }
@@ -184,7 +301,8 @@ async function renderDetail(machineId) {
         const stateLabel = current ? 'Em primeiro plano agora' : appReport.measurementSupported ? 'Não está em primeiro plano' : appReport.hasMeasuredData ? 'Sem estado foreground atual' : 'Medição indisponível';
         return `<tr><td><b>${esc(application.name)}</b><small class="process-subtitle">${esc(application.processName)}</small><div class="bar"><i style="width:${width}%"></i></div></td><td>${durationLabel(Math.floor(application.durationMilliseconds/1000))}</td><td>${application.occurrences}</td><td><span class="app-state ${current?'is-running':''}">${stateLabel}</span></td><td>${fmtDate(application.lastSeenAt)}</td></tr>`;
       }).join('');
-      const rangeOptions = [1, 7, 30].map(days => `<option value="${days}">${days === 1 ? 'Hoje' : `${days} dias`}</option>`).join('');
+      const maxRetention = state.data.plan?.retentionDays || 7;
+      const rangeOptions = [1, 7, 30, 90, 365].filter(days => days <= maxRetention).map(days => `<option value="${days}">${days === 1 ? 'Hoje' : `${days} dias`}</option>`).join('');
       appsPanel = `<section class="panel"><div class="panel-heading"><div><h2>Processos na última amostra</h2><p>Atualizados pelo agente a cada heartbeat</p></div></div>${runningApps.length ? `<div class="process-list">${runningApps.map(app => `<div><b>${esc(app.name)}</b><span>${app.cpu==null?'CPU —':`${Number(app.cpu).toFixed(1)}% CPU`}</span><span>${app.memory} MB</span></div>`).join('')}</div>` : '<div class="subtle-empty">Nenhum processo ativo identificado no último sinal.</div>'}<div class="panel-heading app-history-heading"><div><h2>Aplicações observadas</h2><p>Lista recente de processos deste computador</p></div></div>${recentApps.length ? recentApps.map(app => `<div class="app-summary-row"><b>${esc(app.name)}</b><span>${app.status==='running'&&machine.status==='online'?'Em execução':'Não observada na amostra atual'}</span><span>${appDuration(app)}</span></div>`).join('') : '<div class="subtle-empty">Histórico ainda indisponível.</div>'}</section>`;
       reportPanel = `<section class="panel full-panel detail-events"><div class="panel-heading"><div><h2>Relatório de uso em primeiro plano</h2><p>Tempo medido neste computador</p></div><select id="machineReportRange" class="select" aria-label="Período do relatório">${rangeOptions}</select></div><div class="notice" id="machineReportNotice"></div><div class="metric-grid">${metricCard('Tempo observado',appReport.totalSeconds,'no período','◷','Somatório das aplicações')}${metricCard('Aplicações',appReport.applications.length,'identificadas','▧','Neste computador')}${metricCard('Identificações',appReport.totalOccurrences,'ocorrências','⌁','Sessões observadas')}${metricCard('Em execução',appReport.runningCount,'agora','●','Na última amostra','green')}</div><div class="panel-heading app-history-heading"><div><h2>Uso estimado por dia</h2><p>Somatório das aplicações observadas</p></div></div><div class="daily-usage-list">${dailyBars}</div><div class="panel-heading app-history-heading"><div><h2>Aplicações deste computador</h2><p>Tempo, identificações e estado atual no período selecionado</p></div></div>${reportRows ? `<div class="table-wrap"><table><thead><tr><th>APLICAÇÃO</th><th>TEMPO ESTIMADO</th><th>IDENTIFICAÇÕES</th><th>ESTADO</th><th>ÚLTIMA AMOSTRA</th></tr></thead><tbody>${reportRows}</tbody></table></div>` : '<div class="subtle-empty">Ainda não há tempo de uso registrado neste período.</div>'}</section>`;
     }
@@ -218,15 +336,45 @@ function appendHelpMessage(message, kind = 'bot') {
   $('#helpBotMessages').appendChild(node);
   $('#helpBotMessages').scrollTop = $('#helpBotMessages').scrollHeight;
 }
+function answerHelpQuestion(question) {
+  const text = String(question || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  if (/plano|assin|limite|compr|pagamento|upgrade/.test(text)) {
+    const subscription = state.subscription?.assinatura || { plan: state.user?.plan || 'Free' };
+    const limits = state.subscription?.limites || state.data?.plan || { computers: 10, retentionDays: 7, reports: false, alerts: false };
+    const usage = state.subscription?.uso?.computadores ?? state.data?.usage?.computers ?? 0;
+    return 'Sua conta está no plano ' + subscription.plan + ' e usa ' + usage + ' computador(es). O limite é ' + (limits.computers === null ? 'ilimitado' : limits.computers) + ', com retenção de ' + limits.retentionDays + ' dias. Abra “Planos e cobrança” no menu para comparar opções e simular um pagamento; a mesma assinatura vale para Web e Platform.';
+  }
+  if (/banco|desconect|offline|sem rede|sem internet|enviar|fila|guardar|armazen/.test(text)) {
+    return 'O agente coleta as leituras localmente e mantém uma fila local gravada em disco enquanto não alcança a API. Quando a conexão retorna, reenvia as amostras pendentes em ordem. A fila tem limite local; confira também se a API Platform e o MySQL voltaram a ficar disponíveis.';
+  }
+  if (/computador|conectar|vincular|endpoint/.test(text)) return helpTopics.find(topic => topic.label === 'Conectar computador').answer;
+  if (/mysql|servidor|banco|api/.test(text)) return helpTopics.find(topic => topic.label === 'Servidor e MySQL').answer;
+  if (/navega|dominio|web|extens/.test(text)) return helpTopics.find(topic => topic.label === 'Atividade web').answer;
+  if (/aplic|processo|foreground|primeiro plano/.test(text)) return helpTopics.find(topic => topic.label === 'Métricas de aplicativos').answer;
+  if (/privacidade|consent|termo|dados/.test(text)) return helpTopics.find(topic => topic.label === 'Privacidade').answer;
+  if (/node|instal/.test(text)) return helpTopics.find(topic => topic.label === 'Erro no Node.js').answer;
+  return 'Ainda não encontrei essa resposta na ajuda local. Posso orientar sobre planos, conexão de computadores, banco/API, coleta web, métricas de aplicativos e privacidade. Escolha um assunto ou tente outra pergunta.';
+}
 function initializeHelpBot() {
   const toggle = $('#helpBotToggle'), panel = $('#helpBotPanel'), close = $('#helpBotClose');
   const setOpen = open => { panel.classList.toggle('hidden', !open); toggle.setAttribute('aria-expanded', String(open)); };
-  toggle.onclick = () => { const opening = panel.classList.contains('hidden'); setOpen(opening); if (opening && !$('#helpBotMessages').children.length) appendHelpMessage('Olá! Sou o ARGUS. Escolha um assunto para ver uma orientação rápida baseada nos guias do projeto.'); };
+  toggle.onclick = () => { const opening = panel.classList.contains('hidden'); setOpen(opening); if (opening && !$('#helpBotMessages').children.length) appendHelpMessage('Olá! Sou o ARGUS. Pergunte diretamente ou escolha um assunto para receber orientações rápidas sobre a Platform.'); };
   close.onclick = () => setOpen(false);
+  $('#helpBotForm').onsubmit = event => {
+    event.preventDefault();
+    const input = $('#helpBotInput'), question = input.value.trim();
+    if (!question) return;
+    appendHelpMessage(question, 'user');
+    appendHelpMessage(answerHelpQuestion(question));
+    input.value = '';
+  };
+  const topicLabels = new Set();
   helpTopics.forEach(topic => {
+    if (topicLabels.has(topic.label)) return;
+    topicLabels.add(topic.label);
     const button = document.createElement('button');
     button.type = 'button'; button.className = 'help-bot-topic'; button.textContent = topic.label;
-    button.onclick = () => { appendHelpMessage(topic.label, 'user'); appendHelpMessage(typeof topic.answer === 'function' ? topic.answer() : topic.answer); };
+    button.onclick = () => { appendHelpMessage(topic.label, 'user'); appendHelpMessage(answerHelpQuestion(topic.label)); };
     $('#helpBotTopics').appendChild(button);
   });
 }

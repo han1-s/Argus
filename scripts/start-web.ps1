@@ -1,28 +1,27 @@
+﻿param([switch]$NoBrowser)
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $platformRoot = Join-Path $root 'Platform'
 $backendRoot = Join-Path $root 'Web\Backend'
 $frontendRoot = Join-Path $root 'Web\Frontend'
-$node = (Get-Command node.exe -ErrorAction Stop).Source
+$nodeCommand = Get-Command node.exe -ErrorAction SilentlyContinue
+if (-not $nodeCommand) { throw 'Node.js nao encontrado. Escolha Instalar ou atualizar no ARGUS.cmd.' }
+$node = $nodeCommand.Source
 $controlDir = Join-Path $env:LOCALAPPDATA 'ARGUS\Control'
 $logDir = Join-Path $env:LOCALAPPDATA 'ARGUS\Logs'
 $envFile = Join-Path $platformRoot '.env'
-$exampleFile = Join-Path $platformRoot '.env.example'
 New-Item -ItemType Directory -Force -Path $controlDir, $logDir | Out-Null
 
 if (-not (Test-Path $envFile)) {
-  if (-not (Test-Path $exampleFile)) { throw "Arquivo de configuracao ausente: $exampleFile" }
-  Copy-Item -LiteralPath $exampleFile -Destination $envFile
-  Write-Host 'Criei Platform\.env a partir do modelo. Preencha as credenciais do MySQL; o Web ainda nao foi iniciado.' -ForegroundColor Yellow
-  Start-Process -FilePath 'notepad.exe' -ArgumentList @("`"$envFile`"") -Wait
+  throw 'Platform\.env ausente. Escolha Instalar ou atualizar no ARGUS.cmd antes de iniciar o Web.'
 }
 
 $envText = Get-Content -LiteralPath $envFile -Raw
-if ($envText -match '(?im)^\s*MYSQL_PASSWORD\s*=\s*change-this-password\s*$') {
-  throw 'Configure MYSQL_PASSWORD em Platform\.env e execute Iniciar Web novamente.'
+if ($envText -match '(?im)^\s*MYSQL_PASSWORD\s*=\s*(change-this-password|configure-during-install)\s*$') {
+  throw 'Configure o banco compartilhado pela opcao Instalar ou atualizar no ARGUS.cmd.'
 }
 if (-not (Test-Path (Join-Path $backendRoot 'node_modules\express\package.json')) -or -not (Test-Path (Join-Path $frontendRoot 'node_modules\vite\bin\vite.js'))) {
-  throw 'Dependencias do Web ausentes. Use ARGUS.cmd > Ferramentas > Instalar dependencias e tente novamente.'
+  throw 'Dependencias do Web ausentes. Escolha Instalar ou atualizar no menu principal do ARGUS.'
 }
 
 $services = @(
@@ -50,7 +49,7 @@ function Test-ServiceReady($Service) {
 
 try {
   foreach ($service in $services) {
-    if (-not (Test-Path $service.Entry)) { throw "Dependencia de inicializacao ausente: $($service.Entry). Use Ferramentas > Instalar dependencias." }
+    if (-not (Test-Path $service.Entry)) { throw "Dependencia de inicializacao ausente: $($service.Entry). Escolha Instalar ou atualizar no menu principal do ARGUS." }
     $existing = Get-ListenerProcess $service.Port
     if ($existing) {
       if ($existing.Name -ne 'node.exe' -or $existing.CommandLine -notmatch $service.Pattern) {
@@ -91,7 +90,7 @@ try {
   Write-Host 'Web pronto: API e frontend ativos; a API confirmou conexao com o MySQL.' -ForegroundColor Green
   Write-Host 'Frontend: http://127.0.0.1:5173/login'
   Write-Host "Logs: $logDir"
-  & (Join-Path $PSScriptRoot 'open-edge.ps1') -Url 'http://127.0.0.1:5173/login'
+  if (-not $NoBrowser) { & (Join-Path $PSScriptRoot 'open-edge.ps1') -Url 'http://127.0.0.1:5173/login' }
   if (-not $started.Count) { exit 2 }
 } catch {
   foreach ($item in $started) {

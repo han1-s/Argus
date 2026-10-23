@@ -12,8 +12,8 @@ dotenv.config({
   path: envPath,
 });
 
-if (process.env.MYSQL_PASSWORD === 'change-this-password') {
-  throw new Error('Configure MYSQL_PASSWORD in Platform/.env before starting Web.');
+if (['change-this-password', 'configure-during-install'].includes(process.env.MYSQL_PASSWORD)) {
+  throw new Error('Configure o banco compartilhado pela opcao Instalar ou atualizar no ARGUS.cmd antes de iniciar o Web.');
 }
 
 const database = process.env.MYSQL_DATABASE || 'argus';

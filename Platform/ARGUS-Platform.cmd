@@ -1,47 +1,59 @@
 @echo off
-setlocal
+setlocal EnableExtensions
 cd /d "%~dp0"
+for %%I in ("%~dp0..") do set "ARGUS_ROOT=%%~fI"
+
+if /i "%~1"=="/start" goto start_server
+if /i "%~1"=="/stop" goto stop_server
+if /i "%~1"=="/agent" goto agent
+if /i "%~1"=="/logs" goto logs
 
 :menu
 cls
 echo ==========================================
-echo            ARGUS - Platform
+echo              ARGUS - Platform
 echo ==========================================
 echo.
-echo  1. Abrir painel de controle (servidor e agentes)
-echo  2. Iniciar somente a API Platform
-echo  3. Parar o servidor da Platform
-echo  4. Abrir logs do servidor
-echo  5. Voltar ao menu principal
+echo  1. Iniciar API Platform e painel
+echo  2. Parar API Platform
+echo  3. Controlar agente deste computador
+echo  4. Abrir logs
+echo  5. Instalacao e controles avancados
+echo  6. Voltar ao menu principal
 echo.
-choice /c 12345 /n /m "Escolha: "
-if errorlevel 5 exit /b 0
+choice /c 123456 /n /m "Escolha: "
+if errorlevel 6 exit /b 0
+if errorlevel 5 goto advanced
 if errorlevel 4 goto logs
-if errorlevel 3 goto stopserver
-if errorlevel 2 goto api
-if errorlevel 1 goto control
+if errorlevel 3 goto agent
+if errorlevel 2 goto stop_server
+if errorlevel 1 goto start_server
 
-:api
-where node >nul 2>nul || (echo Node.js nao encontrado. Execute a preparacao pelo painel de controle.& pause & goto menu)
-if not exist "%~dp0node_modules\express\package.json" (
-  echo Dependencias da Platform nao encontradas. Escolha Preparar servidor no painel de controle.
-  pause
-  goto menu
-)
+:start_server
 call "%~dp0ARGUS.cmd" /start-server
+if /i "%~1"=="/start" exit /b %ERRORLEVEL%
 pause
 goto menu
 
-:control
-call "%~dp0ARGUS.cmd"
-goto menu
-
-:stopserver
+:stop_server
 call "%~dp0ARGUS.cmd" /stop-server
+if /i "%~1"=="/stop" exit /b %ERRORLEVEL%
 pause
+goto menu
+
+:agent
+set "ARGUS_AGENT_ONLY=1"
+call "%~dp0ARGUS.cmd"
+if /i "%~1"=="/agent" exit /b %ERRORLEVEL%
+set "ARGUS_AGENT_ONLY="
+goto menu
+
+:advanced
+call "%~dp0ARGUS.cmd"
 goto menu
 
 :logs
 set "ARGUS_LOGS=%LOCALAPPDATA%\ARGUS\Logs"
-if exist "%ARGUS_LOGS%" (start "ARGUS logs" explorer.exe "%ARGUS_LOGS%") else echo Nenhum log da Platform foi criado ainda.
+if exist "%ARGUS_LOGS%" (start "ARGUS logs" explorer.exe "%ARGUS_LOGS%") else echo Ainda nao ha logs da Platform.
+if /i "%~1"=="/logs" exit /b 0
 goto menu

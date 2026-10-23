@@ -66,6 +66,11 @@ async function cadastrar(req, res, next) {
       'INSERT INTO terms_acceptances (user_id, terms_version, accepted_at, web_consent) VALUES (?, ?, ?, ?)',
       [id, TERMS_VERSION, now, webConsent],
     );
+    await connection.execute(
+      `INSERT INTO subscriptions (user_id, plan, billing_cycle, status, started_at, updated_at)
+       VALUES (?, 'Free', 'monthly', 'active', ?, ?)`,
+      [id, now, now],
+    );
     await createSession(connection, id, res, req);
     await connection.commit();
     res.status(201).json({ user: { id, name, email, webConsent, termsVersion: TERMS_VERSION } });

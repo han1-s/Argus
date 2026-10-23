@@ -99,6 +99,9 @@ test('Web API integration against MySQL (opt-in)', { skip: !enabled }, async t =
       const [users] = await pool.execute('SELECT id FROM users WHERE email = ?', [emails[0]]);
       assert.equal(users.length, 1);
       const userId = users[0].id;
+      const upgrade = await request('/api/assinatura/pagamentos-simulados', { method: 'POST', body: { plan: 'Pro', billingCycle: 'monthly', paymentMethod: 'pix' } });
+      assert.equal(upgrade.status, 201);
+      assert.equal((await readJson(upgrade)).limites.computers, 50, 'the Web upgrade grants the shared Pro limits');
       machineId = crypto.randomUUID();
       alertId = crypto.randomUUID();
       const now = new Date();
@@ -127,7 +130,7 @@ test('Web API integration against MySQL (opt-in)', { skip: !enabled }, async t =
       assert.equal(dashboard.events.length, 1);
       assert.equal(dashboard.webActivity[0].domain, 'example.invalid');
       assert.equal((await readJson(await request('/api/atividades'))).atividades.length, 1);
-      assert.equal((await readJson(await request('/api/relatorios?days=999'))).dias, 30);
+      assert.equal((await readJson(await request('/api/relatorios?days=999'))).dias, 90);
       assert.equal((await readJson(await request('/api/alertas'))).alertas.length, 1);
       const notifications = (await readJson(await request('/api/notificacoes'))).notificacoes;
       assert.equal(notifications.length, 2);
@@ -136,6 +139,7 @@ test('Web API integration against MySQL (opt-in)', { skip: !enabled }, async t =
       const otherLogin = await request('/api/auth/login', { method: 'POST', body: { email: emails[1], password, termsAccepted: true, termsVersion } });
       assert.equal(otherLogin.status, 200);
       const otherCookie = otherLogin.headers.get('set-cookie').split(';')[0];
+      assert.equal((await request('/api/assinatura/pagamentos-simulados', { method: 'POST', session: otherCookie, body: { plan: 'Pro', billingCycle: 'monthly', paymentMethod: 'pix' } })).status, 201);
       assert.equal((await readJson(await request('/api/maquinas', { session: otherCookie }))).maquinas.length, 0);
       assert.equal((await request(`/api/alertas/${alertId}/ack`, { method: 'POST', body: {}, session: otherCookie })).status, 404);
       assert.equal(Number((await readJson(await request('/api/alertas'))).alertas[0].aberto), 1);
@@ -147,6 +151,8 @@ test('Web API integration against MySQL (opt-in)', { skip: !enabled }, async t =
     });
 
     await t.test('subscription is validated, persisted, and returned on the next read', async () => {
+      const downgraded = await request('/api/assinatura', { method: 'PUT', body: { plan: 'Free', billingCycle: 'monthly' } });
+      assert.equal(downgraded.status, 200);
       assert.equal((await readJson(await request('/api/assinatura'))).assinatura.plan, 'Free');
       assert.equal((await request('/api/assinatura', { method: 'PUT', body: { plan: 'Invalid', billingCycle: 'monthly' } })).status, 400);
       assert.equal((await request('/api/assinatura', { method: 'PUT', body: { plan: 'Pro', billingCycle: 'invalid' } })).status, 400);

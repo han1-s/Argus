@@ -9,7 +9,7 @@ const net = require('node:net');
 const { spawn, execFileSync } = require('node:child_process');
 const Module = require('node:module');
 
-const db = { users: [], machines: [], pairings: [], events: [], alerts: [], webActivity: [], termAcceptances: [], sessions: [] };
+const db = { users: [], machines: [], pairings: [], events: [], alerts: [], webActivity: [], termAcceptances: [], sessions: [], subscriptions: [], payments: [], metricSamples: [] };
 const resetCodes = new Map();
 const store = {
   initialize: async () => db,
@@ -17,10 +17,25 @@ const store = {
   findSessionUser: async tokenHash => {
     const session = db.sessions.find(row => row.tokenHash === tokenHash && Date.parse(row.expiresAt) > Date.now());
     const user = session && db.users.find(row => row.id === session.userId);
-    return user ? { id: user.id, name: user.name, email: user.email, webConsent: Boolean(user.webConsent), termsVersion: user.termsVersion || null } : null;
+    return user ? { id: user.id, name: user.name, email: user.email, webConsent: Boolean(user.webConsent), termsVersion: user.termsVersion || null, plan: db.subscriptions.find(subscription => subscription.userId === user.id)?.plan || 'Free' } : null;
   },
   createSession: async session => { db.sessions.push(session); },
   deleteSession: async tokenHash => { db.sessions = db.sessions.filter(row => row.tokenHash !== tokenHash); },
+  getPlan: async userId => db.subscriptions.find(subscription => subscription.userId === userId)?.plan || 'Free',
+  getSubscription: async userId => db.subscriptions.find(subscription => subscription.userId === userId) || { plan: 'Free', billing_cycle: 'monthly', status: 'active', started_at: null, updated_at: null, latest_payment: null },
+  setFreeSubscription: async (userId, billingCycle = 'monthly') => {
+    const subscription = { ...(db.subscriptions.find(row => row.userId === userId) || {}), userId, plan: 'Free', billing_cycle: billingCycle, status: 'active', latest_payment: null };
+    db.subscriptions = db.subscriptions.filter(row => row.userId !== userId); db.subscriptions.push(subscription); return subscription;
+  },
+  saveSimulatedPayment: async (userId, payment) => {
+    const savedPayment = { plan: payment.plan, method: payment.paymentMethod, amount_cents: payment.amountCents, currency: 'BRL', status: 'approved', reference: payment.reference, card_brand: payment.cardBrand, card_last4: payment.cardLast4, created_at: payment.now };
+    const subscription = { userId, plan: payment.plan, billing_cycle: payment.billingCycle, status: 'active', latest_payment: savedPayment };
+    db.subscriptions = db.subscriptions.filter(row => row.userId !== userId); db.subscriptions.push(subscription); db.payments.push(savedPayment); return subscription;
+  },
+  saveMetricSample: async (sampleId, machineId, sampledAt, metrics, apps) => {
+    if (!db.metricSamples.some(sample => sample.sample_id === sampleId)) db.metricSamples.push({ sample_id: sampleId, machine_id: machineId, sampled_at: sampledAt, metrics, apps });
+  },
+  listMetricSamples: async (userId, days) => db.metricSamples.filter(sample => db.machines.some(machine => machine.id === sample.machine_id && machine.userId === userId) && Date.parse(sample.sampled_at) >= Date.now() - days * 86400000).map(sample => ({ id: sample.sample_id, sampledAt: new Date(sample.sampled_at).toISOString(), machineId: sample.machine_id, machineName: db.machines.find(machine => machine.id === sample.machine_id)?.name, metrics: sample.metrics, apps: sample.apps })),
   createPasswordReset: async email => { if (!db.users.some(user => user.email === email)) return null; resetCodes.set(email, '123456'); return '123456'; },
   completePasswordReset: async (email, code, password) => {
     if (resetCodes.get(email) !== code) return null;
@@ -44,7 +59,8 @@ for (const relativePath of ['backend/server.js','agent/agent.js','agent/setup.js
 }
 const originalLoad = Module._load;
 Module._load = function(request, parent, isMain) {
-  if (parent?.filename === backendPath && request === '../database/mysql') return store;
+  const backendRoot = path.resolve(__dirname, '..', 'backend') + path.sep;
+  if (parent?.filename?.startsWith(backendRoot) && request === '../database/mysql') return store;
   return originalLoad.call(this, request, parent, isMain);
 };
 
@@ -113,6 +129,12 @@ async function removeSmokeDirectory(folder) {
     assert.equal(rejectedLogin.response.status, 428, 'login must require explicit terms confirmation');
     const successfulLogin = await responseJson(`${base}/api/auth/login`, { method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:'ValidPass123',termsVersion:'2026-09-v1',termsAccepted:true}) });
     assert.equal(successfulLogin.response.status,200,'accepted terms allow login');
+    const freeSubscription=await responseJson(`${base}/api/assinatura`,{headers:{Cookie:cookie}});
+    assert.equal(freeSubscription.response.status,200); assert.equal(freeSubscription.body.assinatura.plan,'Free'); assert.equal(freeSubscription.body.limites.computers,10);
+    assert.equal((await responseJson(`${base}/api/assinatura`,{method:'PUT',headers:{Cookie:cookie,'Content-Type':'application/json'},body:JSON.stringify({plan:'Pro',billingCycle:'annual'})})).response.status,409,'paid plans require the simulated checkout');
+    assert.equal((await responseJson(`${base}/api/assinatura/pagamentos-simulados`,{method:'POST',headers:{Cookie:cookie,'Content-Type':'application/json'},body:JSON.stringify({plan:'Pro',billingCycle:'monthly',paymentMethod:'credit_card',cardNumber:'4242424242424242',cvv:'123'})})).response.status,400,'checkout never accepts complete card credentials');
+    const simulatedPayment=await responseJson(`${base}/api/assinatura/pagamentos-simulados`,{method:'POST',headers:{Cookie:cookie,'Content-Type':'application/json'},body:JSON.stringify({plan:'Pro',billingCycle:'monthly',paymentMethod:'pix'})});
+    assert.equal(simulatedPayment.response.status,201); assert.equal(simulatedPayment.body.pagamento.amount_cents,4900); assert.equal(simulatedPayment.body.assinatura.plan,'Pro');
     const externalSessionToken = crypto.randomBytes(32).toString('hex');
     const externalSessionHash = crypto.createHash('sha256').update(externalSessionToken).digest('hex');
     db.sessions.push({ tokenHash:externalSessionHash, userId:db.users[0].id, createdAt:new Date().toISOString(), expiresAt:new Date(Date.now()+60000).toISOString() });
@@ -225,7 +247,7 @@ async function removeSmokeDirectory(folder) {
     let alertDashboard = (await responseJson(`${base}/api/dashboard`,{headers:{Cookie:cookie}})).body; const cpuAlert=alertDashboard.alerts.find(a=>a.kind==='cpu'); assert.ok(cpuAlert,'high CPU creates a CPU alert');
     const acknowledged = await responseJson(`${base}/api/alerts/${cpuAlert.id}/ack`,{method:'POST',headers:{Cookie:cookie,'Content-Type':'application/json'},body:'{}'}); assert.equal(acknowledged.response.status,200);
     alertDashboard = (await responseJson(`${base}/api/dashboard`,{headers:{Cookie:cookie}})).body; assert.ok(!alertDashboard.alerts.some(a=>a.kind==='cpu'),'acknowledged CPU alerts leave the active summary');
-    assert.equal((await responseJson(`${base}/api/reports?days=999`,{headers:{Cookie:cookie}})).body.days,30,'reports cap the period to 30 days');
+    assert.equal((await responseJson(`${base}/api/reports?days=999`,{headers:{Cookie:cookie}})).body.days,90,'report range is capped to the Pro plan retention window');
     assert.equal((await responseJson(`${base}/api/reports?days=0`,{headers:{Cookie:cookie}})).body.days,7,'invalid report periods use the default');
     agent=launchAgent(agentDir);
     await waitFor(async()=>{const preflight=await fetch(`http://127.0.0.1:${config.bridgePort}/navigation`,{method:'OPTIONS',headers:{Origin:'chrome-extension://abcdefghijklmnopabcdefghijklmnop','Access-Control-Request-Method':'POST','Access-Control-Request-Headers':'content-type,x-argus-bridge-key'}});return preflight.status===204;},'ponte local do agente voltar a escutar');
@@ -250,10 +272,25 @@ async function removeSmokeDirectory(folder) {
     const offline=await waitFor(async()=>{const {body}=await responseJson(`${base}/api/dashboard`,{headers:{Cookie:cookie}});return body.machines.find(m=>m.id===connected.body.machineId)?.status==='offline'?body:null;},'offline ser refletido',8000);assert.ok(offline.summary.offline>=1);
     agent=launchAgent(agentDir);
     const recovered=await waitFor(async()=>{const {body}=await responseJson(`${base}/api/dashboard`,{headers:{Cookie:cookie}});return body.machines[0]?.status==='online'?body:null;},'agente reconectar',12000);assert.equal(recovered.summary.online,1);
+    await stopAgent(agent); agent=null;
+    const configPath=path.join(agentDir,'config.json');
+    const onlineConfig=JSON.parse(fs.readFileSync(configPath,'utf8'));
+    fs.writeFileSync(configPath,JSON.stringify({...onlineConfig,serverUrl:'http://127.0.0.1:1'},null,2));
+    agent=launchAgent(agentDir);
+    const outboxPath=path.join(agentDir,'outbox.ndjson');
+    await waitFor(async()=>{try{return fs.statSync(outboxPath).size>0?true:null;}catch{return null;}},'agente persistir leituras sem servidor',10000);
+    const queuedLines=fs.readFileSync(outboxPath,'utf8').trim().split(/\r?\n/).filter(Boolean).map(line=>JSON.parse(line));
+    assert.ok(queuedLines.length>0,'disconnected measurements are written to the local outbox');
+    assert.ok(queuedLines[0].id&&queuedLines[0].payload.metrics&&queuedLines[0].payload.sampledAt,'the local outbox contains complete heartbeat payloads');
+    await stopAgent(agent); agent=null;
+    fs.writeFileSync(configPath,JSON.stringify(onlineConfig,null,2));
+    agent=launchAgent(agentDir);
+    await waitFor(async()=>{try{return fs.statSync(outboxPath).size===0?true:null;}catch{return true;}},'agente enviar e remover leituras pendentes apos reconexao',12000);
+    assert.equal(fs.statSync(outboxPath).size,0,'queued samples are acknowledged and removed after the server reconnects');
     const exported=await responseJson(`${base}/api/privacy/export`,{headers:{Cookie:cookie}});assert.equal(exported.response.status,200);assert.ok(!JSON.stringify(exported.body).includes(connected.body.token),'export never exposes device token');
     const deleted=await responseJson(`${base}/api/privacy/delete-account`,{method:'POST',headers:{Cookie:cookie,'Content-Type':'application/json'},body:'{}'});assert.equal(deleted.response.status,200);
     const unauthorized=await responseJson(`${base}/api/dashboard`,{headers:{Cookie:cookie}});assert.equal(unauthorized.response.status,401,'account deletion revokes its session');
-    console.log('PASS: auth/terms, installer and Windows foreground watcher, pairing, metrics/processes, measured foreground app durations, isolated machine reports, reports/alerts, extension bridge/consent, privacy deletion, offline and recovery.');
+    console.log('PASS: auth/terms, installer and Windows foreground watcher, pairing, metrics/processes, measured foreground app durations, isolated machine reports, reports/alerts, extension bridge/consent, offline agent queue and sync recovery, privacy deletion.');
     process.exitCode=0;
   } catch (error) { console.error('FAIL:',error); process.exitCode=1; }
   finally { await stopAgent(agent); await stopSetup(setup); if(agentDir)await removeSmokeDirectory(agentDir); }

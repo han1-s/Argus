@@ -37,7 +37,7 @@ const comparison = [
   ['Métricas', 'Básicas', 'Avançadas', 'Avançadas'],
   ['Detecção de anomalias', '—', 'Disponível', 'Disponível'],
   ['Relatórios exportáveis', '—', 'Disponível', 'Disponível'],
-  ['Retenção de dados', '7 dias', '90 dias', 'Ampliada'],
+  ['Retenção de dados', '7 dias', '90 dias', '365 dias'],
   ['Alertas', '—', 'Disponível', 'Disponível'],
   ['Suporte', 'Essencial', 'Chat e e-mail', 'Prioritário'],
   ['API', '—', '—', 'Dedicada'],
@@ -49,7 +49,7 @@ const faqs = [
   ['Como funciona a cobrança anual?', 'O valor anual é apresentado como equivalente mensal, com desconto demonstrativo de 20%. O pagamento seria anual; nenhum valor é cobrado nesta demonstração.'],
   ['Quais formas de pagamento estão disponíveis?', 'O checkout permite simular PIX, cartão de crédito ou cartão de débito. A confirmação e os metadados ficam no banco ARGUS; nenhuma cobrança é realizada.'],
   ['Posso mudar de plano?', 'Sim. Ao concluir o checkout demonstrativo, o plano escolhido é salvo na conta e aparece nas configurações.'],
-  ['O que acontece se eu ultrapassar o limite de computadores?', 'Os limites mostrados são ilustrativos. Esta página não monitora computadores nem verifica utilização.'],
+  ['O que acontece se eu ultrapassar o limite de computadores?', 'O ARGUS bloqueia novos vínculos quando sua conta atinge o limite. Os computadores já conectados continuam vinculados; você pode trocar de plano para ampliar o limite.'],
   ['Os pagamentos são reais?', 'Não. Preços, planos e checkout são demonstrativos. Nenhuma transação ou cobrança real é realizada.'],
 ];
 
@@ -62,6 +62,7 @@ export const Monetizacao: React.FC = () => {
   const [currentPlan, setCurrentPlan] = useState<PlanType>('Free');
   const [planCycle, setPlanCycle] = useState<BillingCycle>('monthly');
   const [latestPayment, setLatestPayment] = useState<ArgusPayment | null>(null);
+  const [computerUsage, setComputerUsage] = useState(0);
   const [planError, setPlanError] = useState('');
   const activePlan = plans.find(plan => plan.id === currentPlan) || plans[0];
 
@@ -72,6 +73,7 @@ export const Monetizacao: React.FC = () => {
       setCurrentPlan(subscription.plan);
       setPlanCycle(subscription.billing_cycle);
       setLatestPayment(subscription.latest_payment ?? null);
+      setComputerUsage(subscription.usage?.computers ?? 0);
     }).catch(error => {
       if (active) setPlanError(error instanceof Error ? error.message : 'Não foi possível carregar o plano atual.');
     });
@@ -84,6 +86,7 @@ export const Monetizacao: React.FC = () => {
       setCurrentPlan(subscription.plan);
       setPlanCycle(subscription.billing_cycle);
       setPlanError('');
+      setComputerUsage(subscription.usage?.computers ?? computerUsage);
       showArgusToast('Plano Free ativado.');
     } catch (error) {
       setPlanError(error instanceof Error ? error.message : 'Não foi possível salvar o plano.');
@@ -94,6 +97,7 @@ export const Monetizacao: React.FC = () => {
     setCurrentPlan(subscription.plan);
     setPlanCycle(subscription.billing_cycle);
     setLatestPayment(payment);
+    setComputerUsage(subscription.usage?.computers ?? computerUsage);
     showArgusToast('Plano salvo na sua conta. A cobrança continua simulada.');
   };
 
@@ -110,6 +114,7 @@ export const Monetizacao: React.FC = () => {
           <div className="current-plan-heading"><span>Plano atual</span><span className="current-plan-status"><Check size={13} /> ATIVO</span></div>
           <div className="current-plan-name">{activePlan.name}</div>
           <p className="current-plan-description">Plano {planCycle === 'annual' ? 'anual' : 'mensal'} selecionado. Contratação e cobrança permanecem simuladas.</p>
+          <p className="current-plan-description">Uso atual: {computerUsage} de {activePlan.id === 'Business' ? 'ilimitados' : activePlan.id === 'Pro' ? '50 computadores' : '10 computadores'} · retenção de {activePlan.id === 'Business' ? '365 dias' : activePlan.id === 'Pro' ? '90 dias' : '7 dias'}.</p>
           <ul>{activePlan.resources.slice(0, 4).map(({ icon: Icon, name, value }) => <li key={name}><Icon size={15} /><span>{name}</span><strong>{value}</strong></li>)}</ul>
           {latestPayment && <p className="current-plan-payment">Último pagamento simulado: {latestPayment.plan} · {latestPayment.method === 'pix' ? 'PIX' : `${latestPayment.method === 'credit_card' ? 'Crédito' : 'Débito'} · ${latestPayment.card_brand || 'Cartão'} •••• ${latestPayment.card_last4 || ''}`} · R$ {(latestPayment.amount_cents / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>}
           {planError && <p role="alert" className="argus-auth-error">{planError}</p>}
@@ -121,7 +126,7 @@ export const Monetizacao: React.FC = () => {
         <div className="section-header plans-heading">
           <span className="section-label">Planos para cada etapa</span>
           <h2 id="plans-title">Recursos claros para sua operação</h2>
-          <p className="section-desc">Compare limites e recursos. Valores e condições são exibidos apenas para demonstração.</p>
+          <p className="section-desc">Compare os limites aplicados à sua conta. Os pagamentos continuam simulados.</p>
           <div className="billing-switch" role="group" aria-label="Período de cobrança">
             <button type="button" className={cycle === 'monthly' ? 'selected' : ''} aria-pressed={cycle === 'monthly'} onClick={() => setCycle('monthly')}>Mensal</button>
             <button type="button" className={cycle === 'annual' ? 'selected' : ''} aria-pressed={cycle === 'annual'} onClick={() => setCycle('annual')}>Anual <span>Economize 20%</span></button>
@@ -167,7 +172,7 @@ export const Monetizacao: React.FC = () => {
         <div className="faq-accordion">{faqs.map(([question, answer], index) => <div className="faq-item" key={question}><h3><button className="faq-question" type="button" aria-expanded={openFaq === index} aria-controls={`monetization-faq-${index}`} onClick={() => setOpenFaq(openFaq === index ? null : index)}><span>{question}</span><ChevronDown size={18} /></button></h3><div id={`monetization-faq-${index}`} className={`faq-answer monetization-faq-answer ${openFaq === index ? 'is-open' : ''}`} aria-hidden={openFaq !== index}><p>{answer}</p></div></div>)}</div>
       </section>
 
-      <aside className="demo-disclosure"><span className="demo-disclosure-icon"><ShieldCheck size={17} /></span><div><strong>Modo demonstração</strong><p>Preços e limites são ilustrativos. O checkout é simulado e nenhuma cobrança real é realizada.</p></div></aside>
+      <aside className="demo-disclosure"><span className="demo-disclosure-icon"><ShieldCheck size={17} /></span><div><strong>Modo demonstração</strong><p>Os limites de computadores, relatórios e retenção são aplicados. O checkout é simulado e nenhuma cobrança real é realizada.</p></div></aside>
 
       <CheckoutModal key={`${selectedPlan ?? 'closed'}-${cycle}`} isOpen={!!selectedPlan} planName={selectedPlan} cycle={cycle} onClose={() => setSelectedPlan(null)} onPlanSaved={handlePlanSaved} />
     </div>

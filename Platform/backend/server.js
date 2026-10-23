@@ -5,6 +5,9 @@ const { Server } = require('socket.io');
 const crypto = require('crypto');
 const os = require('os');
 const mysqlStore = require('../database/mysql');
+const { getPlanEntitlements } = require('../shared/plans');
+const { createPlanRouter } = require('./planRoutes');
+const { createInstaller } = require('../agent/installer');
 
 const TERMS_VERSION = '2026-09-v1';
 const PORT = Number(process.env.PORT || 3000);
@@ -18,7 +21,7 @@ let db;
 const sessions = new Map();
 
 function id() { return crypto.randomUUID(); }
-function safeUser(user) { return { id: user.id, name: user.name, email: user.email, webConsent: Boolean(user.webConsent), termsVersion: user.termsVersion || null }; }
+function safeUser(user) { return { id: user.id, name: user.name, email: user.email, webConsent: Boolean(user.webConsent), termsVersion: user.termsVersion || null, plan: user.plan || 'Free' }; }
 function hashPassword(password, salt = crypto.randomBytes(16).toString('hex')) { return { salt, hash: crypto.scryptSync(password, salt, 64).toString('hex') }; }
 function cookie(name, value, maxAge) { return `${name}=${encodeURIComponent(value)}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${maxAge}`; }
 function sessionToken(req) { const t = (req.headers.cookie || '').match(/(?:^|;\s*)argus_session=([^;]+)/)?.[1]; try { return t ? decodeURIComponent(t) : null; } catch { return null; } }
@@ -45,6 +48,8 @@ async function auth(req, res, next) {
       cachedUser.termsVersion = user.termsVersion;
     }
     req.user = cachedUser || user;
+    req.user.plan = user.plan || 'Free';
+    req.entitlements = getPlanEntitlements(req.user.plan);
     next();
   } catch (error) {
     next(error);
@@ -54,7 +59,23 @@ function addEvent(machine, type, message) {
   db.events.unshift({ id: id(), machineId: machine.id, machineName: machine.name, type, message, at: new Date().toISOString() });
   db.events.length = Math.min(db.events.length, 500);
 }
-function publicMachine(machine) { const { token, ...visible } = machine; return visible; }
+function publicMachine(machine, retentionDays = 365, advancedMetrics = true) {
+  const { token, ...visible } = machine;
+  const cutoff = Date.now() - retentionDays * 86400000;
+  visible.apps = (Array.isArray(machine.apps) ? machine.apps : [])
+    .filter(app => Date.parse(app.lastSeenAt) >= cutoff)
+    .map(app => {
+      const daily = (Array.isArray(app.foregroundDailyUsage) ? app.foregroundDailyUsage : []).filter(day => Date.parse(day.date + 'T00:00:00Z') >= cutoff);
+      return {
+        ...app,
+        foregroundDailyUsage: advancedMetrics ? daily : [],
+        foregroundDurationMilliseconds: advancedMetrics ? daily.reduce((sum, day) => sum + (Number(day.durationMilliseconds) || 0), 0) : 0,
+        foregroundOccurrences: advancedMetrics ? daily.reduce((sum, day) => sum + (Number(day.occurrences) || 0), 0) : 0,
+      };
+    });
+  if (!advancedMetrics) visible.apps = [];
+  return visible;
+}
 function clamp(value) { const n = Number(value); return Number.isFinite(n) ? Math.max(0, Math.min(100, n)) : 0; }
 function ownerForMachine(machineId) { const machine = db.machines.find(m => m.id === machineId); return machine && db.users.find(u => u.id === machine.userId); }
 const APP_NAMES = Object.freeze({
@@ -74,8 +95,8 @@ const APP_NAMES = Object.freeze({
   obsidian:'Obsidian', notion:'Notion', evernote:'Evernote', todoist:'Todoist', trello:'Trello', clickup:'ClickUp', asana:'Asana', jira:'Jira', confluence:'Confluence', linear:'Linear', postman:'Postman', notion_calendar:'Notion Calendar',
 });
 function friendlyAppName(processName) { const key = String(processName || '').toLowerCase().replace(/\.exe$/, ''); return APP_NAMES[key] || key.replace(/[-_]+/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) || 'Aplicação sem identificação'; }
-function updateApplicationSnapshot(machine, processes, foregroundUsage, foregroundApp, foregroundBatchId, foregroundTelemetryAvailable, now) {
-  const retainAfter = Date.now() - 90 * 86400000;
+function updateApplicationSnapshot(machine, processes, foregroundUsage, foregroundApp, foregroundBatchId, foregroundTelemetryAvailable, now, retentionDays = 90) {
+  const retainAfter = Date.now() - retentionDays * 86400000;
   const history = Array.isArray(machine.apps) ? machine.apps : [];
   for (const app of history) {
     if (!app.processName) { app.processName = String(app.name || ''); app.name = friendlyAppName(app.processName); app.status = 'not_observed'; app.durationSeconds = 0; app.occurrences = 0; app.lastSeenAt = machine.lastSeen || now; }
@@ -213,19 +234,6 @@ function validDomain(value) {
   if (!/^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/.test(domain)) return null;
   return domain;
 }
-function validServerAddress(value) {
-  try {
-    const url = new URL(value);
-    const port = Number(url.port || (url.protocol === 'https:' ? 443 : 80));
-    return ['http:', 'https:'].includes(url.protocol)
-      && Boolean(url.hostname)
-      && !url.username && !url.password
-      && url.pathname === '/' && !url.search && !url.hash
-      && port >= 1 && port <= 65535;
-  } catch {
-    return false;
-  }
-}
 async function issueSession(user, res) {
   const token = crypto.randomBytes(32).toString('hex');
   const createdAt = new Date();
@@ -241,14 +249,15 @@ async function save() { await mysqlStore.save(db); }
 
 app.use(express.json({ limit: '256kb' }));
 app.use(express.static(require('path').join(__dirname, '..', 'frontend')));
+app.get('/api/health', (req, res) => res.json({ ok: true, database: true }));
 app.get('/downloads/argus-agent.js', (req,res) => res.sendFile(require('path').join(__dirname, '..', 'agent', 'agent.js')));
 app.get('/downloads/argus-setup.js', (req,res) => res.sendFile(require('path').join(__dirname, '..', 'agent', 'setup.js')));
 app.get('/downloads/argus-foreground-watcher.ps1', (req,res) => res.download(require('path').join(__dirname, '..', 'agent', 'foreground-watcher.ps1'), 'argus-foreground-watcher.ps1'));
 app.get('/downloads/argus-control.ps1', (req,res) => res.download(require('path').join(__dirname, '..', 'scripts', 'argus-control.ps1'), 'argus-control.ps1'));
 function agentCommandDownload(req, res) {
   const host = String(req.query.server || '').trim(); const code = String(req.query.code || '').trim().toUpperCase();
-  if (!validServerAddress(host) || code) return res.status(400).send('Endereço do servidor inválido. Baixe um instalador ARGUS válido.');
-  const content = `@echo off\r\nsetlocal\r\ncd /d "%~dp0"\r\nset "ARGUS_SERVER_URL=${host}"\r\nset "ARGUS_AGENT_ONLY=1"\r\nset "ARGUS_INSTALL_ONLY=1"\r\nset "ARGUS_HELPER_PATH=%~dp0argus-control.ps1"\r\nif not exist "%ARGUS_HELPER_PATH%" (\r\n  echo Baixando componentes de suporte do ARGUS...\r\n  powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "Invoke-WebRequest -Uri ($env:ARGUS_SERVER_URL + '/downloads/argus-control.ps1') -OutFile $env:ARGUS_HELPER_PATH"\r\n  if errorlevel 1 (echo Nao foi possivel baixar o suporte. Confira a rede e tente novamente.& pause & exit /b 1)\r\n)\r\npowershell.exe -NoProfile -ExecutionPolicy Bypass -File "%ARGUS_HELPER_PATH%"\r\n`;
+  const content = createInstaller(host);
+  if (!content || code) return res.status(400).send('Endereço do servidor inválido. Baixe um instalador ARGUS válido.');
   res.setHeader('Content-Type', 'application/octet-stream'); res.setHeader('Content-Disposition', 'attachment; filename="ARGUS.cmd"'); res.send(content);
 }
 app.get('/downloads/ARGUS.cmd', agentCommandDownload);
@@ -316,9 +325,12 @@ app.post('/api/auth/logout', async (req, res, next) => {
   } catch (error) { next(error); }
 });
 app.get('/api/auth/me', auth, (req,res) => res.json({ user: safeUser(req.user) }));
+app.use('/api', createPlanRouter({ auth, countMachines: userId => db.machines.filter(machine => machine.userId === userId).length }));
 
 app.post('/api/pairings', auth, async (req, res, next) => {
   try {
+    const used = db.machines.filter(machine => machine.userId === req.user.id).length;
+    if (req.entitlements.computers !== null && used >= req.entitlements.computers) return res.status(409).json({ error: 'O plano ' + req.entitlements.name + ' permite até ' + req.entitlements.computers + ' computadores. Faça upgrade para conectar outro dispositivo.', upgradeRequired: true, usage: used, limit: req.entitlements.computers });
     const code = `ARG-${crypto.randomBytes(2).toString('hex').toUpperCase()}-${crypto.randomBytes(2).toString('hex').toUpperCase()}`;
     db.pairings = db.pairings.filter(p => p.expiresAt > Date.now()); db.pairings.push({ code, userId: req.user.id, expiresAt: Date.now() + 900000 }); await save();
     res.status(201).json({ code, expiresIn: 900 });
@@ -328,8 +340,13 @@ app.post('/api/agent/connect', async (req, res, next) => {
   try {
     const code = String(req.body.code || '').toUpperCase().trim(); const index = db.pairings.findIndex(p => p.code === code && p.expiresAt > Date.now());
     if (index < 0) return res.status(400).json({ error: 'Código inválido ou expirado. Gere um novo no dashboard.' });
-    const pairing = db.pairings.splice(index, 1)[0]; const name = String(req.body.name || 'Computador').slice(0,80);
+    const pairing = db.pairings[index]; const name = String(req.body.name || 'Computador').slice(0,80);
     let machine = db.machines.find(m => m.userId === pairing.userId && m.name.toLowerCase() === name.toLowerCase());
+    const currentPlan = await mysqlStore.getPlan(pairing.userId);
+    const entitlements = getPlanEntitlements(currentPlan);
+    const used = db.machines.filter(entry => entry.userId === pairing.userId).length;
+    if (!machine && entitlements.computers !== null && used >= entitlements.computers) return res.status(409).json({ error: 'O plano ' + entitlements.name + ' permite até ' + entitlements.computers + ' computadores. Faça upgrade para conectar outro dispositivo.', upgradeRequired: true, usage: used, limit: entitlements.computers });
+    db.pairings.splice(index, 1);
     const token = crypto.randomBytes(32).toString('hex'); const now = new Date().toISOString();
     if (!machine) { machine = { id: id(), userId: pairing.userId, name, status: 'online', createdAt: now, firstSeenAt: now, metrics: {}, apps: [], lastSeen: now, token, webActivity: 'Extensão de navegação ainda não conectada.' }; db.machines.push(machine); addEvent(machine,'connected','Novo computador conectado'); }
     else { machine.token = token; machine.status = 'online'; machine.lastSeen = now; }
@@ -341,40 +358,61 @@ app.post('/api/agent/heartbeat', async (req, res, next) => {
     const token = String(req.headers.authorization || '').replace(/^Bearer\s+/i, ''); const machine = db.machines.find(m => m.token && m.token === token);
     if (!machine) return res.status(401).json({ error: 'Agente não autorizado. Conecte usando um novo código.' });
     const body = req.body || {}; const previousStatus = machine.status;
+    const currentPlan = await mysqlStore.getPlan(machine.userId);
+    const entitlements = getPlanEntitlements(currentPlan);
     machine.name = String(body.name || machine.name).slice(0,80); machine.userName = String(body.userName || 'Não informado').slice(0,100);
     machine.os = String(body.os || 'Sistema desconhecido').slice(0,120); machine.arch = String(body.arch || '').slice(0,30); machine.uptime = Number(body.uptime) || 0;
     machine.metrics = { cpu: clamp(body.metrics?.cpu), ram: clamp(body.metrics?.ram), disk: clamp(body.metrics?.disk), memoryUsed: Number(body.metrics?.memoryUsed) || 0, memoryTotal: Number(body.metrics?.memoryTotal) || 0 };
-    const heartbeatAt = new Date().toISOString(); machine.foregroundTelemetryAvailable = body.foregroundTelemetryAvailable === true; updateApplicationSnapshot(machine, body.apps, body.foregroundUsage, body.foregroundApp, body.foregroundBatchId, machine.foregroundTelemetryAvailable, heartbeatAt); machine.lastSeen = heartbeatAt; machine.status = 'online';
+    const heartbeatAt = new Date().toISOString(); machine.foregroundTelemetryAvailable = body.foregroundTelemetryAvailable === true; updateApplicationSnapshot(machine, body.apps, body.foregroundUsage, body.foregroundApp, body.foregroundBatchId, machine.foregroundTelemetryAvailable, heartbeatAt, entitlements.retentionDays); machine.lastSeen = heartbeatAt; machine.status = 'online';
     if (previousStatus !== 'online') addEvent(machine,'connected','Computador voltou a ficar online');
-    if ((machine.metrics.cpu >= 85 || machine.metrics.ram >= 90) && !db.alerts.some(a => a.machineId === machine.id && a.open && a.kind === (machine.metrics.cpu >= 85 ? 'cpu' : 'ram'))) {
+    if (entitlements.alerts && (machine.metrics.cpu >= 85 || machine.metrics.ram >= 90) && !db.alerts.some(a => a.machineId === machine.id && a.open && a.kind === (machine.metrics.cpu >= 85 ? 'cpu' : 'ram'))) {
       const kind = machine.metrics.cpu >= 85 ? 'cpu' : 'ram'; const alert = { id:id(),machineId:machine.id,machineName:machine.name,kind,message:kind === 'cpu' ? 'CPU acima de 85%' : 'RAM acima de 90%',at:machine.lastSeen,open:true }; db.alerts.unshift(alert); addEvent(machine,'alert',alert.message);
     }
     const owner = ownerForMachine(machine.id);
     if (owner?.webConsent && Array.isArray(body.navigation)) {
-      const grouped = new Map();
-      for (const item of body.navigation.slice(0,40)) { const domain = validDomain(item.domain); const seconds = Math.floor(Number(item.durationSeconds)); if (!domain || !Number.isFinite(seconds) || seconds < 1 || seconds > 60) continue; grouped.set(domain,(grouped.get(domain)||0)+seconds); }
-      for (const [domain,durationSeconds] of grouped) db.webActivity.unshift({ id:id(),machineId:machine.id,domain,durationSeconds:Math.min(60,durationSeconds),at:machine.lastSeen });
+      for (const item of body.navigation.slice(0,40)) {
+        const domain = validDomain(item.domain);
+        const seconds = Math.floor(Number(item.durationSeconds));
+        const navigationId = /^[\da-f-]{36}$/i.test(String(item.id || '')) ? item.id : id();
+        if (!domain || !Number.isFinite(seconds) || seconds < 1 || seconds > 60 || db.webActivity.some(entry => entry.id === navigationId)) continue;
+        db.webActivity.unshift({ id: navigationId, machineId: machine.id, domain, durationSeconds: seconds, at: machine.lastSeen });
+      }
       db.webActivity.length = Math.min(db.webActivity.length,5000);
-      if (grouped.size) machine.webActivity = 'Extensão instalada; domínios e tempo em aba ativa.';
+      if (body.navigation.length) machine.webActivity = 'Extensão instalada; domínios e tempo em aba ativa.';
     } else if (!owner?.webConsent) machine.webActivity = 'Coleta desativada: consentimento não concedido.';
-    await save(); io.to(`user:${machine.userId}`).emit('update'); res.json({ ok:true,serverTime:machine.lastSeen,webCollection:!!owner?.webConsent });
+    await save();
+    const sampleId = String(body.heartbeatId || '');
+    if (/^[\da-f-]{36}$/i.test(sampleId)) {
+      const reportedAt = Date.parse(body.sampledAt);
+      const sampledAt = Number.isFinite(reportedAt) && reportedAt <= Date.now() + 30000 ? new Date(reportedAt) : new Date();
+      if (Date.now() - sampledAt.getTime() <= entitlements.retentionDays * 86400000) await mysqlStore.saveMetricSample(sampleId, machine.id, sampledAt, machine.metrics, body.apps);
+    }
+    io.to(`user:${machine.userId}`).emit('update'); res.json({ ok:true,serverTime:machine.lastSeen,webCollection:!!owner?.webConsent });
   } catch(e) { next(e); }
 });
 
 app.get('/api/dashboard', auth, (req,res) => {
-  const machines = db.machines.filter(m => m.userId === req.user.id).map(publicMachine); const online = machines.filter(m => m.status === 'online').length;
-  const machineIds = new Set(machines.map(m => m.id)); const alerts = db.alerts.filter(a => a.open && machineIds.has(a.machineId));
-  res.json({ summary:{total:machines.length,online,offline:machines.length-online,users:new Set(machines.filter(m=>m.status==='online').map(m=>m.userName).filter(Boolean)).size,alerts:alerts.length},machines,applications:applicationSummary(machines),events:db.events.filter(e=>machineIds.has(e.machineId)).slice(0,30),alerts:alerts.slice(0,20),webActivity:webSummary(req.user.id) });
+  const sourceMachines = db.machines.filter(m => m.userId === req.user.id);
+  const machines = sourceMachines.map(machine => publicMachine(machine, req.entitlements.retentionDays, req.entitlements.advancedMetrics)); const online = machines.filter(m => m.status === 'online').length;
+  const since = Date.now() - req.entitlements.retentionDays * 86400000;
+  const machineIds = new Set(machines.map(m => m.id)); const alerts = req.entitlements.alerts ? db.alerts.filter(a => a.open && machineIds.has(a.machineId) && Date.parse(a.at) >= since) : [];
+  const events = db.events.filter(e => machineIds.has(e.machineId) && Date.parse(e.at) >= since);
+  res.json({ plan: req.entitlements, usage: { computers: machines.length }, summary:{total:machines.length,online,offline:machines.length-online,users:new Set(machines.filter(m=>m.status==='online').map(m=>m.userName).filter(Boolean)).size,alerts:alerts.length},machines,applications:req.entitlements.advancedMetrics?applicationSummary(machines):[],events:events.slice(0,30),alerts:alerts.slice(0,20),webActivity:webSummary(req.user.id, req.entitlements.retentionDays) });
 });
 app.get('/api/machines/:id', auth, (req,res) => {
   const machine = db.machines.find(m => m.id === req.params.id && m.userId === req.user.id); if (!machine) return res.status(404).json({error:'Computador não encontrado.'});
   const requestedDays = Number(req.query.days);
-  const days = [1, 7, 30].includes(requestedDays) ? requestedDays : 7;
-  res.json({ machine:publicMachine(machine),events:db.events.filter(e=>e.machineId===machine.id).slice(0,100),webActivity:webSummary(req.user.id).filter(w=>w.machineId===machine.id),applicationReport:machineApplicationReport(machine,days) });
+  const days = Math.min(req.entitlements.retentionDays, [1, 7, 30, 90, 365].includes(requestedDays) ? requestedDays : 7);
+  const since = Date.now() - req.entitlements.retentionDays * 86400000;
+  res.json({ machine:publicMachine(machine, req.entitlements.retentionDays, req.entitlements.advancedMetrics),events:db.events.filter(e=>e.machineId===machine.id&&Date.parse(e.at)>=since).slice(0,100),webActivity:webSummary(req.user.id, req.entitlements.retentionDays).filter(w=>w.machineId===machine.id),applicationReport:req.entitlements.reports?machineApplicationReport(machine,days):null,plan:req.entitlements });
 });
-app.get('/api/reports', auth, (req,res) => {
-  const days = Math.min(30,Math.max(1,Number(req.query.days)||7)); const since=Date.now()-days*86400000; const machines=db.machines.filter(m=>m.userId===req.user.id); const ids=new Set(machines.map(m=>m.id));
-  res.json({days,machines:machines.map(publicMachine),events:db.events.filter(e=>ids.has(e.machineId)&&Date.parse(e.at)>=since),alerts:db.alerts.filter(a=>ids.has(a.machineId)&&Date.parse(a.at)>=since),webActivity:webSummary(req.user.id,days)});
+app.get('/api/reports', auth, async (req,res,next) => {
+  if (!req.entitlements.reports) return res.status(403).json({error:'Relatórios ficam disponíveis nos planos Pro e Business.'});
+  try {
+    const days = Math.min(req.entitlements.retentionDays,Math.max(1,Number(req.query.days)||7)); const since=Date.now()-days*86400000; const machines=db.machines.filter(m=>m.userId===req.user.id); const ids=new Set(machines.map(m=>m.id));
+    const metricSamples = await mysqlStore.listMetricSamples(req.user.id, days);
+    res.json({days,plan:req.entitlements,machines:machines.map(machine=>publicMachine(machine, req.entitlements.retentionDays, req.entitlements.advancedMetrics)),events:db.events.filter(e=>ids.has(e.machineId)&&Date.parse(e.at)>=since),alerts:req.entitlements.alerts?db.alerts.filter(a=>ids.has(a.machineId)&&Date.parse(a.at)>=since):[],webActivity:webSummary(req.user.id,days),metricSamples});
+  } catch (error) { next(error); }
 });
 app.get('/api/config', auth, (req,res) => { const nets=os.networkInterfaces(); const ips=Object.values(nets).flat().filter(x=>x&&x.family==='IPv4'&&!x.internal).map(x=>x.address); res.json({ips,port:PORT}); });
 app.get('/api/privacy/export', auth, (req,res) => { const machines=db.machines.filter(m=>m.userId===req.user.id); const ids=new Set(machines.map(m=>m.id)); res.json({user:safeUser(req.user),machines:machines.map(publicMachine),events:db.events.filter(e=>ids.has(e.machineId)),alerts:db.alerts.filter(a=>ids.has(a.machineId)),webActivity:db.webActivity.filter(w=>ids.has(w.machineId)),terms:db.termAcceptances.filter(t=>t.userId===req.user.id)}); });
@@ -386,7 +424,7 @@ app.post('/api/privacy/delete-account', auth, async (req,res,next) => {
   try { if(req.user.email===String(process.env.ARGUS_ADMIN_EMAIL||'hanielshz@gmail.com').trim().toLowerCase())return res.status(403).json({error:'A conta administradora inicial não pode ser excluída.'});const userId=req.user.id; await mysqlStore.deleteUser(userId); db.users=db.users.filter(u=>u.id!==userId); const machines=db.machines.filter(m=>m.userId===userId);const ids=new Set(machines.map(m=>m.id));db.machines=db.machines.filter(m=>m.userId!==userId);db.events=db.events.filter(e=>!ids.has(e.machineId));db.alerts=db.alerts.filter(a=>!ids.has(a.machineId));db.webActivity=db.webActivity.filter(w=>!ids.has(w.machineId));db.pairings=db.pairings.filter(p=>p.userId!==userId);db.termAcceptances=db.termAcceptances.filter(t=>t.userId!==userId);for(const [token,owner] of sessions)if(owner===userId)sessions.delete(token);res.setHeader('Set-Cookie',cookie('argus_session','',0));res.json({ok:true}); }
   catch(e){next(e);}
 });
-app.post('/api/alerts/:id/ack', auth, async (req,res,next) => { try { const a=db.alerts.find(x=>x.id===req.params.id&&db.machines.some(m=>m.id===x.machineId&&m.userId===req.user.id));if(!a)return res.status(404).json({error:'Alerta não encontrado.'});a.open=false;await save();io.to(`user:${req.user.id}`).emit('update');res.json({ok:true});}catch(e){next(e);} });
+app.post('/api/alerts/:id/ack', auth, async (req,res,next) => { try { if(!req.entitlements.alerts)return res.status(403).json({error:'Alertas ficam disponíveis nos planos Pro e Business.'});const a=db.alerts.find(x=>x.id===req.params.id&&db.machines.some(m=>m.id===x.machineId&&m.userId===req.user.id));if(!a)return res.status(404).json({error:'Alerta não encontrado.'});a.open=false;await save();io.to(`user:${req.user.id}`).emit('update');res.json({ok:true});}catch(e){next(e);} });
 
 io.use(async (socket, next) => {
   const raw = socket.handshake.headers.cookie?.match(/(?:^|;\s*)argus_session=([^;]+)/)?.[1];
@@ -405,12 +443,28 @@ io.use(async (socket, next) => {
   }
 });
 io.on('connection',socket=>socket.join(`user:${socket.userId}`));
-setInterval(async()=>{if(!db)return;let changed=false;for(const machine of db.machines)if(machine.status!=='offline'&&Date.now()-Date.parse(machine.lastSeen)>OFFLINE_TIMEOUT_MS){machine.status='offline';for(const app of machine.apps||[])if(app.status==='running')app.status='not_observed';addEvent(machine,'offline',`Conexão perdida — sem heartbeat há ${Math.round(OFFLINE_TIMEOUT_MS/1000)} segundos`);db.alerts.unshift({id:id(),machineId:machine.id,machineName:machine.name,kind:'offline',message:'Conexão perdida',at:new Date().toISOString(),open:true});changed=true;}if(changed){try{await save();for(const user of db.users)io.to(`user:${user.id}`).emit('update');}catch(e){console.error('Falha ao salvar status offline:',e.message);}}},OFFLINE_CHECK_INTERVAL_MS).unref();
+setInterval(async () => {
+  if (!db) return;
+  let changed = false;
+  for (const machine of db.machines) {
+    if (machine.status === 'offline' || Date.now() - Date.parse(machine.lastSeen) <= OFFLINE_TIMEOUT_MS) continue;
+    machine.status = 'offline';
+    for (const app of machine.apps || []) if (app.status === 'running') app.status = 'not_observed';
+    addEvent(machine, 'offline', `Conexão perdida — sem heartbeat há ${Math.round(OFFLINE_TIMEOUT_MS / 1000)} segundos`);
+    const currentPlan = await mysqlStore.getPlan(machine.userId);
+    if (getPlanEntitlements(currentPlan).alerts) db.alerts.unshift({ id: id(), machineId: machine.id, machineName: machine.name, kind: 'offline', message: 'Conexão perdida', at: new Date().toISOString(), open: true });
+    changed = true;
+  }
+  if (changed) {
+    try { await save(); for (const user of db.users) io.to(`user:${user.id}`).emit('update'); }
+    catch (error) { console.error('Falha ao salvar status offline:', error.message); }
+  }
+}, OFFLINE_CHECK_INTERVAL_MS).unref();
 
 app.use((err,req,res,next)=>{console.error(err);if(!res.headersSent)res.status(500).json({error:'Erro interno do ARGUS. Verifique o log do backend.'});});
 
 async function start(){
-  try{db=await mysqlStore.initialize();db.sessions=db.sessions||[];const cleanup=setInterval(async()=>{db.pairings=db.pairings.filter(p=>p.expiresAt>Date.now());db.sessions=db.sessions.filter(s=>Date.parse(s.expiresAt)>Date.now());db.webActivity=db.webActivity.filter(w=>Date.parse(w.at)>Date.now()-90*86400000);await mysqlStore.prune().catch(e=>console.error('Falha na limpeza de retenção:',e.message));},3600000);cleanup.unref();server.listen(PORT,HOST,()=>console.log(`ARGUS backend inicializado em http://localhost:${PORT} (LAN: http://<IP-do-administrador>:${PORT})`));}
+  try{db=await mysqlStore.initialize();db.sessions=db.sessions||[];const cleanup=setInterval(async()=>{db.pairings=db.pairings.filter(p=>p.expiresAt>Date.now());db.sessions=db.sessions.filter(s=>Date.parse(s.expiresAt)>Date.now());await mysqlStore.prune().catch(e=>console.error('Falha na limpeza de retenção:',e.message));},3600000);cleanup.unref();server.listen(PORT,HOST,()=>console.log(`ARGUS backend inicializado em http://localhost:${PORT} (LAN: http://<IP-do-administrador>:${PORT})`));}
   catch(error){await mysqlStore.close().catch(()=>{});console.error('Não foi possível iniciar o ARGUS. Confira o MySQL local e as variáveis do arquivo .env.');console.error(error.message);process.exitCode=1;}
 }
 start();

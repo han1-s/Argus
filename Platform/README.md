@@ -25,29 +25,18 @@ O agente nunca acessa o MySQL diretamente. A porta `3306` do banco deve ficar di
 - MySQL 8 ou superior instalado e em execução no computador servidor.
 - Rede local entre servidor e endpoints; permitir a porta `3000` no firewall do servidor.
 
-## 1. Preparar o servidor
+## 1. Instalar e iniciar
 
 1. Instale e inicie o MySQL no computador servidor.
-2. No MySQL Workbench, abra `Platform/database/schema.sql`. Copie todo o conteúdo, cole em uma nova consulta SQL e clique em **Executar**. O script cria o banco `argus` e suas tabelas.
-3. Copie `.env.example` para `.env`. Configure `MYSQL_USER` e `MYSQL_PASSWORD` com uma conta MySQL que já exista (por exemplo, a usada no Workbench). Deixe `MYSQL_DATABASE=argus`. O acesso MySQL do `.env` conecta o servidor ao banco; ele é diferente da conta ARGUS criada pela tela **Criar conta**.
-4. O servidor também prepara a conta inicial com os valores `ARGUS_ADMIN_EMAIL` e `ARGUS_ADMIN_PASSWORD` do `.env`. Troque os valores padrão antes de iniciar. Outros acessos podem ser cadastrados na tela **Criar conta**.
-5. Abra PowerShell na pasta `Platform` e instale as dependências:
+2. Abra o `ARGUS.cmd` na raiz do projeto e escolha **Instalar ou atualizar**. O assistente instala as dependências Web e Platform e, na primeira configuração, solicita uma conta administradora local do MySQL e os dados da primeira conta ARGUS.
+3. O instalador cria o banco compartilhado, aplica o schema e cria a conta `argus_app`, limitada ao banco ARGUS e a conexões locais. Não é necessário copiar `.env.example`, editar SQL no Workbench ou criar usuários manualmente.
+4. Escolha **Iniciar Web + Platform** no menu principal. O Web abre em <http://127.0.0.1:5173/login> e a Platform em <http://127.0.0.1:3000>.
 
-```powershell
-npm install
-```
+`Platform/database/schema.sql` é o schema canônico do Web e da Platform. Cada serviço aplica as atualizações compatíveis na inicialização e preserva as tabelas e dados existentes. O arquivo `Platform/.env` contém credenciais locais e não deve ser compartilhado.
 
-6. Inicie o servidor:
+Também é possível usar `Platform/ARGUS-Platform.cmd` para iniciar ou parar somente a API da Platform e abrir os controles do agente deste computador. O MySQL precisa permanecer ativo durante o uso. A opção de parar serviços locais não encerra o MySQL.
 
-```powershell
-npm start
-```
-
-7. No servidor, abra <http://localhost:3000> e entre com a conta inicial ou escolha **Criar conta**.
-
-Também é possível abrir `Platform/ARGUS.cmd` e escolher **Preparar servidor** e depois **Iniciar servidor e abrir o painel**. O MySQL precisa estar iniciado antes.
-
-Para instalar o site completo, siga também o guia principal em [`README.md`](../README.md).
+Para instalar somente dependências e configurar o banco pelo terminal, execute `scripts/install-dependencies.cmd` na raiz do projeto.
 
 ## 2. Conectar um computador
 
@@ -65,6 +54,15 @@ Repita estes passos em cada endpoint autorizado:
 O endereço `127.0.0.1` do assistente é local ao endpoint; ele **não** é o endereço do servidor. Use o IP LAN do computador que executa a Platform. O botão **Cancelar instalação** encerra o assistente sem conectar o PC.
 
 Após conectar, o agente inicia com o Windows. Para parar ou iniciar o agente, use o `ARGUS.cmd` de controle no próprio endpoint. A opção de parar encerra também o observador foreground.
+
+O agente mantém amostras em %LOCALAPPDATA%\ARGUS\Agent\outbox.ndjson quando a API fica indisponível e tenta reenviá-las em ordem ao reconectar. A fila armazena até 20 mil amostras; no intervalo padrão de 5 segundos, isso cobre cerca de 27 horas. Ao atingir o limite, as amostras mais antigas são descartadas. A Platform grava cada amostra recebida e aplica a retenção do plano.
+### Independencia do computador monitorado
+
+Instale MySQL somente no computador principal que executa a Platform e o Web. O endpoint precisa de Node.js, dos arquivos do agente e de acesso a rede local; nao precisa de banco proprio. Depois do pareamento inicial, o agente continua coletando durante uma indisponibilidade da API ou do banco e persiste leituras no disco local. Quando o servidor volta, envia a fila pendente em ordem. O primeiro pareamento exige que a Platform esteja acessivel.
+
+## Planos compartilhados
+
+Web e Platform usam as mesmas contas, sessões e assinatura no banco argus. Entre com o mesmo e-mail e senha nas duas interfaces. Abra **Planos e cobrança** no menu da Platform ou **Monetização** na Web para consultar uso, limites e simular a compra. Free permite até 10 computadores e 7 dias de retenção; Pro permite até 50 computadores, relatórios, alertas e 90 dias; Business permite computadores ilimitados, relatórios, alertas e 365 dias. Compras não geram cobranças reais.
 
 ## 3. Ver computadores e uso de aplicações
 

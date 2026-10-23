@@ -2,6 +2,7 @@ const mysql = require('mysql2/promise');
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
+const { ensureDatabaseExists, ensureSharedSchema } = require('./schemaManager');
 
 let pool;
 let eventIds = new Set();
@@ -12,17 +13,9 @@ const date = value => value instanceof Date ? value.toISOString() : new Date(val
 const json = value => typeof value === 'string' ? JSON.parse(value || 'null') : value;
 
 async function initialize() {
-  const database = process.env.MYSQL_DATABASE || 'argus';
-  if (!/^[a-zA-Z0-9_]+$/.test(database)) throw new Error('MYSQL_DATABASE may contain only letters, numbers and underscores.');
-  const config = { host: process.env.MYSQL_HOST || '127.0.0.1', port: Number(process.env.MYSQL_PORT || 3306), user: process.env.MYSQL_USER || 'root', password: process.env.MYSQL_PASSWORD || '', waitForConnections: true, connectionLimit: 10, charset: 'utf8mb4' };
-  if (process.env.MYSQL_AUTO_CREATE_DATABASE !== 'false') {
-    const bootstrap = await mysql.createConnection({ host: config.host, port: config.port, user: config.user, password: config.password, charset: config.charset });
-    try { await bootstrap.query(`CREATE DATABASE IF NOT EXISTS \`${database}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`); }
-    finally { await bootstrap.end(); }
-  }
-  pool = mysql.createPool({ ...config, database, timezone: 'Z', dateStrings: false });
-  const sql = fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8').replace(/^CREATE DATABASE[^;]*;\s*/i, '').replace(/^USE[^;]*;\s*/i, '');
-  for (const statement of sql.split(';').map(s => s.trim()).filter(Boolean)) await pool.query(statement);
+  const config = await ensureDatabaseExists(mysql, process.env);
+  pool = mysql.createPool({ ...config, waitForConnections: true, connectionLimit: 10, timezone: 'Z', dateStrings: false });
+  await ensureSharedSchema(pool);
   const data = await load();
   if (data.users.length === 0) {
     const legacyPath = path.join(__dirname, 'data.json');
@@ -45,7 +38,12 @@ async function initializeAdmin(data) {
   if (markers.length) return;
 
   const email = String(process.env.ARGUS_ADMIN_EMAIL || 'hanielshz@gmail.com').trim().toLowerCase();
-  const password = String(process.env.ARGUS_ADMIN_PASSWORD || '12345678');
+  const passwordB64 = String(process.env.ARGUS_ADMIN_PASSWORD_B64 || '');
+  if (['change-this-password', 'configure-during-install'].includes(passwordB64)) throw new Error('Configure a conta inicial do ARGUS pelo assistente de instalacao.');
+  const password = passwordB64
+    ? Buffer.from(passwordB64, 'base64').toString('utf8')
+    : String(process.env.ARGUS_ADMIN_PASSWORD || '12345678');
+  if (!passwordB64 && ['change-this-password', 'configure-during-install'].includes(password)) throw new Error('Configure a conta inicial do ARGUS pelo assistente de instalacao.');
   if (!/^\S+@\S+\.\S+$/.test(email) || password.length < 8) throw new Error('ARGUS_ADMIN_EMAIL and ARGUS_ADMIN_PASSWORD must define valid admin credentials (password: at least 8 characters).');
 
   const user = data.users.find(entry => entry.email.toLowerCase() === email);
@@ -96,8 +94,9 @@ async function refreshUsers(data) {
 
 async function findSessionUser(tokenHash) {
   const [rows] = await pool.execute(
-    `SELECT u.id, u.name, u.email, u.web_consent, u.terms_version
+    `SELECT u.id, u.name, u.email, u.web_consent, u.terms_version, COALESCE(sub.plan, 'Free') AS plan
      FROM sessions s JOIN users u ON u.id = s.user_id
+     LEFT JOIN subscriptions sub ON sub.user_id = u.id AND sub.status = 'active'
      WHERE s.token_hash = ? AND s.expires_at > UTC_TIMESTAMP(3)
      LIMIT 1`,
     [tokenHash],
@@ -109,7 +108,94 @@ async function findSessionUser(tokenHash) {
     email: user.email,
     webConsent: Boolean(user.web_consent),
     termsVersion: user.terms_version,
+    plan: user.plan,
   } : null;
+}
+
+async function getSubscription(userId) {
+  const [rows] = await pool.execute(
+    `SELECT s.plan, s.billing_cycle, s.status, s.started_at, s.updated_at,
+            p.payment_method, p.amount_cents, p.currency, p.status AS payment_status,
+            p.transaction_reference, p.card_brand, p.card_last4, p.plan AS payment_plan, p.created_at AS payment_created_at
+     FROM subscriptions s
+     LEFT JOIN payment_transactions p ON p.transaction_id = (
+       SELECT recent.transaction_id FROM payment_transactions recent
+       WHERE recent.user_id = s.user_id ORDER BY recent.created_at DESC LIMIT 1
+     )
+     WHERE s.user_id = ? LIMIT 1`,
+    [userId],
+  );
+  const row = rows[0];
+  return row ? {
+    plan: row.plan, billing_cycle: row.billing_cycle, status: row.status,
+    started_at: row.started_at, updated_at: row.updated_at,
+    latest_payment: row.payment_method ? {
+      plan: row.payment_plan, method: row.payment_method, amount_cents: Number(row.amount_cents),
+      currency: row.currency, status: row.payment_status, reference: row.transaction_reference,
+      card_brand: row.card_brand, card_last4: row.card_last4, created_at: row.payment_created_at,
+    } : null,
+  } : { plan: 'Free', billing_cycle: 'monthly', status: 'active', started_at: null, updated_at: null, latest_payment: null };
+}
+
+async function getPlan(userId) {
+  const [rows] = await pool.execute("SELECT plan FROM subscriptions WHERE user_id = ? AND status = 'active' LIMIT 1", [userId]);
+  return rows[0]?.plan || 'Free';
+}
+
+async function setFreeSubscription(userId, billingCycle = 'monthly') {
+  const now = new Date();
+  await pool.execute(
+    `INSERT INTO subscriptions (user_id, plan, billing_cycle, status, started_at, updated_at)
+     VALUES (?, 'Free', ?, 'active', ?, ?)
+     ON DUPLICATE KEY UPDATE plan = 'Free', billing_cycle = VALUES(billing_cycle), status = 'active', updated_at = VALUES(updated_at)`,
+    [userId, billingCycle, now, now],
+  );
+  return getSubscription(userId);
+}
+
+async function saveSimulatedPayment(userId, { plan, billingCycle, paymentMethod, cardBrand = null, cardLast4 = null, amountCents, transactionId, reference, now }) {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+    await connection.execute(
+      `INSERT INTO payment_transactions
+       (transaction_id, user_id, plan, billing_cycle, payment_method, amount_cents, currency, status, transaction_reference, card_brand, card_last4, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, 'BRL', 'approved', ?, ?, ?, ?)`,
+      [transactionId, userId, plan, billingCycle, paymentMethod, amountCents, reference, cardBrand, cardLast4, now],
+    );
+    await connection.execute(
+      `INSERT INTO subscriptions (user_id, plan, billing_cycle, status, started_at, updated_at)
+       VALUES (?, ?, ?, 'active', ?, ?)
+       ON DUPLICATE KEY UPDATE plan = VALUES(plan), billing_cycle = VALUES(billing_cycle), status = 'active', updated_at = VALUES(updated_at)`,
+      [userId, plan, billingCycle, now, now],
+    );
+    await connection.commit();
+  } catch (error) {
+    await connection.rollback().catch(() => {});
+    throw error;
+  } finally { connection.release(); }
+  return getSubscription(userId);
+}
+
+async function saveMetricSample(sampleId, machineId, sampledAt, metrics, apps) {
+  await pool.execute(
+    'INSERT IGNORE INTO metric_samples (sample_id,machine_id,sampled_at,metrics,apps) VALUES (?,?,?,?,?)',
+    [sampleId, machineId, sampledAt, JSON.stringify(metrics || {}), JSON.stringify(Array.isArray(apps) ? apps : [])],
+  );
+}
+
+async function listMetricSamples(userId, days) {
+  const [rows] = await pool.execute(
+    'SELECT s.sample_id, s.sampled_at, s.metrics, s.apps, m.id AS machine_id, m.name AS machine_name ' +
+    'FROM metric_samples s JOIN machines m ON m.id = s.machine_id ' +
+    'WHERE m.user_id = ? AND s.sampled_at >= DATE_SUB(UTC_TIMESTAMP(3), INTERVAL ? DAY) ' +
+    'ORDER BY s.sampled_at DESC LIMIT 2000',
+    [userId, days],
+  );
+  return rows.map(row => ({
+    id: row.sample_id, sampledAt: date(row.sampled_at), machineId: row.machine_id, machineName: row.machine_name,
+    metrics: json(row.metrics) || {}, apps: json(row.apps) || [],
+  }));
 }
 
 async function deleteSession(tokenHash) {
@@ -177,6 +263,7 @@ async function saveNow(data) {
     await connection.query('DELETE FROM pairings');
     await connection.execute('DELETE FROM sessions WHERE expires_at <= UTC_TIMESTAMP(3)');
     for (const u of data.users) await connection.execute(`INSERT INTO users (id,name,email,salt,password_hash,created_at,web_consent,terms_version,terms_accepted_at) VALUES (?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE name=VALUES(name),email=VALUES(email),salt=VALUES(salt),password_hash=VALUES(password_hash),web_consent=VALUES(web_consent),terms_version=VALUES(terms_version),terms_accepted_at=VALUES(terms_accepted_at)`, [u.id,u.name,u.email,u.salt,u.hash,new Date(u.createdAt),Boolean(u.webConsent),u.termsVersion || null,u.termsAcceptedAt ? new Date(u.termsAcceptedAt) : null]);
+    await connection.execute(`INSERT IGNORE INTO subscriptions (user_id,plan,billing_cycle,status,started_at,updated_at) SELECT id,'Free','monthly','active',UTC_TIMESTAMP(3),UTC_TIMESTAMP(3) FROM users`);
     for (const m of data.machines) await connection.execute(`INSERT INTO machines (id,user_id,name,token,status,user_name,os,arch,uptime,metrics,apps,web_activity,last_seen,created_at,first_seen_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE name=VALUES(name),token=VALUES(token),status=VALUES(status),user_name=VALUES(user_name),os=VALUES(os),arch=VALUES(arch),uptime=VALUES(uptime),metrics=VALUES(metrics),apps=VALUES(apps),web_activity=VALUES(web_activity),last_seen=VALUES(last_seen)`, [m.id,m.userId,m.name,m.token,m.status,m.userName || null,m.os || null,m.arch || null,m.uptime || 0,JSON.stringify(m.metrics || {}),JSON.stringify(m.apps || []),m.webActivity || null,new Date(m.lastSeen),new Date(m.createdAt || m.lastSeen),new Date(m.firstSeenAt || m.createdAt || m.lastSeen)]);
     for (const p of data.pairings) await connection.execute('INSERT INTO pairings (code,user_id,expires_at) VALUES (?,?,?) ON DUPLICATE KEY UPDATE expires_at=VALUES(expires_at)', [p.code,p.userId,p.expiresAt]);
     const newEvents = data.events.filter(e => !eventIds.has(e.id));
@@ -200,9 +287,14 @@ async function acknowledgeConsentRevocation(userId) {
 async function deleteUser(userId) { await pool.execute('DELETE FROM users WHERE id=?', [userId]); }
 async function prune() {
   await pool.execute('DELETE FROM sessions WHERE expires_at <= UTC_TIMESTAMP(3)');
-  await pool.execute('DELETE FROM web_activity WHERE occurred_at < DATE_SUB(UTC_TIMESTAMP(3), INTERVAL 90 DAY)');
-  await pool.execute('DELETE FROM events WHERE occurred_at < DATE_SUB(UTC_TIMESTAMP(3), INTERVAL 90 DAY)');
-  await pool.execute('DELETE FROM alerts WHERE is_open=FALSE AND occurred_at < DATE_SUB(UTC_TIMESTAMP(3), INTERVAL 90 DAY)');
+  for (const [plan, days] of [['Free', 7], ['Pro', 90], ['Business', 365]]) {
+    const planCondition = plan === 'Free' ? "(s.plan = 'Free' OR s.plan IS NULL)" : 's.plan = ?';
+    const values = plan === 'Free' ? [days] : [plan, days];
+    await pool.execute(`DELETE e FROM events e JOIN machines m ON m.id=e.machine_id LEFT JOIN subscriptions s ON s.user_id=m.user_id WHERE ${planCondition} AND e.occurred_at < DATE_SUB(UTC_TIMESTAMP(3), INTERVAL ? DAY)`, values);
+    await pool.execute(`DELETE w FROM web_activity w JOIN machines m ON m.id=w.machine_id LEFT JOIN subscriptions s ON s.user_id=m.user_id WHERE ${planCondition} AND w.occurred_at < DATE_SUB(UTC_TIMESTAMP(3), INTERVAL ? DAY)`, values);
+    await pool.execute(`DELETE a FROM alerts a JOIN machines m ON m.id=a.machine_id LEFT JOIN subscriptions s ON s.user_id=m.user_id WHERE ${planCondition} AND a.occurred_at < DATE_SUB(UTC_TIMESTAMP(3), INTERVAL ? DAY)`, values);
+    await pool.execute('DELETE ms FROM metric_samples ms JOIN machines m ON m.id=ms.machine_id LEFT JOIN subscriptions s ON s.user_id=m.user_id WHERE ' + planCondition + ' AND ms.sampled_at < DATE_SUB(UTC_TIMESTAMP(3), INTERVAL ? DAY)', values);
+  }
 }
 async function close() { if (pool) await pool.end(); }
-module.exports = { initialize, refreshUsers, findSessionUser, createSession, deleteSession, createPasswordReset, completePasswordReset, save, acknowledgeConsentRevocation, deleteUser, prune, close };
+module.exports = { initialize, refreshUsers, findSessionUser, getSubscription, getPlan, setFreeSubscription, saveSimulatedPayment, saveMetricSample, listMetricSamples, createSession, deleteSession, createPasswordReset, completePasswordReset, save, acknowledgeConsentRevocation, deleteUser, prune, close };

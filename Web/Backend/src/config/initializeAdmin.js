@@ -3,10 +3,10 @@ const pool = require('./database');
 
 async function initializeAdmin() {
   const email = String(process.env.ARGUS_ADMIN_EMAIL || 'hanielshz@gmail.com').trim().toLowerCase();
-  const password = String(process.env.ARGUS_ADMIN_PASSWORD || '12345678');
-  if (!/^\S+@\S+\.\S+$/.test(email) || password.length < 8) {
-    throw new Error('Configure um e-mail válido e senha admin com pelo menos 8 caracteres.');
-  }
+  const passwordB64 = String(process.env.ARGUS_ADMIN_PASSWORD_B64 || '');
+  const password = passwordB64
+    ? Buffer.from(passwordB64, 'base64').toString('utf8')
+    : String(process.env.ARGUS_ADMIN_PASSWORD || '12345678');
 
   const connection = await pool.getConnection();
   try {
@@ -18,6 +18,12 @@ async function initializeAdmin() {
     if (markers.length) {
       await connection.commit();
       return;
+    }
+    if (['change-this-password', 'configure-during-install'].includes(passwordB64) || (!passwordB64 && ['change-this-password', 'configure-during-install'].includes(password))) {
+      throw new Error('Configure a conta inicial do ARGUS pela opcao Instalar ou atualizar no ARGUS.cmd.');
+    }
+    if (!/^\S+@\S+\.\S+$/.test(email) || password.length < 8) {
+      throw new Error('Configure um e-mail válido e senha admin com pelo menos 8 caracteres.');
     }
 
     const [existing] = await connection.execute('SELECT id FROM users WHERE email = ? LIMIT 1', [email]);
@@ -33,6 +39,11 @@ async function initializeAdmin() {
         [crypto.randomUUID(), 'Haniel Sousa e Souza', email, salt, passwordHash, now],
       );
     }
+    await connection.execute(
+      `INSERT IGNORE INTO subscriptions (user_id, plan, billing_cycle, status, started_at, updated_at)
+       SELECT id, 'Free', 'monthly', 'active', UTC_TIMESTAMP(3), UTC_TIMESTAMP(3) FROM users WHERE email = ?`,
+      [email],
+    );
     await connection.execute(
       'INSERT INTO app_metadata (`key`, value) VALUES (?, ?)',
       ['admin_account_seed_v1', email],

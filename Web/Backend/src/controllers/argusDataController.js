@@ -1,13 +1,39 @@
 const crypto = require('node:crypto');
 const pool = require('../config/database');
+const { getPlanEntitlements } = require('../../../../Platform/shared/plans');
+
+async function getUserPlan(userId) {
+  const [rows] = await pool.execute("SELECT plan FROM subscriptions WHERE user_id = ? AND status = 'active' LIMIT 1", [userId]);
+  return getPlanEntitlements(rows[0]?.plan || 'Free');
+}
+
+async function getComputerUsage(userId) {
+  const [rows] = await pool.execute('SELECT COUNT(*) AS computers FROM machines WHERE user_id = ?', [userId]);
+  return { computadores: Number(rows[0]?.computers || 0) };
+}
 
 function parseJson(value, fallback = {}) {
   if (typeof value !== 'string') return value || fallback;
   try { return JSON.parse(value); } catch { return fallback; }
 }
 
+function visibleApps(value, plan) {
+  if (!plan.advancedMetrics) return [];
+  const cutoff = Date.now() - plan.retentionDays * 86400000;
+  return parseJson(value, []).filter(app => Date.parse(app.lastSeenAt) >= cutoff).map(app => {
+    const daily = (Array.isArray(app.foregroundDailyUsage) ? app.foregroundDailyUsage : []).filter(day => Date.parse(day.date + 'T00:00:00Z') >= cutoff);
+    return {
+      ...app,
+      foregroundDailyUsage: daily,
+      foregroundDurationMilliseconds: daily.reduce((sum, day) => sum + (Number(day.durationMilliseconds) || 0), 0),
+      foregroundOccurrences: daily.reduce((sum, day) => sum + (Number(day.occurrences) || 0), 0),
+    };
+  });
+}
+
 async function listarMaquinas(req, res, next) {
   try {
+    const plan = await getUserPlan(req.user.id);
     const [rows] = await pool.execute(
       `SELECT id, name, status, user_name, os, arch, uptime, metrics, apps, last_seen, created_at, first_seen_at
        FROM machines WHERE user_id = ? ORDER BY created_at DESC`,
@@ -22,7 +48,7 @@ async function listarMaquinas(req, res, next) {
       arquitetura: row.arch,
       tempo_ligado: Number(row.uptime),
       metricas: parseJson(row.metrics),
-      aplicativos: parseJson(row.apps, []),
+      aplicativos: visibleApps(row.apps, plan),
       ultimo_sinal: row.last_seen,
       criado_em: row.created_at,
       primeiro_sinal: row.first_seen_at,
@@ -33,6 +59,7 @@ async function listarMaquinas(req, res, next) {
 
 async function obterMaquina(req, res, next) {
   try {
+    const plan = await getUserPlan(req.user.id);
     const [rows] = await pool.execute(
       'SELECT * FROM machines WHERE id = ? AND user_id = ? LIMIT 1',
       [req.params.id, req.user.id],
@@ -40,12 +67,13 @@ async function obterMaquina(req, res, next) {
     const machine = rows[0];
     if (!machine) return res.status(404).json({ message: 'Máquina não encontrada.' });
     delete machine.token;
-    res.json({ maquina: { ...machine, metricas: parseJson(machine.metrics), aplicativos: parseJson(machine.apps, []) } });
+    res.json({ maquina: { ...machine, metricas: parseJson(machine.metrics), aplicativos: visibleApps(machine.apps, plan) } });
   } catch (error) { next(error); }
 }
 
 async function obterDashboard(req, res, next) {
   try {
+    const plan = await getUserPlan(req.user.id);
     const [machines] = await pool.execute('SELECT * FROM machines WHERE user_id = ? ORDER BY created_at DESC', [req.user.id]);
     const machineIds = machines.map(machine => machine.id);
     let events = [];
@@ -53,27 +81,28 @@ async function obterDashboard(req, res, next) {
     let webActivity = [];
     if (machineIds.length) {
       const placeholders = machineIds.map(() => '?').join(',');
-      [events] = await pool.execute(`SELECT * FROM events WHERE machine_id IN (${placeholders}) ORDER BY occurred_at DESC LIMIT 100`, machineIds);
-      [alerts] = await pool.execute(`SELECT * FROM alerts WHERE machine_id IN (${placeholders}) AND is_open = TRUE ORDER BY occurred_at DESC LIMIT 100`, machineIds);
-      [webActivity] = await pool.execute(`SELECT w.machine_id, m.name AS machine_name, w.domain, SUM(w.duration_seconds) AS duration_seconds, COUNT(*) AS visits, MAX(w.occurred_at) AS last_seen FROM web_activity w JOIN machines m ON m.id = w.machine_id WHERE m.user_id = ? AND w.occurred_at >= DATE_SUB(UTC_TIMESTAMP(3), INTERVAL 30 DAY) GROUP BY w.machine_id, m.name, w.domain ORDER BY duration_seconds DESC LIMIT 200`, [req.user.id]);
+      [events] = await pool.execute(`SELECT * FROM events WHERE machine_id IN (${placeholders}) AND occurred_at >= DATE_SUB(UTC_TIMESTAMP(3), INTERVAL ? DAY) ORDER BY occurred_at DESC LIMIT 100`, [...machineIds, plan.retentionDays]);
+      if (plan.alerts) [alerts] = await pool.execute(`SELECT * FROM alerts WHERE machine_id IN (${placeholders}) AND is_open = TRUE AND occurred_at >= DATE_SUB(UTC_TIMESTAMP(3), INTERVAL ? DAY) ORDER BY occurred_at DESC LIMIT 100`, [...machineIds, plan.retentionDays]);
+      [webActivity] = await pool.execute(`SELECT w.machine_id, m.name AS machine_name, w.domain, SUM(w.duration_seconds) AS duration_seconds, COUNT(*) AS visits, MAX(w.occurred_at) AS last_seen FROM web_activity w JOIN machines m ON m.id = w.machine_id WHERE m.user_id = ? AND w.occurred_at >= DATE_SUB(UTC_TIMESTAMP(3), INTERVAL ? DAY) GROUP BY w.machine_id, m.name, w.domain ORDER BY duration_seconds DESC LIMIT 200`, [req.user.id, plan.retentionDays]);
     }
     const online = machines.filter(machine => machine.status === 'online').length;
     const publicMachines = machines.map(machine => {
       delete machine.token;
-      return { ...machine, name: machine.name, metrics: parseJson(machine.metrics), apps: parseJson(machine.apps, []) };
+      return { ...machine, name: machine.name, metrics: parseJson(machine.metrics), apps: visibleApps(machine.apps, plan) };
     });
     const summary = { total: machines.length, online, offline: machines.length - online, users: new Set(machines.filter(machine => machine.status === 'online').map(machine => machine.user_name).filter(Boolean)).size, alerts: alerts.length };
-    res.json({ summary, resumo: { totalMaquinas: summary.total, online, offline: summary.offline, outros: 0 }, machines: publicMachines, maquinas: publicMachines, applications: [], events: events.map(event => ({ id: event.id, machineId: event.machine_id, machineName: event.machine_name, type: event.type, message: event.message, at: event.occurred_at })), alerts, webActivity: webActivity.map(item => ({ machineId: item.machine_id, machineName: item.machine_name, domain: item.domain, durationSeconds: Number(item.duration_seconds), visits: Number(item.visits), lastSeen: item.last_seen })) });
+    res.json({ plan, usage: { computers: machines.length }, summary, resumo: { totalMaquinas: summary.total, online, offline: summary.offline, outros: 0 }, machines: publicMachines, maquinas: publicMachines, applications: [], events: events.map(event => ({ id: event.id, machineId: event.machine_id, machineName: event.machine_name, type: event.type, message: event.message, at: event.occurred_at })), alerts, webActivity: webActivity.map(item => ({ machineId: item.machine_id, machineName: item.machine_name, domain: item.domain, durationSeconds: Number(item.duration_seconds), visits: Number(item.visits), lastSeen: item.last_seen })) });
   } catch (error) { next(error); }
 }
 
 async function listarAtividades(req, res, next) {
   try {
+    const plan = await getUserPlan(req.user.id);
     const [atividades] = await pool.execute(
       `SELECT e.id, e.machine_id AS maquina_id, e.machine_name AS maquina_nome, e.type AS tipo, e.message AS mensagem, e.occurred_at AS data
        FROM events e JOIN machines m ON m.id = e.machine_id
-       WHERE m.user_id = ? ORDER BY e.occurred_at DESC LIMIT 500`,
-      [req.user.id],
+       WHERE m.user_id = ? AND e.occurred_at >= DATE_SUB(UTC_TIMESTAMP(3), INTERVAL ? DAY) ORDER BY e.occurred_at DESC LIMIT 500`,
+      [req.user.id, plan.retentionDays],
     );
     res.json({ atividades });
   } catch (error) { next(error); }
@@ -81,7 +110,9 @@ async function listarAtividades(req, res, next) {
 
 async function listarRelatorios(req, res, next) {
   try {
-    const days = Math.min(30, Math.max(1, Number(req.query.days) || 7));
+    const plan = await getUserPlan(req.user.id);
+    if (!plan.reports) return res.status(403).json({ error: 'Relatórios ficam disponíveis nos planos Pro e Business.' });
+    const days = Math.min(plan.retentionDays, Math.max(1, Number(req.query.days) || 7));
     const [relatorios] = await pool.execute(
       `SELECT e.id, e.machine_id AS maquina_id, e.machine_name AS maquina_nome, e.type AS tipo, e.message AS titulo, e.occurred_at AS data
        FROM events e JOIN machines m ON m.id = e.machine_id
@@ -89,17 +120,26 @@ async function listarRelatorios(req, res, next) {
        ORDER BY e.occurred_at DESC LIMIT 500`,
       [req.user.id, days],
     );
-    res.json({ dias: days, relatorios });
+    const [metricas] = await pool.execute(
+      'SELECT s.sample_id, s.sampled_at, s.metrics, s.apps, m.id AS machine_id, m.name AS machine_name ' +
+      'FROM metric_samples s JOIN machines m ON m.id = s.machine_id ' +
+      'WHERE m.user_id = ? AND s.sampled_at >= DATE_SUB(UTC_TIMESTAMP(3), INTERVAL ? DAY) ' +
+      'ORDER BY s.sampled_at DESC LIMIT 2000',
+      [req.user.id, days],
+    );
+    res.json({ dias: days, retencaoMaxima: plan.retentionDays, relatorios, metricas: metricas.map(row => ({ id: row.sample_id, coletado_em: row.sampled_at, maquina_id: row.machine_id, maquina_nome: row.machine_name, metricas: parseJson(row.metrics), aplicativos: parseJson(row.apps, []) })) });
   } catch (error) { next(error); }
 }
 
 async function listarAlertas(req, res, next) {
   try {
+    const plan = await getUserPlan(req.user.id);
+    if (!plan.alerts) return res.json({ alertas: [] });
     const [alertas] = await pool.execute(
       `SELECT a.id, a.machine_id AS maquina_id, a.machine_name AS maquina_nome, a.kind AS tipo, a.message AS mensagem, a.occurred_at AS data, a.is_open AS aberto
        FROM alerts a JOIN machines m ON m.id = a.machine_id
-       WHERE m.user_id = ? ORDER BY a.occurred_at DESC LIMIT 500`,
-      [req.user.id],
+       WHERE m.user_id = ? AND a.occurred_at >= DATE_SUB(UTC_TIMESTAMP(3), INTERVAL ? DAY) ORDER BY a.occurred_at DESC LIMIT 500`,
+      [req.user.id, plan.retentionDays],
     );
     res.json({ alertas });
   } catch (error) { next(error); }
@@ -107,6 +147,8 @@ async function listarAlertas(req, res, next) {
 
 async function reconhecerAlerta(req, res, next) {
   try {
+    const plan = await getUserPlan(req.user.id);
+    if (!plan.alerts) return res.status(403).json({ error: 'Alertas ficam disponíveis nos planos Pro e Business.' });
     const [result] = await pool.execute(
       'UPDATE alerts a JOIN machines m ON m.id = a.machine_id SET a.is_open = FALSE WHERE a.id = ? AND m.user_id = ?',
       [req.params.id, req.user.id],
@@ -118,6 +160,7 @@ async function reconhecerAlerta(req, res, next) {
 
 async function obterAssinatura(req, res, next) {
   try {
+    const plan = await getUserPlan(req.user.id);
     const [rows] = await pool.execute(
       `SELECT s.plan, s.billing_cycle, s.status, s.started_at, s.updated_at,
               p.payment_method, p.amount_cents, p.currency, p.status AS payment_status,
@@ -131,7 +174,8 @@ async function obterAssinatura(req, res, next) {
       [req.user.id],
     );
     const row = rows[0];
-    res.json({ assinatura: row ? {
+    const [usageRows] = await pool.execute('SELECT COUNT(*) AS computers FROM machines WHERE user_id = ?', [req.user.id]);
+    res.json({ limites: plan, uso: { computadores: Number(usageRows[0]?.computers || 0) }, assinatura: row ? {
       plan: row.plan,
       billing_cycle: row.billing_cycle,
       status: row.status,
@@ -210,6 +254,8 @@ async function concluirPagamentoSimulado(req, res, next) {
     res.status(201).json({
       assinatura: { plan, billing_cycle: billingCycle, status: 'active', started_at: now, updated_at: now, latest_payment: payment },
       pagamento: payment,
+      limites: getPlanEntitlements(plan),
+      uso: await getComputerUsage(req.user.id),
     });
   } catch (error) {
     if (connection) await connection.rollback().catch(() => {});
@@ -236,22 +282,26 @@ async function salvarAssinatura(req, res, next) {
        ON DUPLICATE KEY UPDATE plan = VALUES(plan), billing_cycle = VALUES(billing_cycle), status = 'active', updated_at = VALUES(updated_at)`,
       [req.user.id, plan, billingCycle, now, now],
     );
-    res.json({ assinatura: { plan, billing_cycle: billingCycle, status: 'active', started_at: now, updated_at: now, simulated: true } });
+    res.json({ assinatura: { plan, billing_cycle: billingCycle, status: 'active', started_at: now, updated_at: now, simulated: true }, limites: getPlanEntitlements(plan), uso: await getComputerUsage(req.user.id) });
   } catch (error) { next(error); }
 }
 
 async function listarNotificacoes(req, res, next) {
   try {
+    const plan = await getUserPlan(req.user.id);
+    const alertQuery = plan.alerts ? `
+         SELECT a.id, 'alert' AS category, a.kind AS type, a.message, a.machine_name, a.occurred_at AS created_at, a.is_open AS active
+         FROM alerts a JOIN machines m ON m.id = a.machine_id WHERE m.user_id = ? AND a.occurred_at >= DATE_SUB(UTC_TIMESTAMP(3), INTERVAL ? DAY)
+         UNION ALL` : '';
+    const queryValues = plan.alerts ? [req.user.id, plan.retentionDays, req.user.id] : [req.user.id];
     const [notificacoes] = await pool.execute(
       `SELECT * FROM (
-         SELECT a.id, 'alert' AS category, a.kind AS type, a.message, a.machine_name, a.occurred_at AS created_at, a.is_open AS active
-         FROM alerts a JOIN machines m ON m.id = a.machine_id WHERE m.user_id = ?
-         UNION ALL
+         ${alertQuery}
          SELECT e.id, 'event' AS category, e.type, e.message, e.machine_name, e.occurred_at AS created_at, TRUE AS active
-         FROM events e JOIN machines m ON m.id = e.machine_id WHERE m.user_id = ?
+         FROM events e JOIN machines m ON m.id = e.machine_id WHERE m.user_id = ? AND e.occurred_at >= DATE_SUB(UTC_TIMESTAMP(3), INTERVAL ? DAY)
        ) AS platform_notifications
        ORDER BY created_at DESC LIMIT 100`,
-      [req.user.id, req.user.id],
+      [...queryValues, plan.retentionDays],
     );
     res.json({ notificacoes: notificacoes.map(item => ({ ...item, active: Boolean(item.active), source: 'Platform' })) });
   } catch (error) { next(error); }

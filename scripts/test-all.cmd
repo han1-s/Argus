@@ -1,7 +1,13 @@
 @echo off
-setlocal
+setlocal EnableExtensions
+title ARGUS - verificacoes de desenvolvimento
 for %%I in ("%~dp0..") do set "ARGUS_ROOT=%%~fI"
 pushd "%ARGUS_ROOT%"
+
+echo Esta ferramenta executa testes, lint, build e auditorias de dependencias.
+echo Ela e separada do instalador e nao e executada pelo menu principal.
+choice /c SN /n /m "Continuar? [S/N] "
+if errorlevel 2 goto cancelled
 
 where node >nul 2>nul || (echo Node.js nao encontrado no PATH.& goto failed)
 where npm >nul 2>nul || (echo npm nao encontrado no PATH.& goto failed)
@@ -51,3 +57,8 @@ popd
 echo.
 echo Uma verificacao falhou. Leia a saida acima, corrija o problema e execute novamente.
 exit /b 1
+
+:cancelled
+popd
+echo Verificacoes canceladas.
+exit /b 0

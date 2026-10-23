@@ -1,0 +1,21 @@
+.argus-helpbot { position: fixed; right: max(1.25rem,env(safe-area-inset-right)); bottom: max(1.25rem,env(safe-area-inset-bottom)); z-index: 1200; font-family: Inter,system-ui,sans-serif; }
+.argus-helpbot-toggle { display: flex; align-items: center; gap: .55rem; min-height: 46px; padding: .7rem 1rem; border: 1px solid rgba(167,139,250,.48); border-radius: 999px; color: #fff; background: linear-gradient(135deg,#7652c8,#4934a1); box-shadow: 0 12px 32px rgba(0,0,0,.4); font: 700 .82rem Inter,system-ui,sans-serif; cursor: pointer; }
+.argus-helpbot-toggle:hover { filter: brightness(1.12); transform: translateY(-1px); }
+.argus-helpbot-panel { position: absolute; right: 0; bottom: 58px; display: flex; flex-direction: column; width: min(370px,calc(100vw - 2rem)); height: min(530px,calc(100vh - 8rem)); overflow: hidden; border: 1px solid rgba(167,139,250,.25); border-radius: 18px; color: #eeeaf5; background: linear-gradient(155deg,#171522,#0c0d14 65%); box-shadow: 0 24px 80px rgba(0,0,0,.58); }
+.argus-helpbot-panel>header { display: flex; align-items: center; gap: .7rem; padding: .9rem 1rem; border-bottom: 1px solid rgba(255,255,255,.08); }
+.argus-helpbot-icon { display: grid; place-items: center; width: 37px; height: 37px; border: 1px solid rgba(167,139,250,.25); border-radius: 11px; color: #c4b5fd; background: rgba(139,92,246,.16); }
+.argus-helpbot-panel>header strong,.argus-helpbot-panel>header small { display: block; }
+.argus-helpbot-panel>header strong { font-size: .86rem; }
+.argus-helpbot-panel>header small { margin-top: .2rem; color: #918a9f; font-size: .68rem; }
+.argus-helpbot-panel>header>button { display: grid; place-items: center; width: 32px; height: 32px; margin-left: auto; border: 0; border-radius: 9px; color: #aaa3b9; background: transparent; cursor: pointer; }
+.argus-helpbot-messages { display: flex; flex: 1; flex-direction: column; gap: .65rem; padding: 1rem; overflow-y: auto; }
+.argus-helpbot-message { max-width: 88%; margin: 0; padding: .7rem .78rem; border: 1px solid rgba(255,255,255,.08); border-radius: 13px 13px 13px 4px; color: #d5d0df; background: rgba(255,255,255,.045); font-size: .76rem; line-height: 1.55; }
+.argus-helpbot-message.user { align-self: flex-end; border-color: rgba(167,139,250,.22); border-radius: 13px 13px 4px 13px; color: #f2ecff; background: rgba(124,85,197,.2); }
+.argus-helpbot-shortcuts { display: flex; flex-wrap: wrap; gap: .4rem; padding: .1rem .85rem .7rem; }
+.argus-helpbot-shortcuts button,.argus-helpbot-shortcuts a { padding: .4rem .55rem; border: 1px solid rgba(167,139,250,.17); border-radius: 999px; color: #bba4eb; background: rgba(139,92,246,.08); font: 600 .65rem Inter,system-ui,sans-serif; text-decoration: none; cursor: pointer; }
+.argus-helpbot-compose { display: flex; gap: .45rem; padding: .7rem; border-top: 1px solid rgba(255,255,255,.08); }
+.argus-helpbot-compose input { min-width: 0; flex: 1; padding: .7rem .8rem; border: 1px solid rgba(255,255,255,.1); border-radius: 11px; outline: 0; color: #f3effa; background: rgba(0,0,0,.25); font: .76rem Inter,system-ui,sans-serif; }
+.argus-helpbot-compose input:focus { border-color: rgba(167,139,250,.55); }
+.argus-helpbot-compose button { display: grid; place-items: center; width: 39px; border: 0; border-radius: 11px; color: #fff; background: #7050b4; cursor: pointer; }
+.argus-helpbot-compose button:disabled { opacity: .45; cursor: default; }
+@media(max-width:520px) { .argus-helpbot { right: max(.75rem,env(safe-area-inset-right)); bottom: max(.75rem,env(safe-area-inset-bottom)); } .argus-helpbot-panel { right: 0; bottom: 56px; width: calc(100vw - 1.5rem); height: min(72vh,540px); } }

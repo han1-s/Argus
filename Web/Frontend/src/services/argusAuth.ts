@@ -1,5 +1,6 @@
 const AUTH_KEY = 'argusAuthenticated';
 const GUEST_KEY = 'argusGuest';
+const TERMS_VERSION_KEY = 'argusTermsAcceptedVersion';
 
 export interface ArgusAuthUser {
   id: string;
@@ -12,6 +13,7 @@ export interface ArgusAuthUser {
 interface ArgusAccountDetails {
   name?: string;
   email?: string;
+  termsVersion?: string | null;
 }
 
 interface AuthResponse {
@@ -118,6 +120,7 @@ export function signInArgus(account: ArgusAccountDetails = {}): void {
     const displayName = account.email.split('@')[0].replace(/[._-]+/g, ' ').replace(/\b\w/g, (letter) => letter.toLocaleUpperCase('pt-BR'));
     localStorage.setItem('argusUserName', displayName);
   }
+  if (account.termsVersion) localStorage.setItem(TERMS_VERSION_KEY, account.termsVersion);
   localStorage.setItem(AUTH_KEY, 'true');
   localStorage.removeItem(GUEST_KEY);
   window.dispatchEvent(new Event('argus-auth-changed'));

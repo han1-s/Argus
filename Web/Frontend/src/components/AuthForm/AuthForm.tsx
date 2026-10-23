@@ -90,7 +90,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode }) => {
       const user = isRegister
         ? await registerArgus(name.trim(), email.trim(), password, termsVersion, webConsent)
         : await loginArgus(email.trim(), password, termsVersion);
-      signInArgus({ name: user.name, email: user.email });
+      signInArgus(user);
       setFeedback(isRegister ? 'Conta criada com sucesso.' : 'Login realizado com sucesso.');
       setFeedbackSuccess(true);
       setSubmitting(false);

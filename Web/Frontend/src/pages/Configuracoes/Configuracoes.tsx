@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  Bell, Check, ChevronRight, CircleHelp, CreditCard, Download, Eraser, Globe,
+  Bell, Check, ChevronRight, CircleHelp, CreditCard, Download, Eraser, ExternalLink, FileText, Globe,
   ImagePlus, Languages, Palette, Shield, Sparkles, SunMoon, Trash2, X,
 } from 'lucide-react';
 import type { SettingsTab, UserSettings } from '../../types';
@@ -11,11 +11,12 @@ import {
 } from '../../services/argusPreferences';
 import { showArgusToast } from '../../services/argusToast';
 import { getArgusSubscription, getPlatformNotifications, type ArgusSubscription, type PlatformNotification } from '../../services/argusWebApi';
+import { getArgusTerms } from '../../services/argusAuth';
 import './Configuracoes.css';
 
 const SETTINGS_KEY = 'argusSettings';
 const defaultSettings: UserSettings = {
-  notifSystem: true, notifAi: true, notifUpdates: true, theme: 'dark', language: 'pt-BR',
+  notifSystem: true, notifAi: true, notifUpdates: true, theme: 'dark', language: 'pt-BR', refreshSeconds: 30,
 };
 
 function getStoredSettings(): UserSettings {
@@ -36,6 +37,7 @@ const tabs: Array<{ id: SettingsTab; label: string; icon: React.ReactNode }> = [
   { id: 'appearance', label: 'Aparência', icon: <Palette size={18} /> },
   { id: 'system', label: 'Idioma e Horário', icon: <Globe size={18} /> },
   { id: 'billing', label: 'Planos e Cobrança', icon: <CreditCard size={18} /> },
+  { id: 'legal', label: 'Termos e Privacidade', icon: <FileText size={18} /> },
 ];
 
 export const Configuracoes: React.FC = () => {
@@ -50,6 +52,9 @@ export const Configuracoes: React.FC = () => {
   const [subscription, setSubscription] = useState<ArgusSubscription | null>(null);
   const [platformNotifications, setPlatformNotifications] = useState<PlatformNotification[]>([]);
   const [notificationError, setNotificationError] = useState('');
+  const [termsVersion, setTermsVersion] = useState('');
+  const [termsError, setTermsError] = useState('');
+  const [acceptedTermsVersion] = useState(() => localStorage.getItem('argusTermsAcceptedVersion') || '');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -66,11 +71,15 @@ export const Configuracoes: React.FC = () => {
         if (active) setNotificationError(error instanceof Error ? error.message : 'Não foi possível carregar notificações.');
       });
       void refresh();
-      const interval = window.setInterval(refresh, 30000);
+      const interval = window.setInterval(refresh, settings.refreshSeconds * 1000);
       return () => { active = false; window.clearInterval(interval); };
     }
+    if (activeTab === 'legal') {
+      getArgusTerms().then((terms) => { if (active) { setTermsVersion(terms.version); setTermsError(''); } })
+        .catch((error) => { if (active) setTermsError(error instanceof Error ? error.message : 'Não foi possível carregar os termos atuais.'); });
+    }
     return () => { active = false; };
-  }, [activeTab]);
+  }, [activeTab, settings.refreshSeconds]);
 
   useEffect(() => {
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
@@ -155,6 +164,7 @@ export const Configuracoes: React.FC = () => {
     const exportSettings = {
       theme: settings.theme,
       notifications: { system: settings.notifSystem, predictiveAi: settings.notifAi, updates: settings.notifUpdates },
+      refreshSeconds: settings.refreshSeconds, acceptedTermsVersion,
       animations: animationsEnabled,
       effects: glowEnabled,
       language: settings.language,
@@ -229,12 +239,13 @@ export const Configuracoes: React.FC = () => {
 
           {activeTab === 'notifications' && <div className="settings-tab-content">
             <div className="settings-section-heading"><span className="settings-section-icon"><Bell size={19} /></span><div><h2>Notificações</h2><p>Escolha quais categorias de aviso prefere ver na interface.</p></div></div>
-            <div className="settings-info-note"><CircleHelp size={16} /><p>Preferências desta interface ficam neste navegador. Alertas e eventos abaixo são lidos diretamente do Platform e atualizados a cada 30 segundos.</p></div>
+              <div className="settings-info-note"><CircleHelp size={16} /><p>Preferências desta interface ficam neste navegador. Alertas e eventos abaixo são lidos diretamente do Platform e atualizados a cada {settings.refreshSeconds} segundos.</p></div>
             <div className="settings-toggle-list">
               {renderToggle('notifSystem', 'Notificações do sistema', 'Alertas gerais relacionados ao desempenho e ao funcionamento do ARGUS.', settings.notifSystem, (value) => updateSetting('notifSystem', value))}
               {renderToggle('notifAi', 'Alertas preditivos de IA', 'Preferência para alertas relacionados às análises e previsões do sistema.', settings.notifAi, (value) => updateSetting('notifAi', value))}
               {renderToggle('notifUpdates', 'Novidades e atualizações', 'Novidades, atualizações e avisos importantes de segurança do ARGUS.', settings.notifUpdates, (value) => updateSetting('notifUpdates', value))}
             </div>
+            <section className="settings-subsection"><div className="settings-subsection-heading"><h3>Atualização das notificações do Platform</h3><p>Define a frequência de consulta enquanto esta aba está aberta.</p></div><div className="form-group settings-system-field"><label htmlFor="refreshSeconds">Intervalo</label><select id="refreshSeconds" className="form-input" value={settings.refreshSeconds} onChange={(event) => updateSetting('refreshSeconds', Number(event.target.value) as UserSettings['refreshSeconds'])}><option value={10}>A cada 10 segundos</option><option value={30}>A cada 30 segundos</option><option value={60}>A cada 60 segundos</option></select></div></section>
             <section className="settings-subsection"><div className="settings-subsection-heading"><h3>Atividade do Platform</h3><p>{platformNotifications.length} notificações recentes da sua conta</p></div>
               {notificationError && <p className="settings-inline-error" role="alert">{notificationError}</p>}
               {platformNotifications.length ? <div className="settings-toggle-list">{platformNotifications.map(item => <article className="settings-toggle-row" key={`${item.category}-${item.id}`}><div className="settings-toggle-copy"><h3>{item.category === 'alert' ? `Alerta · ${item.type}` : `Evento · ${item.type}`}</h3><p>{item.message} · {item.machine_name} · {new Date(item.created_at).toLocaleString('pt-BR')}</p></div><span className={`settings-plan-status ${item.active ? '' : 'is-muted'}`}>{item.active ? 'Ativo' : 'Reconhecido'}</span></article>)}</div> : !notificationError ? <p className="settings-accessibility-note">Nenhum evento ou alerta recebido do Platform.</p> : null}
@@ -260,7 +271,13 @@ export const Configuracoes: React.FC = () => {
           {activeTab === 'billing' && <div className="settings-tab-content">
             <div className="settings-section-heading"><span className="settings-section-icon"><CreditCard size={19} /></span><div><h2>Planos e Cobrança</h2><p>Consulte a assinatura persistida na sua conta.</p></div></div>
             {notificationError && <p className="settings-inline-error" role="alert">{notificationError}</p>}
-            <div className="settings-billing-card"><div className="settings-billing-heading"><div><span className="settings-plan-tag">PLANO ATUAL</span><h3>Argus {subscription?.plan || 'Free'}</h3><p>{subscription?.billing_cycle === 'annual' ? 'Ciclo anual demonstrativo.' : 'Ciclo mensal demonstrativo.'} Nenhuma cobrança real é processada.</p></div><span className="settings-plan-status"><Check size={14} /> {subscription?.status === 'canceled' ? 'Encerrado' : 'Ativo'}</span></div><ul className="settings-plan-limits"><li><Check size={16} /><span>Limite de computadores</span><strong>{subscription?.plan === 'Business' ? 'Ilimitado' : subscription?.plan === 'Pro' ? 'Até 50' : 'Até 10'}</strong></li><li><Check size={16} /><span>Retenção de métricas</span><strong>{subscription?.plan === 'Business' ? 'Ampliada' : subscription?.plan === 'Pro' ? '90 dias' : '7 dias'}</strong></li><li><Check size={16} /><span>Forma de pagamento</span><strong>{subscription?.latest_payment?.method === 'pix' ? 'PIX simulado' : subscription?.latest_payment ? `${subscription.latest_payment.method === 'credit_card' ? 'Crédito' : 'Débito'} · ${subscription.latest_payment.card_brand || 'Cartão'} •••• ${subscription.latest_payment.card_last4}` : 'Nenhum pagamento'}</strong></li>{subscription?.latest_payment && <li><Check size={16} /><span>Último valor simulado</span><strong>R$ {(subscription.latest_payment.amount_cents / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong></li>}</ul>{subscription?.latest_payment && <p className="settings-billing-note">Transação {subscription.latest_payment.reference} · {new Date(subscription.latest_payment.created_at).toLocaleString('pt-BR')} · pagamento aprovado em modo demonstração.</p>}<p className="settings-billing-note">O plano e o histórico demonstrativo são salvos na sua conta do banco ARGUS. Número completo de cartão, validade e CVV não são armazenados.</p><Link to="/monetizacao" className="settings-btn settings-btn-primary">Gerenciar assinatura <ChevronRight size={16} /></Link></div>
+            <div className="settings-billing-card"><div className="settings-billing-heading"><div><span className="settings-plan-tag">PLANO ATUAL</span><h3>Argus {subscription?.plan || 'Free'}</h3><p>{subscription?.billing_cycle === 'annual' ? 'Ciclo anual demonstrativo.' : 'Ciclo mensal demonstrativo.'} Nenhuma cobrança real é processada.</p></div><span className="settings-plan-status"><Check size={14} /> {subscription?.status === 'canceled' ? 'Encerrado' : 'Ativo'}</span></div><ul className="settings-plan-limits"><li><Check size={16} /><span>Limite de computadores</span><strong>{subscription?.plan === 'Business' ? 'Ilimitado' : subscription?.plan === 'Pro' ? 'Até 50' : 'Até 10'}</strong></li><li><Check size={16} /><span>Retenção de métricas</span><strong>{subscription?.plan === 'Business' ? '365 dias' : subscription?.plan === 'Pro' ? '90 dias' : '7 dias'}</strong></li><li><Check size={16} /><span>Forma de pagamento</span><strong>{subscription?.latest_payment?.method === 'pix' ? 'PIX simulado' : subscription?.latest_payment ? `${subscription.latest_payment.method === 'credit_card' ? 'Crédito' : 'Débito'} · ${subscription.latest_payment.card_brand || 'Cartão'} •••• ${subscription.latest_payment.card_last4}` : 'Nenhum pagamento'}</strong></li>{subscription?.latest_payment && <li><Check size={16} /><span>Último valor simulado</span><strong>R$ {(subscription.latest_payment.amount_cents / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong></li>}</ul>{subscription?.latest_payment && <p className="settings-billing-note">Transação {subscription.latest_payment.reference} · {new Date(subscription.latest_payment.created_at).toLocaleString('pt-BR')} · pagamento aprovado em modo demonstração.</p>}<p className="settings-billing-note">O plano e o histórico demonstrativo são salvos na sua conta do banco ARGUS. Número completo de cartão, validade e CVV não são armazenados.</p><Link to="/monetizacao" className="settings-btn settings-btn-primary">Gerenciar assinatura <ChevronRight size={16} /></Link></div>
+          </div>}
+
+          {activeTab === 'legal' && <div className="settings-tab-content">
+            <div className="settings-section-heading"><span className="settings-section-icon"><FileText size={19} /></span><div><h2>Termos e Privacidade</h2><p>Consulte as regras de uso, os dados tratados e os direitos das pessoas titulares.</p></div></div>
+            <section className="settings-subsection"><div className="settings-subsection-heading"><h3>Termos atuais</h3><p>A aceitação da versão vigente é solicitada ao entrar na conta.</p></div><div className="settings-action-card"><span className="settings-action-icon"><Shield size={18} /></span><div><h4>{termsVersion ? `Versão ${termsVersion}` : 'Versão atual'}</h4><p>{termsError || (termsVersion ? `Versão aceita nesta sessão: ${acceptedTermsVersion || 'não registrada localmente'}.` : 'Carregando versão vigente…')}</p></div><a className="settings-btn settings-btn-secondary" href="/terms.html" target="_blank" rel="noreferrer">Ler termos <ExternalLink size={15} /></a></div></section>
+            <div className="settings-info-note"><CircleHelp size={16} /><p>O consentimento para coleta de navegação é opcional e pode ser revogado na seção Dados e Privacidade. Ao revogar, os registros web associados à conta são removidos.</p></div>
           </div>}
         </section>
       </div>

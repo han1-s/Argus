@@ -1,4 +1,4 @@
-﻿param([switch]$StopAll, [switch]$StopServerOnly, [switch]$StartServerOnly, [string]$ServerUrl = $env:ARGUS_SERVER_URL)
+﻿param([switch]$StopAll, [switch]$StopServerOnly, [switch]$StartServerOnly, [switch]$NoBrowser, [string]$ServerUrl = $env:ARGUS_SERVER_URL)
 $ErrorActionPreference = 'Stop'
 $ParentRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $ProjectRoot = if (Test-Path (Join-Path $ParentRoot 'backend\server.js')) { $ParentRoot } else { $PSScriptRoot }
@@ -19,15 +19,16 @@ function Show-MoreInfo {
     Write-Host ''
     Write-Host '1 - Instalar/configurar: baixa o agente e abre o assistente local no navegador.'
     Write-Host '    No assistente, informe o servidor LAN, nome do PC e autentique sua conta ARGUS.'
+    Write-Host '    Este computador nao precisa instalar MySQL: os dados ficam numa fila local ate o servidor voltar.'
     Write-Host '2 - Iniciar: inicia o agente ja configurado e habilita seu inicio ao entrar no Windows.'
     Write-Host '3 - Parar: encerra o agente deste computador e remove o inicio automatico.'
     Write-Host '4 - Sair: fecha este menu sem alterar o agente.'
   } else {
     Write-Host 'SAIBA MAIS - CENTRAL ARGUS' -ForegroundColor Magenta
     Write-Host ''
-    Write-Host '1 - Preparar servidor: instala Node.js se faltar, baixa dependencias e cria/abre .env para configurar o MySQL.'
-    Write-Host '    Inicie o MySQL antes de continuar. Esta opcao nao inicia o painel.'
-    Write-Host '2 - Iniciar servidor: executa a API em segundo plano e abre o painel no navegador.'
+    Write-Host '1 - Instalar/atualizar: instala dependencias e configura o banco compartilhado Web + Platform.'
+    Write-Host '    O assistente solicita uma conta administradora local do MySQL e cria uma conta de aplicacao restrita.'
+    Write-Host '2 - Iniciar servidor: inicia a API Platform em segundo plano e abre o painel no navegador.'
     Write-Host '3 - Instalar/configurar agente: abre o assistente local para informar servidor, nome e conta ARGUS.'
     Write-Host '4 - Iniciar agente: inicia o agente ja configurado neste computador.'
     Write-Host '5 - Parar locais: encerra o servidor e o agente deste computador e remove a inicializacao automatica do agente.'
@@ -69,20 +70,11 @@ function Install-Node {
   return $false
 }
 function Prepare-Server {
-  if (-not (Install-Node)) { return }
-  if (-not (Test-Path (Join-Path $ProjectRoot 'node_modules\express\package.json'))) {
-    Write-Host 'Instalando dependências do servidor...'
-    Push-Location $ProjectRoot
-    try { npm install; if ($LASTEXITCODE -ne 0) { throw 'npm install não terminou com sucesso.' } }
-    finally { Pop-Location }
-  }
-  $envFile = Join-Path $ProjectRoot '.env'
-  if (-not (Test-Path $envFile)) {
-    Copy-Item (Join-Path $ProjectRoot '.env.example') $envFile
-    Write-Host 'Criei .env a partir do exemplo. Confira as credenciais MySQL no editor que será aberto.' -ForegroundColor Yellow
-    Start-Process notepad.exe -ArgumentList "`"$envFile`"" -Wait
-  } else { Write-Host 'Dependências e .env encontrados.' -ForegroundColor Green }
-  Write-Host 'Confira também se o serviço MySQL está iniciado.'
+  $installScript = Join-Path $ParentRoot '..\scripts\install-dependencies.cmd'
+  if (-not (Test-Path $installScript)) { throw 'Instalador principal ausente. Execute ARGUS.cmd na pasta do projeto.' }
+  $process = Start-Process -FilePath $env:ComSpec -ArgumentList @('/d', '/c', ('"{0}"' -f $installScript)) -Wait -PassThru -NoNewWindow
+  if ($process.ExitCode -ne 0) { throw 'A instalacao/configuracao nao terminou. Corrija a mensagem exibida e tente novamente.' }
+  Write-Host 'Dependencias e banco compartilhado estao prontos.' -ForegroundColor Green
 }
 function Install-Agent {
   param([string]$RequestedServerUrl)
@@ -122,27 +114,54 @@ function Install-Agent {
   Remove-Item $completionFile -Force -ErrorAction SilentlyContinue
   return $true
 }
+function Test-ServerReady([string]$Address) {
+  try {
+    $response = Invoke-WebRequest -Uri "$Address/api/health" -TimeoutSec 2 -UseBasicParsing
+    $payload = $response.Content | ConvertFrom-Json
+    return $response.StatusCode -eq 200 -and $payload.ok -eq $true -and $payload.database -eq $true
+  } catch { return $false }
+}
 function Start-Server {
   $node = Find-Node
-  if (-not $node) { Write-Host 'Node.js não encontrado. Escolha Preparar servidor primeiro.' -ForegroundColor Yellow; return }
-  if (-not (Test-Path (Join-Path $ProjectRoot '.env'))) { Write-Host 'Arquivo .env ausente. Escolha Preparar servidor primeiro.' -ForegroundColor Yellow; return }
-  if (-not (Test-Path (Join-Path $ProjectRoot 'node_modules\express\package.json'))) { Write-Host 'Dependências ausentes. Escolha Preparar servidor primeiro.' -ForegroundColor Yellow; return }
+  if (-not $node) { Write-Host 'Node.js nao encontrado. Escolha Instalar/atualizar primeiro.' -ForegroundColor Yellow; return $false }
+  if (-not (Test-Path (Join-Path $ProjectRoot '.env'))) { Write-Host 'Platform\.env ausente. Escolha Instalar/atualizar primeiro.' -ForegroundColor Yellow; return $false }
+  if (-not (Test-Path (Join-Path $ProjectRoot 'node_modules\express\package.json'))) { Write-Host 'Dependencias ausentes. Escolha Instalar/atualizar primeiro.' -ForegroundColor Yellow; return $false }
   $entry = Join-Path $ProjectRoot 'backend\server.js'
   $port = 3000; $envFile = Join-Path $ProjectRoot '.env'
   $portLine = Get-Content $envFile | Where-Object { $_ -match '^\s*PORT\s*=\s*\d+' } | Select-Object -First 1
   if ($portLine -match '^\s*PORT\s*=\s*(\d+)') { $port = [int]$Matches[1] }
-  $address = "http://localhost:$port"
+  $address = "http://127.0.0.1:$port"
+  $mysqlPasswordLine = Get-Content $envFile | Where-Object { $_ -match '^\s*MYSQL_PASSWORD\s*=' } | Select-Object -First 1
+  $mysqlPassword = if ($mysqlPasswordLine) { ($mysqlPasswordLine -replace '^\s*MYSQL_PASSWORD\s*=\s*', '').Trim().Trim('"').Trim("'") } else { '' }
+  if ($mysqlPassword -in @('change-this-password', 'configure-during-install', '')) { Write-Host 'Configure o banco compartilhado pela opcao Instalar/atualizar.' -ForegroundColor Yellow; return $false }
   $running = Get-CimInstance Win32_Process -Filter "Name = 'node.exe'" | Where-Object { $_.CommandLine -and $_.CommandLine.Contains($entry) } | Select-Object -First 1
-  if ($running) { Set-Content -Path $ServerPidFile -Value $running.ProcessId; Write-Host "Servidor ARGUS já está ativo (PID $($running.ProcessId))." -ForegroundColor Green; & $EdgeLauncher -Url $address; return }
+  $process = $null
+  if ($running) { Set-Content -Path $ServerPidFile -Value $running.ProcessId }
   $logDir = Join-Path $env:LOCALAPPDATA 'ARGUS\Logs'
   New-Item -ItemType Directory -Force -Path $logDir | Out-Null
-  $outLog = Join-Path $logDir 'server.out.log'; $errLog = Join-Path $logDir 'server.err.log'
-  $process = Start-Process -FilePath $node -ArgumentList "`"$entry`"" -WorkingDirectory $ProjectRoot -WindowStyle Hidden -PassThru -RedirectStandardOutput $outLog -RedirectStandardError $errLog
-  Set-Content -Path $ServerPidFile -Value $process.Id
-  Start-Sleep -Seconds 2
-  if ($process.HasExited) { Write-Host 'O servidor encerrou durante a inicialização. Confira o log de erro:' -ForegroundColor Red; Write-Host $errLog; Get-Content $errLog -Tail 12; return }
-  Write-Host "Servidor ARGUS iniciado (PID $($process.Id)). Abrindo o painel no Microsoft Edge em $address." -ForegroundColor Green
-  & $EdgeLauncher -Url $address
+  $errLog = Join-Path $logDir 'server.err.log'
+  if (-not $running) {
+    $outLog = Join-Path $logDir 'server.out.log'
+    $process = Start-Process -FilePath $node -ArgumentList "`"$entry`"" -WorkingDirectory $ProjectRoot -WindowStyle Hidden -PassThru -RedirectStandardOutput $outLog -RedirectStandardError $errLog
+    Set-Content -Path $ServerPidFile -Value $process.Id
+  }
+  $ready = $false
+  for ($attempt = 0; $attempt -lt 40; $attempt++) {
+    if ($process) { $process.Refresh(); if ($process.HasExited) { break } }
+    if (Test-ServerReady $address) { $ready = $true; break }
+    Start-Sleep -Milliseconds 500
+  }
+  if (-not $ready) {
+    if ($process -and -not $process.HasExited) { Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue; Remove-Item $ServerPidFile -Force -ErrorAction SilentlyContinue }
+    Write-Host 'A Platform nao ficou pronta. Confira o banco MySQL e o log:' -ForegroundColor Red
+    Write-Host $errLog
+    if (Test-Path $errLog) { Get-Content $errLog -Tail 12 }
+    return $false
+  }
+  $serverPid = if ($running) { $running.ProcessId } else { $process.Id }
+  Write-Host "API Platform pronta (PID $serverPid): $address" -ForegroundColor Green
+  if (-not $NoBrowser) { & $EdgeLauncher -Url $address }
+  return $true
 }
 function Stop-Server {
   $entry = Join-Path $ProjectRoot 'backend\server.js'
@@ -191,7 +210,7 @@ function Stop-Agent {
 
 if ($StopAll) { Stop-Server; Stop-Agent; exit 0 }
 if ($StopServerOnly) { Stop-Server; exit 0 }
-if ($StartServerOnly) { Start-Server; exit 0 }
+if ($StartServerOnly) { if (Start-Server) { exit 0 } else { exit 1 } }
 
 if ($env:ARGUS_AGENT_ONLY -eq '1' -and $env:ARGUS_INSTALL_ONLY -eq '1') {
   Clear-Host
@@ -230,7 +249,7 @@ if ($env:ARGUS_AGENT_ONLY -eq '1' -and $env:ARGUS_INSTALL_ONLY -eq '1') {
     Clear-Host
     Write-Host 'ARGUS — Central de instalação e execução' -ForegroundColor Magenta
     Write-Host ''
-    Write-Host '  1. Preparar servidor (Node.js, dependências e .env)'
+    Write-Host '  1. Instalar/atualizar dependencias e configurar o banco compartilhado'
     Write-Host '  2. Iniciar servidor e abrir o painel'
     Write-Host '  3. Instalar/conectar o agente neste computador'
     Write-Host '  4. Iniciar agente instalado neste computador'

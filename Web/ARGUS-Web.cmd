@@ -1,65 +1,77 @@
 @echo off
-setlocal
+setlocal EnableExtensions
 for %%I in ("%~dp0..") do set "ARGUS_ROOT=%%~fI"
-if /i "%~1"=="/manage" goto detect
-goto startweb
 
-:detect
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%ARGUS_ROOT%\scripts\test-web-running.ps1"
-if errorlevel 1 (set "ARGUS_WEB_RUNNING=0") else set "ARGUS_WEB_RUNNING=1"
-goto menu
-
-:startweb
-where node >nul 2>nul || (echo Node.js nao encontrado. Instale Node.js 20.19+ ou 22.12+ LTS e tente novamente.& pause & set "ARGUS_WEB_RUNNING=0" & goto menu)
-where npm >nul 2>nul || (echo npm nao encontrado no PATH.& pause & set "ARGUS_WEB_RUNNING=0" & goto menu)
-node -e "const [a,b]=process.versions.node.split('.').map(Number); if (!((a===20&&b>=19)||(a===22&&b>=12)||a>22)) process.exit(1)"
-if errorlevel 1 (
-  echo Versao incompativel: o frontend precisa de Node.js 20.19+ ou 22.12+ LTS.
-  pause
-  set "ARGUS_WEB_RUNNING=0"
-  goto menu
-)
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%ARGUS_ROOT%\scripts\start-web.ps1"
-if errorlevel 2 (set "ARGUS_WEB_RUNNING=1" & goto menu)
-if errorlevel 1 (
-  pause
-  set "ARGUS_WEB_RUNNING=0"
-  goto menu
-)
-set "ARGUS_WEB_RUNNING=1"
-goto menu
+if /i "%~1"=="/start" goto start_browser
+if /i "%~1"=="/start-no-browser" goto start_silent
+if /i "%~1"=="/stop" goto stop_web
+if /i "%~1"=="/status" goto status
+if /i "%~1"=="/logs" goto logs
 
 :menu
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%ARGUS_ROOT%\scripts\test-web-running.ps1"
+if errorlevel 1 goto stopped_menu
+goto running_menu
+
+:stopped_menu
 cls
 echo ==========================================
-echo          ARGUS - Controle do Web
+echo             ARGUS - Web
 echo ==========================================
 echo.
-if "%ARGUS_WEB_RUNNING%"=="1" goto running
 echo Web esta parado.
-echo  1. Iniciar Web
+echo  1. Iniciar Web e abrir o navegador
 echo  2. Abrir logs
-echo  3. Voltar ao menu principal
+echo  3. Voltar
 echo.
 choice /c 123 /n /m "Escolha: "
 if errorlevel 3 exit /b 0
 if errorlevel 2 goto logs
-goto startweb
+goto start_browser
 
-:running
+:running_menu
+cls
+echo ==========================================
+echo             ARGUS - Web
+echo ==========================================
+echo.
 echo Web esta rodando em segundo plano.
 echo  1. Parar Web
 echo  2. Abrir logs
-echo  3. Voltar ao menu principal (mantendo Web ligado)
+echo  3. Voltar mantendo Web ligado
 echo.
 choice /c 123 /n /m "Escolha: "
 if errorlevel 3 exit /b 0
 if errorlevel 2 goto logs
+goto stop_web
+
+:start_browser
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%ARGUS_ROOT%\scripts\start-web.ps1"
+if errorlevel 2 exit /b 0
+if errorlevel 1 (
+  echo O Web nao iniciou. Use Instalar ou atualizar e confira os logs.
+  pause
+  exit /b 1
+)
+exit /b 0
+
+:start_silent
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%ARGUS_ROOT%\scripts\start-web.ps1" -NoBrowser
+if errorlevel 2 exit /b 0
+if errorlevel 1 exit /b 1
+exit /b 0
+
+:stop_web
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%ARGUS_ROOT%\scripts\stop-web.ps1"
-set "ARGUS_WEB_RUNNING=0"
+if /i "%~1"=="/stop" exit /b %ERRORLEVEL%
 goto menu
+
+:status
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%ARGUS_ROOT%\scripts\test-web-running.ps1"
+exit /b %ERRORLEVEL%
 
 :logs
 set "ARGUS_LOGS=%LOCALAPPDATA%\ARGUS\Logs"
-if exist "%ARGUS_LOGS%" (start "ARGUS logs" explorer.exe "%ARGUS_LOGS%") else echo Nenhum log do Web foi criado ainda.
+if exist "%ARGUS_LOGS%" (start "ARGUS logs" explorer.exe "%ARGUS_LOGS%") else echo Ainda nao ha logs do ARGUS.
+if /i "%~1"=="/logs" exit /b 0
 goto menu

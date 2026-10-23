@@ -16,6 +16,7 @@ const html = `<!doctype html>
 </style>
 </head>
 <body><main class="setup"><div class="brand">ARGUS · CONFIGURAÇÃO LOCAL</div><div class="eyebrow">VINCULAR COMPUTADOR</div><h1>Configurar este computador</h1><p>Informe o endereço do servidor, o nome deste computador e o código de conexão gerado no painel ARGUS.</p>
+<p style="padding:12px;background:#eef7f5;border:1px solid #cde5df;border-radius:6px;color:#315e55;font-size:12px">Este computador nao precisa instalar MySQL. Apos o pareamento, o agente guarda leituras pendentes no disco local e sincroniza com a Platform quando a rede voltar.</p>
 <form id="setupForm">
 <label class="field">Endereço LAN do servidor ARGUS<input name="serverUrl" type="url" placeholder="http://192.168.1.10:3000" required autocomplete="url"></label>
 <label class="field">Nome deste computador<input name="deviceName" maxlength="80" required autocomplete="off"></label>

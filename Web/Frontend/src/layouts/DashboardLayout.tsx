@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { Header } from '../components/Header/Header';
 import { Footer } from '../components/Footer/Footer.tsx';
+import { HelpBot } from '../components/HelpBot/HelpBot';
 
 export const DashboardLayout: React.FC = () => {
   const location = useLocation();
@@ -59,6 +60,7 @@ export const DashboardLayout: React.FC = () => {
         </div>
       </main>
       <Footer />
+      <HelpBot />
     </div>
   );
 };

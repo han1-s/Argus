@@ -4,6 +4,11 @@ const path = require('path');
 const { execFile, spawn } = require('child_process');
 const http = require('http');
 const configPath = path.join(__dirname, 'config.json');
+const outboxPath = path.join(__dirname, 'outbox.ndjson');
+const outboxOffsetPath = path.join(__dirname, 'outbox.offset');
+const outboxNextPath = outboxPath + '.next';
+const outboxBackupPath = outboxPath + '.backup';
+const outboxCompactionPath = outboxPath + '.compacting';
 if (!fs.existsSync(configPath)) {
   console.error('Crie agent/config.json a partir de config.example.json e informe o IP e o código do dashboard.'); process.exit(1);
 }
@@ -26,8 +31,97 @@ let foregroundSampleAt = null;
 let foregroundWatcher;
 let foregroundTelemetryAvailable = false;
 let pendingForegroundBatch = null;
+const MAX_OUTBOX_ENTRIES = 20000;
+let uploadQueue = [];
+let acknowledgedOutboxLines = 0;
+let flushingOutbox = false;
 let heartbeatTimer;
 let shuttingDown = false;
+
+function readOutbox() {
+  recoverOutboxCompaction();
+  try { acknowledgedOutboxLines = Math.max(0, Number(fs.readFileSync(outboxOffsetPath, 'utf8')) || 0); } catch {}
+  try {
+    const contents = fs.readFileSync(outboxPath, 'utf8');
+    const completeLength = contents.lastIndexOf('\n') + 1;
+    const completeContents = contents.slice(0, completeLength);
+    if (completeLength < contents.length) fs.writeFileSync(outboxPath, completeContents, 'utf8');
+    const lines = completeContents.split(/\r?\n/).filter(Boolean);
+    uploadQueue = lines.slice(acknowledgedOutboxLines).map(line => JSON.parse(line)).filter(entry => entry?.id && entry?.payload);
+    if (acknowledgedOutboxLines > lines.length) acknowledgedOutboxLines = lines.length;
+  } catch (error) {
+    if (error.code === 'ENOENT') { acknowledgedOutboxLines = 0; uploadQueue = []; }
+    else console.error(`Fila local inválida: ${error.message}`);
+  }
+  while (uploadQueue.length > MAX_OUTBOX_ENTRIES) { uploadQueue.shift(); acknowledgedOutboxLines += 1; }
+  if (acknowledgedOutboxLines) saveOutboxOffset();
+  if (acknowledgedOutboxLines >= 512) compactOutbox(true);
+}
+function saveOutboxOffset() {
+  const temporary = outboxOffsetPath + '.tmp';
+  fs.writeFileSync(temporary, String(acknowledgedOutboxLines), 'utf8');
+  fs.renameSync(temporary, outboxOffsetPath);
+}
+function recoverOutboxCompaction() {
+  if (!fs.existsSync(outboxCompactionPath)) {
+    for (const orphan of [outboxNextPath, outboxBackupPath, outboxCompactionPath + '.tmp']) if (fs.existsSync(orphan)) fs.rmSync(orphan, { force: true });
+    return;
+  }
+  const hasOutbox = fs.existsSync(outboxPath);
+  const hasNext = fs.existsSync(outboxNextPath);
+  const hasBackup = fs.existsSync(outboxBackupPath);
+  if (!hasOutbox && hasBackup && hasNext) fs.renameSync(outboxNextPath, outboxPath);
+  else if (hasOutbox && hasNext && !hasBackup) fs.rmSync(outboxNextPath, { force: true });
+  else if (!hasOutbox && hasBackup && !hasNext) fs.renameSync(outboxBackupPath, outboxPath);
+  if (fs.existsSync(outboxPath) && hasBackup) acknowledgedOutboxLines = 0;
+  if (fs.existsSync(outboxBackupPath)) fs.rmSync(outboxBackupPath, { force: true });
+  if (fs.existsSync(outboxNextPath)) fs.rmSync(outboxNextPath, { force: true });
+  fs.rmSync(outboxCompactionPath, { force: true });
+  if (fs.existsSync(outboxPath)) saveOutboxOffset();
+}
+function compactOutbox(force = false) {
+  if (!uploadQueue.length) {
+    fs.writeFileSync(outboxPath, '', 'utf8');
+    acknowledgedOutboxLines = 0;
+    saveOutboxOffset();
+    return;
+  }
+  if (!force || acknowledgedOutboxLines < 512) return;
+  const descriptor = fs.openSync(outboxNextPath, 'w');
+  try {
+    fs.writeSync(descriptor, uploadQueue.map(entry => JSON.stringify(entry)).join('\n') + '\n', null, 'utf8');
+    fs.fsyncSync(descriptor);
+  } finally { fs.closeSync(descriptor); }
+  try {
+    fs.writeFileSync(outboxCompactionPath + '.tmp', '1', 'utf8');
+    fs.renameSync(outboxCompactionPath + '.tmp', outboxCompactionPath);
+    if (fs.existsSync(outboxBackupPath)) fs.rmSync(outboxBackupPath, { force: true });
+    fs.renameSync(outboxPath, outboxBackupPath);
+    fs.renameSync(outboxNextPath, outboxPath);
+    acknowledgedOutboxLines = 0;
+    saveOutboxOffset();
+    fs.rmSync(outboxBackupPath, { force: true });
+    fs.rmSync(outboxCompactionPath, { force: true });
+  } catch (error) {
+    recoverOutboxCompaction();
+    throw error;
+  }
+}
+function enqueueUpload(payload) {
+  const entry = { id: require('crypto').randomUUID(), payload };
+  const descriptor = fs.openSync(outboxPath, 'a');
+  try { fs.writeSync(descriptor, JSON.stringify(entry) + '\n', null, 'utf8'); fs.fsyncSync(descriptor); }
+  finally { fs.closeSync(descriptor); }
+  uploadQueue.push(entry);
+  if (uploadQueue.length > MAX_OUTBOX_ENTRIES) {
+    acknowledgedOutboxLines += 1;
+    try { saveOutboxOffset(); } catch (error) { acknowledgedOutboxLines -= 1; throw error; }
+    uploadQueue.shift();
+    if (acknowledgedOutboxLines >= 512) compactOutbox(true);
+  }
+  return entry;
+}
+readOutbox();
 
 function cpuSnapshot() {
   const cpus = os.cpus();
@@ -164,7 +258,7 @@ function startBrowserBridge() {
         const domain = String(item.domain || '').toLowerCase().replace(/\.$/, '');
         const durationSeconds = Math.floor(Number(item.durationSeconds));
         if (!/^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/.test(domain) || durationSeconds < 1 || durationSeconds > 60) { res.writeHead(400); return res.end(); }
-        navigationQueue.push({ domain, durationSeconds });
+        navigationQueue.push({ id: require('crypto').randomUUID(), domain, durationSeconds });
         if (navigationQueue.length > 200) navigationQueue.shift();
         res.writeHead(202, { 'Content-Type': 'application/json' }); res.end('{"ok":true}');
       } catch { res.writeHead(400); res.end(); }
@@ -186,6 +280,26 @@ async function enroll() {
   fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
   console.log(`Conectado como ${os.hostname()}. Heartbeat a cada ${interval / 1000}s.`);
 }
+async function flushUploadQueue() {
+  if (flushingOutbox) return;
+  flushingOutbox = true;
+  try {
+    while (uploadQueue.length) {
+      const entry = uploadQueue[0];
+      const payload = entry.payload;
+      const result = await request('/api/agent/heartbeat', { ...payload, heartbeatId: entry.id }, token);
+      if (payload.foregroundBatchId && payload.foregroundBatchId === pendingForegroundBatch?.id) {
+        acknowledgeForegroundUsage(payload.foregroundUsage || []);
+        pendingForegroundBatch = null;
+      }
+      webEnabled = result.webCollection === true;
+      acknowledgedOutboxLines += 1;
+      try { saveOutboxOffset(); } catch (error) { acknowledgedOutboxLines -= 1; throw error; }
+      uploadQueue.shift();
+      if (!uploadQueue.length) compactOutbox();
+    }
+  } finally { flushingOutbox = false; }
+}
 async function heartbeat() {
   if (busy) return; busy = true;
   try {
@@ -196,12 +310,10 @@ async function heartbeat() {
       pendingForegroundBatch = { id: require('crypto').randomUUID(), items: reportedForegroundUsage.map(item => ({ ...item })) };
       reportedForegroundUsage = pendingForegroundBatch.items.map(item => ({ ...item }));
     }
-    const batchId = pendingForegroundBatch?.id || null;
-    const result = await request('/api/agent/heartbeat', { name: config.deviceName || os.hostname(), userName: os.userInfo().username, os: `${os.type()} ${os.release()}`, arch: os.arch(), uptime: os.uptime(), metrics: { cpu: cpuUsage(), ram: Math.round((1 - free / total) * 100), disk: await diskUsage(), memoryUsed: total - free, memoryTotal: total }, apps, foregroundTelemetryAvailable, foregroundApp: foregroundTelemetryAvailable ? foregroundState?.processName || null : null, foregroundBatchId: batchId, foregroundUsage: reportedForegroundUsage, navigation: webEnabled ? navigationQueue.slice(0, 40) : [] }, token);
-    acknowledgeForegroundUsage(reportedForegroundUsage);
-    if (batchId === pendingForegroundBatch?.id) pendingForegroundBatch = null;
-    webEnabled = result.webCollection === true;
-    if (webEnabled) navigationQueue.splice(0, Math.min(40, navigationQueue.length));
+    const payload = { sampledAt: new Date().toISOString(), name: config.deviceName || os.hostname(), userName: os.userInfo().username, os: `${os.type()} ${os.release()}`, arch: os.arch(), uptime: os.uptime(), metrics: { cpu: cpuUsage(), ram: Math.round((1 - free / total) * 100), disk: await diskUsage(), memoryUsed: total - free, memoryTotal: total }, apps, foregroundTelemetryAvailable, foregroundApp: foregroundTelemetryAvailable ? foregroundState?.processName || null : null, foregroundBatchId: pendingForegroundBatch?.id || null, foregroundUsage: reportedForegroundUsage, navigation: webEnabled ? navigationQueue.slice(0, 40) : [] };
+    enqueueUpload(payload);
+    if (payload.navigation.length) navigationQueue.splice(0, payload.navigation.length);
+    await flushUploadQueue();
   } catch (error) { console.error(`Falha ao enviar heartbeat: ${error.message}`); }
   finally { busy = false; }
 }
