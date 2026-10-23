@@ -1,0 +1,146 @@
+/* Neutral gray and light surfaces for shared Web pages and settings. */
+body[data-theme="gray"] {
+  color-scheme: dark;
+  --bg-main: #202329;
+  --bg-card: #292d34;
+  --bg-card-hover: #343941;
+  --bg-dark: #202329;
+  --bg-surface: #292d34;
+  --bg-surface-hover: #343941;
+  --text-main: #f1f3f6;
+  --text-muted: #b4bbc5;
+  --border-color: rgba(226,232,240,.13);
+  --border-hover: rgba(203,188,232,.48);
+  --accent-purple: #baa4e8;
+  --accent-purple-glow: rgba(186,164,232,.3);
+  --input-bg: #202329;
+  background: #202329;
+  color: #f1f3f6;
+}
+
+body[data-theme="light"] {
+  color-scheme: light;
+  --bg-main: #f3f5f8;
+  --bg-card: #fff;
+  --bg-card-hover: #f7f8fa;
+  --bg-dark: #f3f5f8;
+  --bg-surface: #fff;
+  --bg-surface-hover: #f7f8fa;
+  --text-main: #202938;
+  --text-muted: #647184;
+  --border-color: rgba(32,41,56,.13);
+  --border-hover: rgba(109,78,158,.42);
+  --accent-purple: #69469b;
+  --accent-purple-glow: rgba(105,70,155,.2);
+  --input-bg: #fff;
+  background: #f3f5f8;
+  color: #202938;
+}
+
+body[data-theme="gray"] .app-layout,
+body[data-theme="gray"] .main-content,
+body[data-theme="gray"] .main-header,
+body[data-theme="gray"] .main-footer,
+body[data-theme="gray"] .settings-redesign .settings-sidebar,
+body[data-theme="gray"] .settings-redesign .settings-content-card,
+body[data-theme="gray"] .profile-dropdown,
+body[data-theme="gray"] .info-card,
+body[data-theme="gray"] .pricing-card,
+body[data-theme="gray"] .faq-item {
+  color: #f1f3f6;
+  background-color: #292d34;
+  border-color: #444952;
+}
+
+body[data-theme="light"] .app-layout,
+body[data-theme="light"] .main-content,
+body[data-theme="light"] .main-header,
+body[data-theme="light"] .main-footer,
+body[data-theme="light"] .settings-redesign .settings-sidebar,
+body[data-theme="light"] .settings-redesign .settings-content-card,
+body[data-theme="light"] .profile-dropdown,
+body[data-theme="light"] .info-card,
+body[data-theme="light"] .pricing-card,
+body[data-theme="light"] .faq-item {
+  color: #202938;
+  background-color: #fff;
+  border-color: #dce1e8;
+}
+
+body[data-theme="light"] .settings-redesign .settings-sidebar,
+body[data-theme="light"] .settings-redesign .settings-content-card {
+  box-shadow: 0 8px 26px rgba(32,41,56,.07);
+}
+body[data-theme="light"] .settings-redesign .settings-subsection-heading h3,
+body[data-theme="light"] .settings-redesign .settings-toggle-copy h3,
+body[data-theme="light"] .settings-redesign .settings-action-card h4,
+body[data-theme="light"] .settings-redesign .settings-theme-option > strong,
+body[data-theme="light"] .settings-redesign .settings-profile-card strong,
+body[data-theme="light"] .settings-page-heading h1 {
+  color: #202938;
+}
+body[data-theme="gray"] .settings-redesign .settings-subsection-heading h3,
+body[data-theme="gray"] .settings-redesign .settings-toggle-copy h3,
+body[data-theme="gray"] .settings-redesign .settings-action-card h4,
+body[data-theme="gray"] .settings-redesign .settings-theme-option > strong,
+body[data-theme="gray"] .settings-redesign .settings-profile-card strong {
+  color: #f1f3f6;
+}
+
+body[data-theme="light"] .settings-redesign .settings-local-note,
+body[data-theme="light"] .settings-redesign .settings-profile-card,
+body[data-theme="light"] .settings-redesign .settings-toggle-row,
+body[data-theme="light"] .settings-redesign .settings-action-card,
+body[data-theme="light"] .settings-redesign .settings-theme-option {
+  color: #364255;
+  background: #f7f8fa;
+  border-color: #dce1e8;
+}
+body[data-theme="gray"] .settings-redesign .settings-local-note,
+body[data-theme="gray"] .settings-redesign .settings-profile-card,
+body[data-theme="gray"] .settings-redesign .settings-toggle-row,
+body[data-theme="gray"] .settings-redesign .settings-action-card,
+body[data-theme="gray"] .settings-redesign .settings-theme-option {
+  background: #24272d;
+  border-color: #444952;
+}
+body[data-theme="light"] .settings-redesign .settings-sidebar-footnote,
+body[data-theme="light"] .settings-redesign .settings-nav-caption,
+body[data-theme="light"] .settings-redesign .settings-subsection-heading p,
+body[data-theme="light"] .settings-redesign .settings-toggle-copy p,
+body[data-theme="light"] .settings-redesign .settings-accessibility-note,
+body[data-theme="light"] .settings-redesign .settings-page-heading p {
+  color: #647184;
+}
+body[data-theme="light"] .settings-redesign .sidebar-nav-item { color: #526074; }
+body[data-theme="light"] .settings-redesign .sidebar-nav-item:hover { color: #35254b; background: #f0ecf6; }
+body[data-theme="light"] .settings-redesign .sidebar-nav-item.active { color: #493364; background: #eee8f6; border-color: #d9cce9; }
+body[data-theme="light"] .settings-redesign .form-input { color: #202938; background: #fff; border-color: #cbd2dc; }
+body[data-theme="light"] .settings-redesign .form-group label { color: #445166; }
+body[data-theme="light"] .settings-redesign .settings-theme-preview { border-color: rgba(32,41,56,.14); }
+
+body[data-theme="light"] .argus-helpbot-panel { color: #263142; background: #fff; border-color: #dce1e8; box-shadow: 0 22px 65px rgba(32,41,56,.2); }
+body[data-theme="light"] .argus-helpbot-panel > header,
+body[data-theme="light"] .argus-helpbot-compose { background: #f7f8fa; border-color: #e1e5eb; }
+body[data-theme="light"] .argus-helpbot-panel > header strong { color: #202938; }
+body[data-theme="light"] .argus-helpbot-panel > header small { color: #647184; }
+body[data-theme="light"] .argus-helpbot-panel > header > button { color: #647184; }
+body[data-theme="light"] .argus-helpbot-message { color: #364255; background: #f1f3f6; border-color: #e1e5eb; }
+body[data-theme="light"] .argus-helpbot-message.user { color: #35254b; background: #eee8f6; border-color: #d9cce9; }
+body[data-theme="light"] .argus-helpbot-shortcuts button,
+body[data-theme="light"] .argus-helpbot-shortcuts a { color: #5e447f; background: #f5f1fa; border-color: #e3d9ef; }
+body[data-theme="light"] .argus-helpbot-compose input { color: #202938; background: #fff; border-color: #cbd2dc; }
+body[data-theme="gray"] .argus-helpbot-panel { color: #f1f3f6; background: #292d34; border-color: #4a505a; }
+body[data-theme="gray"] .argus-helpbot-panel > header,
+body[data-theme="gray"] .argus-helpbot-compose { background: #24272d; border-color: #414650; }
+body[data-theme="gray"] .argus-helpbot-message { color: #e0e3e8; background: #333740; border-color: #484d56; }
+body[data-theme="gray"] .argus-helpbot-compose input { color: #f1f3f6; background: #202329; border-color: #4a505a; }
+
+body[data-theme="light"] .feature-box,
+body[data-theme="light"] .ethics-card { color: #364255; background: rgba(255,255,255,.9); border-color: #dce1e8; }
+body[data-theme="light"] .feature-box h3,
+body[data-theme="light"] .ethics-card h3 { color: #202938; }
+body[data-theme="gray"] .feature-box,
+body[data-theme="gray"] .ethics-card { color: #d7dbe1; background: rgba(41,45,52,.9); border-color: #444952; }
+body[data-theme="gray"] .feature-box h3,
+body[data-theme="gray"] .ethics-card h3 { color: #f1f3f6; }

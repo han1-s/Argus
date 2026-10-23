@@ -11,7 +11,7 @@ const app = express();
 const PORT = Number(process.env.WEB_API_PORT || 3001);
 const TERMS_VERSION = process.env.ARGUS_TERMS_VERSION || '2026-09-v1';
 
-app.use(express.json({ limit: '256kb' }));
+app.use(express.json({ limit: '2mb' }));
 app.use('/api/auth', authRoutes);
 app.use('/api', argusDataRoutes);
 app.get('/api/legal/terms', (req, res) => res.json({ version: TERMS_VERSION, url: '/terms.html' }));

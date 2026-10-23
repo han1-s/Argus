@@ -6,6 +6,7 @@ export interface ArgusAuthUser {
   id: string;
   name: string;
   email: string;
+  avatarData?: string | null;
   webConsent?: boolean;
   termsVersion?: string | null;
 }
@@ -13,6 +14,7 @@ export interface ArgusAuthUser {
 interface ArgusAccountDetails {
   name?: string;
   email?: string;
+  avatarData?: string | null;
   termsVersion?: string | null;
 }
 
@@ -90,6 +92,15 @@ export async function resetArgusPassword(email: string, code: string, password: 
   await authRequest('/api/auth/reset-password', { method: 'POST', body: JSON.stringify({ email, code, password }) });
 }
 
+export async function updateArgusProfile(name: string, email: string, avatarData?: string | null): Promise<ArgusAuthUser> {
+  const body: { name: string; email: string; avatarData?: string | null } = { name, email };
+  if (avatarData !== undefined) body.avatarData = avatarData;
+  const result = await authRequest('/api/auth/profile', { method: 'PUT', body: JSON.stringify(body) });
+  if (!result.user) throw new Error('A API não retornou os dados atualizados da conta.');
+  signInArgus(result.user);
+  return result.user;
+}
+
 export async function restoreArgusSession(): Promise<ArgusAuthUser | null> {
   try {
     const result = await authRequest('/api/auth/me');
@@ -121,6 +132,10 @@ export function signInArgus(account: ArgusAccountDetails = {}): void {
     localStorage.setItem('argusUserName', displayName);
   }
   if (account.termsVersion) localStorage.setItem(TERMS_VERSION_KEY, account.termsVersion);
+  if (account.avatarData !== undefined) {
+    if (account.avatarData) localStorage.setItem('argusProfileImage', account.avatarData);
+    else localStorage.removeItem('argusProfileImage');
+  }
   localStorage.setItem(AUTH_KEY, 'true');
   localStorage.removeItem(GUEST_KEY);
   window.dispatchEvent(new Event('argus-auth-changed'));

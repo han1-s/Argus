@@ -18,6 +18,7 @@ function publicUser(user) {
     id: user.id,
     name: user.name,
     email: user.email,
+    avatarData: user.avatar_data ?? user.avatarData ?? null,
     webConsent: Boolean(user.web_consent ?? user.webConsent),
     termsVersion: user.terms_version ?? user.termsVersion ?? null,
   };
@@ -73,7 +74,7 @@ async function cadastrar(req, res, next) {
     );
     await createSession(connection, id, res, req);
     await connection.commit();
-    res.status(201).json({ user: { id, name, email, webConsent, termsVersion: TERMS_VERSION } });
+    res.status(201).json({ user: { id, name, email, avatarData: null, webConsent, termsVersion: TERMS_VERSION } });
   } catch (error) {
     await connection?.rollback().catch(() => {});
     if (error.code === 'ER_DUP_ENTRY') return res.status(409).json({ error: 'Este e-mail já possui uma conta.' });
@@ -198,12 +199,57 @@ async function redefinirSenha(req, res, next) {
   }
 }
 
-function me(req, res) {
-  res.json({ user: req.user });
+async function me(req, res, next) {
+  try {
+    const [rows] = await pool.execute('SELECT id, name, email, avatar_data, web_consent, terms_version FROM users WHERE id = ? LIMIT 1', [req.user.id]);
+    if (!rows.length) return res.status(404).json({ error: 'Conta não encontrada.' });
+    res.json({ user: publicUser(rows[0]) });
+  } catch (error) { next(error); }
 }
 
-function perfil(req, res) {
-  res.json({ usuario: { id: req.user.id, nome: req.user.name, email: req.user.email } });
+async function perfil(req, res, next) {
+  try {
+    const [rows] = await pool.execute('SELECT id, name, email, avatar_data, web_consent, terms_version FROM users WHERE id = ? LIMIT 1', [req.user.id]);
+    if (!rows.length) return res.status(404).json({ error: 'Conta não encontrada.' });
+    const user = publicUser(rows[0]);
+    res.json({ user, usuario: { id: user.id, nome: user.name, email: user.email } });
+  } catch (error) { next(error); }
 }
 
-module.exports = { cadastrar, login, logout, me, perfil, solicitarRecuperacao, redefinirSenha };
+function validAvatarData(value) {
+  if (value === null) return true;
+  if (typeof value !== 'string' || value.length > 1_400_000) return false;
+  const match = /^data:image\/(jpeg|png|webp);base64,([A-Za-z0-9+/]+={0,2})$/.exec(value);
+  if (!match) return false;
+  const bytes = Buffer.from(match[2], 'base64');
+  if (match[1] === 'jpeg') return bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+  if (match[1] === 'png') return bytes.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
+  return bytes.toString('ascii', 0, 4) === 'RIFF' && bytes.toString('ascii', 8, 12) === 'WEBP';
+}
+
+async function atualizarPerfil(req, res, next) {
+  try {
+    const [rows] = await pool.execute('SELECT name, email, avatar_data FROM users WHERE id = ? LIMIT 1', [req.user.id]);
+    if (!rows.length) return res.status(404).json({ error: 'Conta não encontrada.' });
+    const current = rows[0];
+    const body = req.body || {};
+    if ((Object.hasOwn(body, 'name') && typeof body.name !== 'string') || (Object.hasOwn(body, 'email') && typeof body.email !== 'string')) {
+      return res.status(400).json({ error: 'Nome e e-mail devem ser textos válidos.' });
+    }
+    const name = String(Object.hasOwn(body, 'name') ? body.name : current.name).trim();
+    const email = String(Object.hasOwn(body, 'email') ? body.email : current.email).trim().toLowerCase();
+    const avatarData = Object.hasOwn(body, 'avatarData') ? body.avatarData : current.avatar_data;
+    if (name.length < 2 || name.length > 120 || !/^\S+@\S+\.\S+$/.test(email) || email.length > 254) {
+      return res.status(400).json({ error: 'Informe um nome entre 2 e 120 caracteres e um e-mail válido.' });
+    }
+    if (!validAvatarData(avatarData)) return res.status(400).json({ error: 'A foto deve ser PNG, JPEG ou WebP e ter até 1 MB.' });
+    await pool.execute('UPDATE users SET name = ?, email = ?, avatar_data = ? WHERE id = ?', [name, email, avatarData, req.user.id]);
+    const [updated] = await pool.execute('SELECT id, name, email, avatar_data, web_consent, terms_version FROM users WHERE id = ? LIMIT 1', [req.user.id]);
+    res.json({ user: publicUser(updated[0]) });
+  } catch (error) {
+    if (error.code === 'ER_DUP_ENTRY') return res.status(409).json({ error: 'Este e-mail já possui uma conta.' });
+    next(error);
+  }
+}
+
+module.exports = { cadastrar, login, logout, me, perfil, atualizarPerfil, solicitarRecuperacao, redefinirSenha };

@@ -21,7 +21,17 @@ let db;
 const sessions = new Map();
 
 function id() { return crypto.randomUUID(); }
-function safeUser(user) { return { id: user.id, name: user.name, email: user.email, webConsent: Boolean(user.webConsent), termsVersion: user.termsVersion || null, plan: user.plan || 'Free' }; }
+function safeUser(user) { return { id: user.id, name: user.name, email: user.email, avatarData: user.avatarData || null, webConsent: Boolean(user.webConsent), termsVersion: user.termsVersion || null, plan: user.plan || 'Free' }; }
+function validAvatarData(value) {
+  if (value === null) return true;
+  if (typeof value !== 'string' || value.length > 1_400_000) return false;
+  const match = /^data:image\/(jpeg|png|webp);base64,([A-Za-z0-9+/]+={0,2})$/.exec(value);
+  if (!match) return false;
+  const bytes = Buffer.from(match[2], 'base64');
+  if (match[1] === 'jpeg') return bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+  if (match[1] === 'png') return bytes.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
+  return bytes.toString('ascii', 0, 4) === 'RIFF' && bytes.toString('ascii', 8, 12) === 'WEBP';
+}
 function hashPassword(password, salt = crypto.randomBytes(16).toString('hex')) { return { salt, hash: crypto.scryptSync(password, salt, 64).toString('hex') }; }
 function cookie(name, value, maxAge) { return `${name}=${encodeURIComponent(value)}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${maxAge}`; }
 function sessionToken(req) { const t = (req.headers.cookie || '').match(/(?:^|;\s*)argus_session=([^;]+)/)?.[1]; try { return t ? decodeURIComponent(t) : null; } catch { return null; } }
@@ -247,7 +257,7 @@ async function issueSession(user, res) {
 }
 async function save() { await mysqlStore.save(db); }
 
-app.use(express.json({ limit: '256kb' }));
+app.use(express.json({ limit: '2mb' }));
 app.use(express.static(require('path').join(__dirname, '..', 'frontend')));
 app.get('/api/health', (req, res) => res.json({ ok: true, database: true }));
 app.get('/downloads/argus-agent.js', (req,res) => res.sendFile(require('path').join(__dirname, '..', 'agent', 'agent.js')));
@@ -324,7 +334,29 @@ app.post('/api/auth/logout', async (req, res, next) => {
     res.json({ ok: true });
   } catch (error) { next(error); }
 });
-app.get('/api/auth/me', auth, (req,res) => res.json({ user: safeUser(req.user) }));
+app.get('/api/auth/me', auth, async (req,res,next) => {
+  try { const profile = await mysqlStore.getUserProfile(req.user.id); if (!profile) return res.status(404).json({ error: 'Conta não encontrada.' }); res.json({ user: safeUser({ ...req.user, ...profile }) }); }
+  catch (error) { next(error); }
+});
+app.put('/api/auth/profile', auth, async (req,res,next) => {
+  try {
+    const current = await mysqlStore.getUserProfile(req.user.id);
+    if (!current) return res.status(404).json({ error: 'Conta não encontrada.' });
+    const body = req.body || {};
+    if ((Object.hasOwn(body, 'name') && typeof body.name !== 'string') || (Object.hasOwn(body, 'email') && typeof body.email !== 'string')) return res.status(400).json({ error: 'Nome e e-mail devem ser textos válidos.' });
+    const name = String(Object.hasOwn(body, 'name') ? body.name : current.name).trim();
+    const email = String(Object.hasOwn(body, 'email') ? body.email : current.email).trim().toLowerCase();
+    const avatarData = Object.hasOwn(body, 'avatarData') ? body.avatarData : current.avatarData;
+    if (name.length < 2 || name.length > 120 || !/^\S+@\S+\.\S+$/.test(email) || email.length > 254) return res.status(400).json({ error: 'Informe um nome entre 2 e 120 caracteres e um e-mail válido.' });
+    if (!validAvatarData(avatarData)) return res.status(400).json({ error: 'A foto deve ser PNG, JPEG ou WebP e ter até 1 MB.' });
+    const profile = await mysqlStore.updateUserProfile(req.user.id, { name, email, avatarData });
+    Object.assign(req.user, profile);
+    const cached = db.users.find(user => user.id === req.user.id);
+    if (cached) Object.assign(cached, profile);
+    io.to(`user:${req.user.id}`).emit('update');
+    res.json({ user: safeUser({ ...req.user, ...profile }) });
+  } catch (error) { if (error.code === 'ER_DUP_ENTRY') return res.status(409).json({ error: 'Este e-mail já possui uma conta.' }); next(error); }
+});
 app.use('/api', createPlanRouter({ auth, countMachines: userId => db.machines.filter(machine => machine.userId === userId).length }));
 
 app.post('/api/pairings', auth, async (req, res, next) => {

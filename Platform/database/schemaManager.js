@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 
 const schemaPath = path.join(__dirname, 'schema.sql');
-const schemaVersion = 1;
+const schemaVersion = 2;
 
 function databaseConfigFrom(env = process.env) {
   const database = String(env.MYSQL_DATABASE || 'argus').trim();
@@ -46,6 +46,14 @@ async function ensureIndex(pool, table, name, statement) {
   if (!rows.length) await pool.query(statement);
 }
 
+async function ensureColumn(pool, table, name, statement) {
+  const [rows] = await pool.execute(
+    'SELECT 1 FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = ? AND column_name = ? LIMIT 1',
+    [table, name],
+  );
+  if (!rows.length) await pool.query(statement);
+}
+
 async function ensureSharedSchema(pool) {
   const connection = await pool.getConnection();
   let locked = false;
@@ -72,10 +80,11 @@ async function ensureSharedSchema(pool) {
       ['metric_samples', 'idx_metric_sample_sampled_at', 'ALTER TABLE metric_samples ADD INDEX idx_metric_sample_sampled_at (sampled_at)'],
     ];
     for (const [table, name, statement] of indexes) await ensureIndex(connection, table, name, statement);
+    await ensureColumn(connection, 'users', 'avatar_data', 'ALTER TABLE users ADD COLUMN avatar_data MEDIUMTEXT NULL');
 
     await connection.execute(
       'INSERT IGNORE INTO schema_migrations (version, description, applied_at) VALUES (?, ?, UTC_TIMESTAMP(3))',
-      [schemaVersion, 'Schema compartilhado ARGUS Web + Platform'],
+      [schemaVersion, 'Perfil compartilhado ARGUS Web + Platform'],
     );
     await connection.execute(
       `INSERT IGNORE INTO subscriptions (user_id, plan, billing_cycle, status, started_at, updated_at)

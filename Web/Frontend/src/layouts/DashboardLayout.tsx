@@ -3,6 +3,7 @@ import { Outlet, useLocation } from 'react-router-dom';
 import { Header } from '../components/Header/Header';
 import { Footer } from '../components/Footer/Footer.tsx';
 import { HelpBot } from '../components/HelpBot/HelpBot';
+import { isArgusSignedIn, restoreArgusSession } from '../services/argusAuth';
 
 export const DashboardLayout: React.FC = () => {
   const location = useLocation();
@@ -50,6 +51,15 @@ export const DashboardLayout: React.FC = () => {
       || document.body.classList.contains('reduce-animations');
     window.scrollTo({ top: 0, behavior: reducedMotion ? 'auto' : 'smooth' });
   }, [location.pathname]);
+
+  useEffect(() => {
+    if (!isArgusSignedIn()) return;
+    const interval = window.setInterval(() => {
+      if (isArgusSignedIn()) void restoreArgusSession();
+      else window.clearInterval(interval);
+    }, 30000);
+    return () => window.clearInterval(interval);
+  }, []);
 
   return (
     <div className="app-layout">

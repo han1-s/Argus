@@ -12,11 +12,20 @@ function answerFor(question: string, pathname: string) {
   if (/plano|assin|limite|compr|pagamento|upgrade/.test(text)) {
     return 'Na área Planos você vê os limites aplicados: Free comporta até 10 computadores e 7 dias de retenção; Pro, 50 computadores e 90 dias; Business, computadores ilimitados e 365 dias. A compra é simulada e a assinatura compartilhada com a Platform.';
   }
+  if (/foto|avatar|perfil|nome|email|e-mail/.test(text)) {
+    return 'Web e Platform usam o mesmo perfil no banco ARGUS. Altere nome, e-mail ou foto em Configurações; a mudança aparece nas duas interfaces. A recuperação de senha também atualiza a conta compartilhada.';
+  }
   if (/conta|login|senha|cadastro|web|platform/.test(text)) {
     return 'Web e Platform usam a mesma conta quando estão conectadas ao mesmo servidor e banco ARGUS. Entre com o mesmo e-mail e senha nas duas interfaces.';
   }
-  if (/computador|agente|colet|offline|desconect|banco|mysql|fila|enviar/.test(text)) {
-    return 'O agente guarda amostras em uma fila local quando perde contato com a API e tenta reenviá-las quando a conexão volta. A API Platform e o MySQL precisam estar ativos para persistir os dados.';
+  if (/offline|desconect|fila|enviar|sincron/.test(text)) {
+    return 'O agente coleta leituras localmente e mantém uma fila gravada em disco enquanto não alcança a API. Quando a conexão volta, reenvia as amostras pendentes em ordem. A API Platform e o MySQL precisam estar ativos para persistir os dados.';
+  }
+  if (/computador|agente|endpoint|vincular|conectar/.test(text)) {
+    return 'No Platform, escolha Adicionar computador e baixe ARGUS.cmd. No endpoint autorizado, execute o arquivo, informe o endereço LAN do servidor e use o código de vínculo exibido no painel. O código vale por 15 minutos.';
+  }
+  if (/mysql|servidor|banco|api|instal/.test(text)) {
+    return 'Prepare e inicie o servidor pela opção correspondente no ARGUS.cmd. O MySQL e a API Platform ficam no computador principal; o endpoint precisa apenas do agente e de acesso à rede do servidor. O Web usa o mesmo banco compartilhado.';
   }
   if (/navega|dominio|extens/.test(text)) {
     return 'A coleta web é opcional: precisa de consentimento nas Configurações e da extensão ARGUS ativada no navegador. Ela registra domínio e duração aproximada, sem salvar URL completa ou conteúdo.';
@@ -24,8 +33,11 @@ function answerFor(question: string, pathname: string) {
   if (/privacidade|consent|seguranca|dados/.test(text)) {
     return 'Use o ARGUS somente em computadores autorizados. O consentimento web é separado e pode ser revogado nas Configurações; ao revogar, o histórico web da conta é apagado.';
   }
-  if (/download|instal/.test(text)) {
-    return 'Na página Download, informe o endereço local da Platform e baixe o instalador. No endpoint autorizado, informe o endereço do servidor e o código de vínculo exibido no painel.';
+  if (/tema|claro|cinza|escuro|aparencia/.test(text)) {
+    return 'Abra Configurações → Aparência e escolha Escuro, Cinza ou Claro. O tema é salvo em cada navegador e aplicado imediatamente.';
+  }
+  if (/aplic|processo|foreground|primeiro plano/.test(text)) {
+    return 'No Windows, o agente mede o tempo em que uma janela fica em primeiro plano com entrada recente. Ele não lê títulos, documentos, teclas ou conteúdo.';
   }
   if (/pagina|onde|estou/.test(text)) {
     return 'Você está em ' + pathname + '. Posso ajudar com planos, contas, computadores, coleta web, instalação e privacidade.';
@@ -38,7 +50,7 @@ export const HelpBot: React.FC = () => {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState('');
   const [messages, setMessages] = useState<Message[]>([
-    { id: 1, from: 'bot', text: 'Olá! Sou a ajuda do ARGUS. Pergunte sobre sua conta, planos ou monitoramento.' },
+    { id: 1, from: 'bot', text: 'Olá! Sou o assistente ARGUS. Pergunte sobre conta, instalação, agente, planos ou privacidade, ou escolha um atalho.' },
   ]);
   const nextId = useRef(2);
   const endRef = useRef<HTMLDivElement>(null);
@@ -65,8 +77,11 @@ export const HelpBot: React.FC = () => {
           <div ref={endRef} />
         </div>
         <div className="argus-helpbot-shortcuts">
+          <button type="button" onClick={() => ask('Como conectar um computador?')}>Conectar computador</button>
+          <button type="button" onClick={() => ask('Como funciona a fila offline?')}>Agente offline</button>
+          <button type="button" onClick={() => ask('Como sincronizo meu perfil?')}>Perfil compartilhado</button>
           <button type="button" onClick={() => ask('Quais são os limites dos planos?')}>Planos e limites</button>
-          <button type="button" onClick={() => ask('Como as contas Web e Platform se conectam?')}>Conta compartilhada</button>
+          <button type="button" onClick={() => ask('Como configurar o tema claro ou cinza?')}>Temas</button>
           <Link to="/monetizacao" onClick={() => setOpen(false)}>Abrir planos</Link>
         </div>
         <form className="argus-helpbot-compose" onSubmit={event => { event.preventDefault(); ask(draft); }}>
@@ -75,7 +90,7 @@ export const HelpBot: React.FC = () => {
         </form>
       </section>}
       <button className="argus-helpbot-toggle" type="button" onClick={() => setOpen(value => !value)} aria-expanded={open} aria-label={open ? 'Fechar ajuda ARGUS' : 'Abrir ajuda ARGUS'}>
-        {open ? <X size={19} /> : <MessageCircle size={19} />}<span>{open ? 'Fechar' : 'Ajuda'}</span>
+        {open ? <X size={19} /> : <MessageCircle size={19} />}<span>{open ? 'Fechar' : 'Ajuda ARGUS'}</span>
       </button>
     </div>
   );

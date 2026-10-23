@@ -7,6 +7,7 @@ if (!['dark', 'gray', 'light'].includes(localSettings.theme)) localSettings.them
 if (![5, 10, 30, 60].includes(Number(localSettings.refreshSeconds))) localSettings.refreshSeconds = DEFAULT_LOCAL_SETTINGS.refreshSeconds;
 if (!['local', 'utc'].includes(localSettings.timeZone)) localSettings.timeZone = DEFAULT_LOCAL_SETTINGS.timeZone;
 let dashboardRefreshTimer;
+let profileSyncTimer;
 function applyLocalSettings() {
   document.body.dataset.theme = ['dark', 'gray', 'light'].includes(localSettings.theme) ? localSettings.theme : 'dark';
   document.body.classList.toggle('reduce-animations', localSettings.reduceMotion === true);
@@ -40,7 +41,7 @@ async function api(url, options = {}) {
   if (!res.ok) { if (res.status === 401 && !url.startsWith('/api/auth/')) showAuth(); const error = new Error(data.error || 'Não foi possível concluir a solicitação.'); error.upgradeRequired = data.upgradeRequired === true; throw error; }
   return data;
 }
-function showAuth() { document.documentElement.classList.add('auth-view'); $('#authView').classList.remove('hidden'); $('#appView').classList.add('hidden'); $('#helpBotToggle').classList.add('hidden'); $('#helpBotPanel').classList.add('hidden'); }
+function showAuth() { clearInterval(profileSyncTimer); document.documentElement.classList.add('auth-view'); $('#authView').classList.remove('hidden'); $('#appView').classList.add('hidden'); $('#helpBotToggle').classList.add('hidden'); $('#helpBotPanel').classList.add('hidden'); }
 function showApp() { document.documentElement.classList.remove('auth-view'); $('#authView').classList.add('hidden'); $('#appView').classList.remove('hidden'); $('#helpBotToggle').classList.remove('hidden'); }
 $('#passwordToggle').onclick = () => { const input = $('#passwordInput'), visible = input.type === 'password'; input.type = visible ? 'text' : 'password'; $('#passwordToggle').setAttribute('aria-label', visible ? 'Ocultar senha' : 'Mostrar senha'); $('#passwordToggle').setAttribute('aria-pressed', String(visible)); };
 function setAuthMode(mode) {
@@ -93,9 +94,28 @@ $('#completeResetButton').onclick = async () => {
     $('#resetCodeWrap').classList.add('hidden'); $('#resetNewPasswordWrap').classList.add('hidden'); $('#completeResetButton').classList.add('hidden');
   } catch (error) { status.textContent = error.message; status.classList.add('is-error'); }
 };
+function renderUserBadge() {
+  $('#userName').textContent = state.user.name;
+  const avatar = $('#avatar');
+  avatar.replaceChildren();
+  if (state.user.avatarData) {
+    const image = document.createElement('img'); image.src = state.user.avatarData; image.alt = '';
+    avatar.appendChild(image);
+  } else avatar.textContent = state.user.name.slice(0, 1).toUpperCase();
+}
+async function syncProfile() {
+  try {
+    const result = await api('/api/auth/me');
+    const changed = state.user.name !== result.user.name || state.user.email !== result.user.email || state.user.avatarData !== result.user.avatarData;
+    state.user = result.user;
+    if (changed) { renderUserBadge(); if (state.page === 'settings') renderSettings(); }
+  } catch {}
+}
 function enterApp() {
-  showApp(); $('#userName').textContent = state.user.name; $('#avatar').textContent = state.user.name.slice(0, 1).toUpperCase();
-  refresh().then(render); connectSocket(); loadNetworkConfig(); configureDashboardRefresh(); render();
+  showApp(); renderUserBadge();
+  refresh().then(render); connectSocket(); loadNetworkConfig(); configureDashboardRefresh();
+  clearInterval(profileSyncTimer); profileSyncTimer = setInterval(syncProfile, 30000);
+  render();
 }
 let socket;
 function sameDashboardSummary(previous, next) {
@@ -105,6 +125,7 @@ function connectSocket() {
   if (!window.io) return;
   if (socket) socket.disconnect(); socket = io(); socket.on('update', async () => {
     const previousSummary = state.data?.summary;
+    await syncProfile();
     await refresh();
     if (state.detailId) return renderDetail(state.detailId);
     if (state.page === 'dashboard' && sameDashboardSummary(previousSummary, state.data?.summary)) return;
@@ -166,8 +187,16 @@ function renderSettings() {
   ];
   $('#pageContent').innerHTML = `${pageHead('PREFERÊNCIAS E PRIVACIDADE', 'Configurações', 'Personalize a interface, a atualização dos dados e suas preferências de privacidade.')}
     <div class="settings-grid">
+      <section class="panel settings-panel profile-settings-panel"><div class="panel-heading"><div><h2>Perfil compartilhado</h2><p>Os mesmos dados de conta aparecem na Web e na Platform.</p></div></div>
+        <div class="profile-settings-preview"><div id="settingsProfileAvatar" class="settings-profile-avatar">${state.user.avatarData ? `<img src="${esc(state.user.avatarData)}" alt="">` : esc(state.user.name.slice(0, 1).toUpperCase())}</div><div><b>${esc(state.user.name)}</b><small>Foto, nome e e-mail da conta</small></div></div>
+        <form id="profileSettingsForm" class="profile-settings-form"><div class="settings-field"><label for="profileNameInput">Nome</label><input id="profileNameInput" class="field-input" type="text" name="name" minlength="2" maxlength="120" autocomplete="name" value="${esc(state.user.name)}" required></div>
+          <div class="settings-field"><label for="profileEmailInput">E-mail</label><input id="profileEmailInput" class="field-input" name="email" type="email" maxlength="254" autocomplete="email" value="${esc(state.user.email)}" required></div>
+          <div class="settings-field"><label for="profileAvatarFile">Foto do perfil</label><input id="profileAvatarFile" class="field-input" type="file" accept="image/jpeg,image/png,image/webp"><small>JPEG, PNG ou WebP; até 2 MB. A imagem é otimizada antes de sincronizar.</small></div>
+          <div class="settings-actions"><button class="button primary" type="submit">Salvar perfil</button><button id="removeProfileAvatar" class="button quiet" type="button" ${state.user.avatarData ? '' : 'disabled'}>Remover foto</button></div><p id="profileStatus" class="privacy-help" role="status"></p>
+        </form>
+      </section>
       <section class="panel settings-panel"><div class="panel-heading"><div><h2>Aparência</h2><p>Preferências aplicadas neste navegador.</p></div></div>
-        <div class="settings-field"><label for="platformTheme">Tema da Platform</label><select id="platformTheme" class="select">${themeOptions.map(([value, label]) => `<option value="${value}" ${localSettings.theme === value ? 'selected' : ''}>${label}</option>`).join('')}</select><small>O tema é salvo neste navegador.</small></div>
+        <div class="settings-field"><span class="settings-field-label">Tema da Platform</span><div class="theme-choice-grid" role="group" aria-label="Tema da Platform">${themeOptions.map(([value, label, description]) => `<button type="button" class="theme-choice ${localSettings.theme === value ? 'selected' : ''}" data-theme-choice="${value}" aria-pressed="${localSettings.theme === value}"><span class="theme-choice-preview ${value}"><i></i><i></i><i></i></span><b>${label}</b><small>${description}</small></button>`).join('')}</div><small>O tema é salvo neste navegador.</small></div>
         <label class="toggle-row"><span><b>Movimento reduzido</b><small>Reduz transições e animações da interface.</small></span><input id="reduceMotion" type="checkbox" ${localSettings.reduceMotion ? 'checked' : ''}></label>
         <label class="toggle-row"><span><b>Layout compacto</b><small>Reduz espaçamentos para mostrar mais conteúdo por tela.</small></span><input id="compactUi" type="checkbox" ${localSettings.compact ? 'checked' : ''}></label>
       </section>
@@ -191,7 +220,43 @@ function renderSettings() {
         <p class="privacy-help">A exclusão também encerra a sessão da Platform e da Web.</p>
       </section>
     </div>`;
-  $('#platformTheme').onchange = event => { saveLocalSettings({ theme: event.target.value }); render(); toast(`Tema ${event.target.selectedOptions[0].textContent.toLocaleLowerCase('pt-BR')} aplicado.`); };
+  let pendingAvatarData;
+  const profileStatus = $('#profileStatus');
+  $('#profileAvatarFile').onchange = async event => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 2 * 1024 * 1024) {
+      event.target.value = ''; profileStatus.textContent = 'Escolha JPEG, PNG ou WebP com até 2 MB.'; profileStatus.classList.add('is-error'); return;
+    }
+    try {
+      pendingAvatarData = await optimizeAvatar(file);
+      $('#settingsProfileAvatar').innerHTML = `<img src="${esc(pendingAvatarData)}" alt="">`;
+      $('#removeProfileAvatar').disabled = false;
+      profileStatus.textContent = 'Foto pronta. Salve o perfil para sincronizá-la.'; profileStatus.classList.remove('is-error');
+    } catch (error) { profileStatus.textContent = error.message; profileStatus.classList.add('is-error'); }
+  };
+  $('#profileSettingsForm').onsubmit = async event => {
+    event.preventDefault();
+    const body = { name: $('#profileNameInput').value.trim(), email: $('#profileEmailInput').value.trim() };
+    if (pendingAvatarData !== undefined) body.avatarData = pendingAvatarData;
+    profileStatus.textContent = 'Salvando perfil compartilhado…'; profileStatus.classList.remove('is-error');
+    try {
+      const result = await api('/api/auth/profile', { method: 'PUT', body: JSON.stringify(body) });
+      state.user = result.user; pendingAvatarData = undefined; renderUserBadge();
+      $('.profile-settings-preview b').textContent = state.user.name;
+      profileStatus.textContent = 'Perfil sincronizado com Web e Platform.';
+      $('#removeProfileAvatar').disabled = !state.user.avatarData;
+    } catch (error) { profileStatus.textContent = error.message; profileStatus.classList.add('is-error'); }
+  };
+  $('#removeProfileAvatar').onclick = async () => {
+    try {
+      const result = await api('/api/auth/profile', { method: 'PUT', body: JSON.stringify({ name: $('#profileNameInput').value.trim(), email: $('#profileEmailInput').value.trim(), avatarData: null }) });
+      state.user = result.user; pendingAvatarData = undefined; $('#profileAvatarFile').value = ''; renderUserBadge();
+      $('#settingsProfileAvatar').textContent = state.user.name.slice(0, 1).toUpperCase();
+      $('#removeProfileAvatar').disabled = true; profileStatus.textContent = 'Foto removida da conta Web e Platform.'; profileStatus.classList.remove('is-error');
+    } catch (error) { profileStatus.textContent = error.message; profileStatus.classList.add('is-error'); }
+  };
+  document.querySelectorAll('[data-theme-choice]').forEach(button => button.onclick = () => { const label = button.querySelector('b').textContent; saveLocalSettings({ theme: button.dataset.themeChoice }); render(); toast(`Tema ${label.toLocaleLowerCase('pt-BR')} aplicado.`); });
   $('#reduceMotion').onchange = event => { saveLocalSettings({ reduceMotion: event.target.checked }); toast('Preferência de movimento atualizada.'); };
   $('#compactUi').onchange = event => { saveLocalSettings({ compact: event.target.checked }); toast('Densidade da interface atualizada.'); };
   $('#refreshSeconds').onchange = event => { saveLocalSettings({ refreshSeconds: Number(event.target.value) }); toast('Frequência de atualização atualizada.'); };
@@ -317,6 +382,24 @@ async function renderDetail(machineId) {
   } catch (error) { toast(error.message); state.detailId = null; render(); }
 }
 function fmtBytes(bytes) { if (!bytes) return '—'; return `${(bytes / 1073741824).toFixed(1)} GB`; }
+function optimizeAvatar(file) {
+  return new Promise((resolve, reject) => {
+    const image = new Image(), objectUrl = URL.createObjectURL(file);
+    image.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      const scale = Math.min(1, 512 / Math.max(image.naturalWidth, image.naturalHeight));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(image.naturalWidth * scale)); canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+      const context = canvas.getContext('2d');
+      if (!context) return reject(new Error('Não foi possível preparar esta imagem.'));
+      context.fillStyle = '#fff'; context.fillRect(0, 0, canvas.width, canvas.height);
+      context.drawImage(image, 0, 0, canvas.width, canvas.height);
+      resolve(canvas.toDataURL('image/jpeg', 0.82));
+    };
+    image.onerror = () => { URL.revokeObjectURL(objectUrl); reject(new Error('Não foi possível ler esta imagem.')); };
+    image.src = objectUrl;
+  });
+}
 function toast(message) { const node = $('#toast'); node.textContent = message; node.classList.add('show'); setTimeout(() => node.classList.remove('show'), 2800); }
 const helpTopics = [
   { label: 'Conectar computador', answer: 'No painel, escolha Adicionar computador e baixe ARGUS.cmd. No endpoint autorizado, execute o arquivo, informe o endereço LAN do servidor e use o código exibido. O código vale por 15 minutos e só pode ser usado uma vez.' },
@@ -328,6 +411,8 @@ const helpTopics = [
   { label: 'Métricas de aplicativos', answer: 'No Windows, o watcher mede o tempo em que uma janela fica em primeiro plano com entrada recente; não lê títulos, documentos, teclas ou conteúdo. O histórico começa após a instalação do agente.' },
   { label: 'Métricas de aplicativos', answer: 'No Windows, o watcher mede o tempo em que uma janela fica em primeiro plano com entrada recente; não lê títulos, documentos, teclas ou conteúdo. O histórico começa após a instalação do agente.' },
   { label: 'Privacidade', answer: 'Use o ARGUS somente em computadores autorizados e informe as pessoas monitoradas. A coleta web exige consentimento separado e pode ser revogada em Configurações; ao revogar, o histórico web da conta é apagado.' },
+  { label: 'Perfil compartilhado', answer: 'Web e Platform usam o mesmo perfil no banco ARGUS. Altere foto, nome ou e-mail em Configurações; a mudança aparece nas duas interfaces. A recuperação de senha também atualiza a conta compartilhada.' },
+  { label: 'Tema claro e cinza', answer: 'Abra Configurações e escolha Escuro, Cinza ou Claro. O tema é salvo neste navegador e aplicado imediatamente.' },
 ];
 function appendHelpMessage(message, kind = 'bot') {
   const node = document.createElement('div');
@@ -344,6 +429,8 @@ function answerHelpQuestion(question) {
     const usage = state.subscription?.uso?.computadores ?? state.data?.usage?.computers ?? 0;
     return 'Sua conta está no plano ' + subscription.plan + ' e usa ' + usage + ' computador(es). O limite é ' + (limits.computers === null ? 'ilimitado' : limits.computers) + ', com retenção de ' + limits.retentionDays + ' dias. Abra “Planos e cobrança” no menu para comparar opções e simular um pagamento; a mesma assinatura vale para Web e Platform.';
   }
+  if (/perfil|avatar|foto|email|nome/.test(text)) return helpTopics.find(topic => topic.label === 'Perfil compartilhado').answer;
+  if (/tema|claro|cinza|escuro|aparencia/.test(text)) return helpTopics.find(topic => topic.label === 'Tema claro e cinza').answer;
   if (/banco|desconect|offline|sem rede|sem internet|enviar|fila|guardar|armazen/.test(text)) {
     return 'O agente coleta as leituras localmente e mantém uma fila local gravada em disco enquanto não alcança a API. Quando a conexão retorna, reenvia as amostras pendentes em ordem. A fila tem limite local; confira também se a API Platform e o MySQL voltaram a ficar disponíveis.';
   }
@@ -358,7 +445,7 @@ function answerHelpQuestion(question) {
 function initializeHelpBot() {
   const toggle = $('#helpBotToggle'), panel = $('#helpBotPanel'), close = $('#helpBotClose');
   const setOpen = open => { panel.classList.toggle('hidden', !open); toggle.setAttribute('aria-expanded', String(open)); };
-  toggle.onclick = () => { const opening = panel.classList.contains('hidden'); setOpen(opening); if (opening && !$('#helpBotMessages').children.length) appendHelpMessage('Olá! Sou o ARGUS. Pergunte diretamente ou escolha um assunto para receber orientações rápidas sobre a Platform.'); };
+  toggle.onclick = () => { const opening = panel.classList.contains('hidden'); setOpen(opening); if (opening && !$('#helpBotMessages').children.length) appendHelpMessage('Olá! Sou o assistente ARGUS para Web e Platform. Pergunte diretamente ou escolha um assunto para receber orientações rápidas.'); };
   close.onclick = () => setOpen(false);
   $('#helpBotForm').onsubmit = event => {
     event.preventDefault();

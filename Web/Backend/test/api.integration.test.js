@@ -5,6 +5,7 @@ const pool = require('../src/config/database');
 
 const enabled = process.env.ARGUS_RUN_MYSQL_INTEGRATION_TESTS === '1';
 const baseUrl = (process.env.ARGUS_TEST_API_URL || 'http://127.0.0.1:3001').replace(/\/$/, '');
+const platformBaseUrl = (process.env.ARGUS_TEST_PLATFORM_API_URL || '').replace(/\/$/, '');
 const testRunId = crypto.randomUUID();
 
 test('Web API integration against MySQL (opt-in)', { skip: !enabled }, async t => {
@@ -90,9 +91,57 @@ test('Web API integration against MySQL (opt-in)', { skip: !enabled }, async t =
       const me = await request('/api/auth/me');
       assert.equal(me.status, 200);
       assert.equal((await readJson(me)).user.email, emails[0]);
+      assert.equal((await readJson(await request('/api/auth/me'))).user.avatarData, null);
       const profile = await request('/api/auth/profile');
       assert.equal(profile.status, 200);
       assert.equal((await readJson(profile)).usuario.email, emails[0]);
+    });
+
+    await t.test('shared profile updates validate email, synchronize the avatar, and persist in MySQL', async () => {
+      const avatarData = 'data:image/png;base64,iVBORw0KGgo=';
+      const duplicateEmail = await request('/api/auth/profile', { method: 'PUT', body: { name: 'ARGUS Test', email: emails[1] } });
+      assert.equal(duplicateEmail.status, 409, 'profile updates cannot take an email used by another account');
+      const invalidAvatar = await request('/api/auth/profile', { method: 'PUT', body: { avatarData: 'data:image/svg+xml;base64,PHN2Zz4=' } });
+      assert.equal(invalidAvatar.status, 400, 'unsupported avatar formats are rejected');
+
+      const updatedEmail = `argus-profile-${testRunId}@example.invalid`;
+      const update = await request('/api/auth/profile', { method: 'PUT', body: { name: 'ARGUS Shared Profile', email: updatedEmail, avatarData } });
+      assert.equal(update.status, 200);
+      const updatedUser = (await readJson(update)).user;
+      assert.equal(updatedUser.name, 'ARGUS Shared Profile');
+      assert.equal(updatedUser.email, updatedEmail);
+      assert.equal(updatedUser.avatarData, avatarData);
+      emails[0] = updatedEmail;
+
+      const me = (await readJson(await request('/api/auth/me'))).user;
+      assert.equal(me.name, updatedUser.name);
+      assert.equal(me.email, updatedUser.email);
+      assert.equal(me.avatarData, avatarData);
+      const [stored] = await pool.execute('SELECT name, email, avatar_data FROM users WHERE id = ?', [updatedUser.id]);
+      assert.equal(stored[0].name, updatedUser.name);
+      assert.equal(stored[0].email, updatedUser.email);
+      assert.equal(stored[0].avatar_data, avatarData);
+
+      if (platformBaseUrl) {
+        const platformMe = await fetch(`${platformBaseUrl}/api/auth/me`, { headers: { cookie } });
+        assert.equal(platformMe.status, 200, 'the Platform accepts the Web session from the shared account');
+        assert.deepEqual(
+          (({ name, email, avatarData: avatar }) => ({ name, email, avatar }))( (await readJson(platformMe)).user ),
+          { name: updatedUser.name, email: updatedUser.email, avatar: avatarData },
+        );
+        const platformUpdate = await fetch(`${platformBaseUrl}/api/auth/profile`, {
+          method: 'PUT', headers: { cookie, 'content-type': 'application/json' },
+          body: JSON.stringify({ name: 'ARGUS Platform Profile', email: updatedEmail, avatarData }),
+        });
+        assert.equal(platformUpdate.status, 200, 'Platform can update the same profile');
+        const webMe = (await readJson(await request('/api/auth/me'))).user;
+        assert.equal(webMe.name, 'ARGUS Platform Profile');
+        assert.equal(webMe.avatarData, avatarData, 'avatar updates made in Platform appear in Web');
+      }
+
+      const removed = await request('/api/auth/profile', { method: 'PUT', body: { avatarData: null } });
+      assert.equal(removed.status, 200);
+      assert.equal((await readJson(removed)).user.avatarData, null);
     });
 
     await t.test('account-scoped machines, dashboard, events, reports, alerts, and notifications work', async () => {
@@ -211,6 +260,14 @@ test('Web API integration against MySQL (opt-in)', { skip: !enabled }, async t =
       const reset = await request('/api/auth/reset-password', { method: 'POST', body: { email: emails[0], code, password: newPassword } });
       assert.equal(reset.status, 200);
       assert.equal((await request('/api/auth/me')).status, 401);
+      if (platformBaseUrl) {
+        assert.equal((await fetch(`${platformBaseUrl}/api/auth/me`, { headers: { cookie } })).status, 401, 'Web password reset revokes the shared Platform session');
+        const platformLogin = await fetch(`${platformBaseUrl}/api/auth/login`, {
+          method: 'POST', headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ email: emails[0], password: newPassword, termsAccepted: true, termsVersion }),
+        });
+        assert.equal(platformLogin.status, 200, 'the new Web password authenticates on Platform');
+      }
       assert.equal((await request('/api/auth/login', { method: 'POST', body: { email: emails[0], password, termsAccepted: true, termsVersion } })).status, 401);
       const login = await request('/api/auth/login', { method: 'POST', body: { email: emails[0], password: newPassword, termsAccepted: true, termsVersion } });
       assert.equal(login.status, 200);

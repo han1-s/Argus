@@ -68,7 +68,7 @@ async function load() {
     pool.query('SELECT * FROM sessions WHERE expires_at > UTC_TIMESTAMP(3)')
   ]).then(results => results.map(result => result[0]));
   const result = {
-    users: users.map(u => ({ id: u.id, name: u.name, email: u.email, salt: u.salt, hash: u.password_hash, createdAt: date(u.created_at), webConsent: Boolean(u.web_consent), termsVersion: u.terms_version, termsAcceptedAt: u.terms_accepted_at ? date(u.terms_accepted_at) : null })),
+    users: users.map(u => ({ id: u.id, name: u.name, email: u.email, salt: u.salt, hash: u.password_hash, createdAt: date(u.created_at), webConsent: Boolean(u.web_consent), termsVersion: u.terms_version, termsAcceptedAt: u.terms_accepted_at ? date(u.terms_accepted_at) : null, avatarData: u.avatar_data || null })),
     machines: machines.map(m => ({ id: m.id, userId: m.user_id, name: m.name, token: m.token, status: m.status, userName: m.user_name, os: m.os, arch: m.arch, uptime: Number(m.uptime), metrics: json(m.metrics) || {}, apps: json(m.apps) || [], webActivity: m.web_activity, lastSeen: date(m.last_seen), createdAt: date(m.created_at), firstSeenAt: date(m.first_seen_at) })),
     pairings: pairings.map(p => ({ code: p.code, userId: p.user_id, expiresAt: Number(p.expires_at) })),
     events: events.map(e => ({ id: e.id, machineId: e.machine_id, machineName: e.machine_name, type: e.type, message: e.message, at: date(e.occurred_at) })),
@@ -88,7 +88,7 @@ async function refreshUsers(data) {
     pool.query('SELECT * FROM users'),
     pool.query('SELECT * FROM sessions WHERE expires_at > UTC_TIMESTAMP(3)'),
   ]).then(results => results.map(result => result[0]));
-  data.users = users.map(u => ({ id: u.id, name: u.name, email: u.email, salt: u.salt, hash: u.password_hash, createdAt: date(u.created_at), webConsent: Boolean(u.web_consent), termsVersion: u.terms_version, termsAcceptedAt: u.terms_accepted_at ? date(u.terms_accepted_at) : null }));
+  data.users = users.map(u => ({ id: u.id, name: u.name, email: u.email, salt: u.salt, hash: u.password_hash, createdAt: date(u.created_at), webConsent: Boolean(u.web_consent), termsVersion: u.terms_version, termsAcceptedAt: u.terms_accepted_at ? date(u.terms_accepted_at) : null, avatarData: u.avatar_data || null }));
   data.sessions = sessions.map(s => ({ tokenHash: s.token_hash, userId: s.user_id, createdAt: date(s.created_at), expiresAt: date(s.expires_at) }));
 }
 
@@ -110,6 +110,21 @@ async function findSessionUser(tokenHash) {
     termsVersion: user.terms_version,
     plan: user.plan,
   } : null;
+}
+
+async function getUserProfile(userId) {
+  const [rows] = await pool.execute('SELECT id, name, email, avatar_data, web_consent, terms_version FROM users WHERE id = ? LIMIT 1', [userId]);
+  const user = rows[0];
+  return user ? { id: user.id, name: user.name, email: user.email, avatarData: user.avatar_data || null, webConsent: Boolean(user.web_consent), termsVersion: user.terms_version } : null;
+}
+
+async function updateUserProfile(userId, { name, email, avatarData }) {
+  const task = writeQueue.then(async () => {
+    await pool.execute('UPDATE users SET name = ?, email = ?, avatar_data = ? WHERE id = ?', [name, email, avatarData, userId]);
+    return getUserProfile(userId);
+  });
+  writeQueue = task.catch(() => {});
+  return task;
 }
 
 async function getSubscription(userId) {
@@ -262,7 +277,7 @@ async function saveNow(data) {
     await connection.beginTransaction();
     await connection.query('DELETE FROM pairings');
     await connection.execute('DELETE FROM sessions WHERE expires_at <= UTC_TIMESTAMP(3)');
-    for (const u of data.users) await connection.execute(`INSERT INTO users (id,name,email,salt,password_hash,created_at,web_consent,terms_version,terms_accepted_at) VALUES (?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE name=VALUES(name),email=VALUES(email),salt=VALUES(salt),password_hash=VALUES(password_hash),web_consent=VALUES(web_consent),terms_version=VALUES(terms_version),terms_accepted_at=VALUES(terms_accepted_at)`, [u.id,u.name,u.email,u.salt,u.hash,new Date(u.createdAt),Boolean(u.webConsent),u.termsVersion || null,u.termsAcceptedAt ? new Date(u.termsAcceptedAt) : null]);
+    for (const u of data.users) await connection.execute(`INSERT INTO users (id,name,email,salt,password_hash,created_at,web_consent,terms_version,terms_accepted_at) VALUES (?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE web_consent=VALUES(web_consent),terms_version=VALUES(terms_version),terms_accepted_at=VALUES(terms_accepted_at)`, [u.id,u.name,u.email,u.salt,u.hash,new Date(u.createdAt),Boolean(u.webConsent),u.termsVersion || null,u.termsAcceptedAt ? new Date(u.termsAcceptedAt) : null]);
     await connection.execute(`INSERT IGNORE INTO subscriptions (user_id,plan,billing_cycle,status,started_at,updated_at) SELECT id,'Free','monthly','active',UTC_TIMESTAMP(3),UTC_TIMESTAMP(3) FROM users`);
     for (const m of data.machines) await connection.execute(`INSERT INTO machines (id,user_id,name,token,status,user_name,os,arch,uptime,metrics,apps,web_activity,last_seen,created_at,first_seen_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE name=VALUES(name),token=VALUES(token),status=VALUES(status),user_name=VALUES(user_name),os=VALUES(os),arch=VALUES(arch),uptime=VALUES(uptime),metrics=VALUES(metrics),apps=VALUES(apps),web_activity=VALUES(web_activity),last_seen=VALUES(last_seen)`, [m.id,m.userId,m.name,m.token,m.status,m.userName || null,m.os || null,m.arch || null,m.uptime || 0,JSON.stringify(m.metrics || {}),JSON.stringify(m.apps || []),m.webActivity || null,new Date(m.lastSeen),new Date(m.createdAt || m.lastSeen),new Date(m.firstSeenAt || m.createdAt || m.lastSeen)]);
     for (const p of data.pairings) await connection.execute('INSERT INTO pairings (code,user_id,expires_at) VALUES (?,?,?) ON DUPLICATE KEY UPDATE expires_at=VALUES(expires_at)', [p.code,p.userId,p.expiresAt]);
@@ -297,4 +312,4 @@ async function prune() {
   }
 }
 async function close() { if (pool) await pool.end(); }
-module.exports = { initialize, refreshUsers, findSessionUser, getSubscription, getPlan, setFreeSubscription, saveSimulatedPayment, saveMetricSample, listMetricSamples, createSession, deleteSession, createPasswordReset, completePasswordReset, save, acknowledgeConsentRevocation, deleteUser, prune, close };
+module.exports = { initialize, refreshUsers, findSessionUser, getUserProfile, updateUserProfile, getSubscription, getPlan, setFreeSubscription, saveSimulatedPayment, saveMetricSample, listMetricSamples, createSession, deleteSession, createPasswordReset, completePasswordReset, save, acknowledgeConsentRevocation, deleteUser, prune, close };

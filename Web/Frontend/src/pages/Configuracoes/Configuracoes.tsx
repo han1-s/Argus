@@ -11,7 +11,7 @@ import {
 } from '../../services/argusPreferences';
 import { showArgusToast } from '../../services/argusToast';
 import { getArgusSubscription, getPlatformNotifications, type ArgusSubscription, type PlatformNotification } from '../../services/argusWebApi';
-import { getArgusTerms } from '../../services/argusAuth';
+import { getArgusTerms, isArgusSignedIn, restoreArgusSession, updateArgusProfile } from '../../services/argusAuth';
 import './Configuracoes.css';
 
 const SETTINGS_KEY = 'argusSettings';
@@ -40,12 +40,35 @@ const tabs: Array<{ id: SettingsTab; label: string; icon: React.ReactNode }> = [
   { id: 'legal', label: 'Termos e Privacidade', icon: <FileText size={18} /> },
 ];
 
+function optimizeAvatar(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    const objectUrl = URL.createObjectURL(file);
+    image.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      const scale = Math.min(1, 512 / Math.max(image.naturalWidth, image.naturalHeight));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+      canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+      const context = canvas.getContext('2d');
+      if (!context) { reject(new Error('Não foi possível preparar esta imagem.')); return; }
+      context.fillStyle = '#ffffff';
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      context.drawImage(image, 0, 0, canvas.width, canvas.height);
+      resolve(canvas.toDataURL('image/jpeg', 0.82));
+    };
+    image.onerror = () => { URL.revokeObjectURL(objectUrl); reject(new Error('Não foi possível ler esta imagem. Tente outro arquivo.')); };
+    image.src = objectUrl;
+  });
+}
+
 export const Configuracoes: React.FC = () => {
   const [activeTab, setActiveTab] = useState<SettingsTab>('privacy');
   const [settings, setSettings] = useState<UserSettings>(getStoredSettings);
   const [animationsEnabled, setAnimationsEnabled] = useState(() => localStorage.getItem(ARGUS_KEYS.ANIMATIONS) !== 'false');
   const [glowEnabled, setGlowEnabled] = useState(() => localStorage.getItem(ARGUS_KEYS.GLOW) !== 'false');
   const [profile, setProfile] = useState(getArgusProfile);
+  const [profileIsSynced, setProfileIsSynced] = useState(isArgusSignedIn);
   const [hasCustomAvatar, setHasCustomAvatar] = useState(() => Boolean(localStorage.getItem(ARGUS_KEYS.AVATAR)));
   const [avatarError, setAvatarError] = useState('');
   const [clearDialogOpen, setClearDialogOpen] = useState(false);
@@ -56,6 +79,18 @@ export const Configuracoes: React.FC = () => {
   const [termsError, setTermsError] = useState('');
   const [acceptedTermsVersion] = useState(() => localStorage.getItem('argusTermsAcceptedVersion') || '');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!isArgusSignedIn()) return;
+    let active = true;
+    void restoreArgusSession().then(user => {
+      if (!active || !user) return;
+      setProfile(getArgusProfile());
+      setHasCustomAvatar(Boolean(user.avatarData));
+      setProfileIsSynced(true);
+    });
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -101,7 +136,7 @@ export const Configuracoes: React.FC = () => {
     if (key !== 'theme') showArgusToast('Preferências atualizadas.');
   };
 
-  const handleProfileSave = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleProfileSave = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const name = profile.name.trim();
     const email = profile.email.trim();
@@ -109,18 +144,27 @@ export const Configuracoes: React.FC = () => {
       showArgusToast('Preencha o nome e o e-mail antes de salvar.');
       return;
     }
-    localStorage.setItem(ARGUS_KEYS.USER_NAME, name);
-    localStorage.setItem(ARGUS_KEYS.USER_EMAIL, email);
-    setProfile(getArgusProfile());
-    window.dispatchEvent(new Event('argus-preferences-changed'));
-    showArgusToast('Alterações salvas com sucesso.');
+    try {
+      if (isArgusSignedIn()) {
+        await updateArgusProfile(name, email);
+        setProfileIsSynced(true);
+      } else {
+        localStorage.setItem(ARGUS_KEYS.USER_NAME, name);
+        localStorage.setItem(ARGUS_KEYS.USER_EMAIL, email);
+        window.dispatchEvent(new Event('argus-preferences-changed'));
+      }
+      setProfile(getArgusProfile());
+      showArgusToast(isArgusSignedIn() ? 'Perfil sincronizado com Web e Platform.' : 'Alterações salvas neste navegador.');
+    } catch (error) {
+      showArgusToast(error instanceof Error ? error.message : 'Não foi possível atualizar o perfil.');
+    }
   };
 
-  const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
-    if (!file.type.startsWith('image/')) {
-      setAvatarError('Escolha um arquivo de imagem compatível.');
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      setAvatarError('Escolha uma imagem JPEG, PNG ou WebP.');
       event.target.value = '';
       return;
     }
@@ -129,35 +173,39 @@ export const Configuracoes: React.FC = () => {
       event.target.value = '';
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result !== 'string') {
-        setAvatarError('Não foi possível carregar esta imagem. Tente outro arquivo.');
-        return;
-      }
-      try {
-        localStorage.setItem(ARGUS_KEYS.AVATAR, reader.result);
-        setProfile(getArgusProfile());
-        setHasCustomAvatar(true);
-        setAvatarError('');
-        window.dispatchEvent(new Event('argus-preferences-changed'));
-        showArgusToast('Foto atualizada.');
-      } catch {
-        setAvatarError('Não foi possível salvar a imagem neste navegador. Tente um arquivo menor.');
-      }
-    };
-    reader.onerror = () => setAvatarError('Não foi possível ler esta imagem. Tente novamente.');
-    reader.readAsDataURL(file);
     event.target.value = '';
+    try {
+      const avatarData = await optimizeAvatar(file);
+      if (isArgusSignedIn()) {
+        await updateArgusProfile(profile.name, profile.email, avatarData);
+        setProfileIsSynced(true);
+      } else {
+        localStorage.setItem(ARGUS_KEYS.AVATAR, avatarData);
+        window.dispatchEvent(new Event('argus-preferences-changed'));
+      }
+      setProfile(getArgusProfile());
+      setHasCustomAvatar(true);
+      setAvatarError('');
+      showArgusToast(isArgusSignedIn() ? 'Foto sincronizada com Web e Platform.' : 'Foto salva neste navegador.');
+    } catch (error) {
+      setAvatarError(error instanceof Error ? error.message : 'Não foi possível salvar a imagem. Tente outro arquivo.');
+    }
   };
 
-  const handleAvatarRemove = () => {
-    localStorage.removeItem(ARGUS_KEYS.AVATAR);
-    setProfile(getArgusProfile());
-    setHasCustomAvatar(false);
-    setAvatarError('');
-    window.dispatchEvent(new Event('argus-preferences-changed'));
-    showArgusToast('Foto removida.');
+  const handleAvatarRemove = async () => {
+    try {
+      if (isArgusSignedIn()) await updateArgusProfile(profile.name, profile.email, null);
+      else {
+        localStorage.removeItem(ARGUS_KEYS.AVATAR);
+        window.dispatchEvent(new Event('argus-preferences-changed'));
+      }
+      setProfile(getArgusProfile());
+      setHasCustomAvatar(false);
+      setAvatarError('');
+      showArgusToast(isArgusSignedIn() ? 'Foto removida da conta Web e Platform.' : 'Foto removida deste navegador.');
+    } catch (error) {
+      setAvatarError(error instanceof Error ? error.message : 'Não foi possível remover a foto.');
+    }
   };
 
   const handleExportData = () => {
@@ -216,7 +264,7 @@ export const Configuracoes: React.FC = () => {
     <div className="page-wrapper settings-page-wrapper settings-redesign">
       <header className="settings-page-heading">
         <div><span className="section-label">PREFERÊNCIAS DO ARGUS</span><h1>Configurações</h1><p>Personalize sua experiência no ARGUS e gerencie suas preferências.</p></div>
-        <span className="settings-local-note"><Shield size={15} /> Salvas localmente neste navegador</span>
+        <span className="settings-local-note"><Shield size={15} /> {profileIsSynced ? 'Perfil sincronizado entre Web e Platform' : 'Preferências locais deste navegador'}</span>
       </header>
 
       <div className="settings-container settings-layout">
@@ -229,7 +277,7 @@ export const Configuracoes: React.FC = () => {
         <section className="settings-content-card settings-panel" key={activeTab} aria-live="polite">
           {activeTab === 'privacy' && <div className="settings-tab-content">
             <div className="settings-section-heading"><span className="settings-section-icon"><Shield size={19} /></span><div><h2>Dados e Privacidade</h2><p>Gerencie o perfil e as preferências guardadas neste navegador.</p></div></div>
-            <section className="settings-subsection"><div className="settings-subsection-heading"><h3>Foto do perfil</h3><p>A imagem é armazenada localmente neste navegador. Tamanho máximo: 2 MB.</p></div>
+            <section className="settings-subsection"><div className="settings-subsection-heading"><h3>Foto do perfil</h3><p>{profileIsSynced ? 'Foto compartilhada pela conta Web e Platform. Arquivos de até 2 MB são otimizados antes do envio.' : 'A foto fica neste navegador até você entrar na conta compartilhada. Tamanho máximo: 2 MB.'}</p></div>
               <div className="settings-profile-card"><div className="settings-avatar-preview">{profile.avatar ? <img src={profile.avatar} alt={`Foto de perfil de ${profile.name}`} /> : <span aria-hidden="true">{profile.name.charAt(0).toUpperCase()}</span>}</div><div className="settings-avatar-info"><strong>{profile.name || DEFAULT_USER_NAME}</strong><span>Imagem de perfil</span><div className="settings-avatar-actions"><input ref={fileInputRef} className="settings-file-input" type="file" accept="image/*" onChange={handleAvatarChange} aria-label="Selecionar uma imagem de perfil" /><button type="button" className="settings-btn settings-btn-secondary" onClick={() => fileInputRef.current?.click()}><ImagePlus size={16} /> Alterar foto</button>{hasCustomAvatar && <button type="button" className="settings-btn settings-btn-quiet-danger" onClick={handleAvatarRemove}><Trash2 size={15} /> Remover foto</button>}</div>{avatarError && <p className="settings-inline-error" role="alert">{avatarError}</p>}</div></div>
             </section>
             <form className="settings-form settings-subsection" onSubmit={handleProfileSave}><div className="settings-subsection-heading"><h3>Informações pessoais</h3><p>Atualize os dados exibidos no perfil do ARGUS.</p></div><div className="form-grid"><div className="form-group"><label htmlFor="userNameInput">Nome</label><input id="userNameInput" className="form-input" autoComplete="name" value={profile.name} onChange={(event) => setProfile((current) => ({ ...current, name: event.target.value }))} required /></div><div className="form-group"><label htmlFor="userEmailInput">E-mail</label><input id="userEmailInput" className="form-input" type="email" autoComplete="email" value={profile.email} onChange={(event) => setProfile((current) => ({ ...current, email: event.target.value }))} required /></div></div><div><button type="submit" className="settings-btn settings-btn-primary"><Check size={16} /> Salvar alterações</button></div></form>

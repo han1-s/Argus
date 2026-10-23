@@ -23,7 +23,8 @@ CREATE TABLE IF NOT EXISTS users (
   created_at DATETIME(3) NOT NULL,
   web_consent BOOLEAN NOT NULL DEFAULT FALSE,
   terms_version VARCHAR(30) NULL,
-  terms_accepted_at DATETIME(3) NULL
+  terms_accepted_at DATETIME(3) NULL,
+  avatar_data MEDIUMTEXT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS terms_acceptances (

@@ -19,6 +19,17 @@ const store = {
     const user = session && db.users.find(row => row.id === session.userId);
     return user ? { id: user.id, name: user.name, email: user.email, webConsent: Boolean(user.webConsent), termsVersion: user.termsVersion || null, plan: db.subscriptions.find(subscription => subscription.userId === user.id)?.plan || 'Free' } : null;
   },
+  getUserProfile: async userId => {
+    const user = db.users.find(row => row.id === userId);
+    return user ? { id: user.id, name: user.name, email: user.email, avatarData: user.avatarData || null, webConsent: Boolean(user.webConsent), termsVersion: user.termsVersion || null } : null;
+  },
+  updateUserProfile: async (userId, profile) => {
+    if (db.users.some(user => user.id !== userId && user.email === profile.email)) { const error = new Error('duplicate email'); error.code = 'ER_DUP_ENTRY'; throw error; }
+    const user = db.users.find(row => row.id === userId);
+    if (!user) return null;
+    Object.assign(user, profile);
+    return store.getUserProfile(userId);
+  },
   createSession: async session => { db.sessions.push(session); },
   deleteSession: async tokenHash => { db.sessions = db.sessions.filter(row => row.tokenHash !== tokenHash); },
   getPlan: async userId => db.subscriptions.find(subscription => subscription.userId === userId)?.plan || 'Free',
@@ -129,6 +140,13 @@ async function removeSmokeDirectory(folder) {
     assert.equal(rejectedLogin.response.status, 428, 'login must require explicit terms confirmation');
     const successfulLogin = await responseJson(`${base}/api/auth/login`, { method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:'ValidPass123',termsVersion:'2026-09-v1',termsAccepted:true}) });
     assert.equal(successfulLogin.response.status,200,'accepted terms allow login');
+    const profileEmail = `argus-updated-${crypto.randomUUID()}@example.test`;
+    const avatarData = 'data:image/png;base64,iVBORw0KGgo=';
+    const profileUpdate = await responseJson(`${base}/api/auth/profile`, { method:'PUT',headers:{Cookie:cookie,'Content-Type':'application/json'},body:JSON.stringify({name:'Updated Smoke',email:profileEmail,avatarData}) });
+    assert.equal(profileUpdate.response.status,200,'Platform can update the shared account profile');
+    assert.equal(profileUpdate.body.user.name,'Updated Smoke'); assert.equal(profileUpdate.body.user.email,profileEmail); assert.equal(profileUpdate.body.user.avatarData,avatarData);
+    assert.equal((await responseJson(`${base}/api/auth/me`,{headers:{Cookie:cookie}})).body.user.avatarData,avatarData,'profile changes are returned by the shared session endpoint');
+    assert.equal((await responseJson(`${base}/api/auth/profile`, { method:'PUT',headers:{Cookie:cookie,'Content-Type':'application/json'},body:JSON.stringify({avatarData:'data:image/svg+xml;base64,PHN2Zz4='}) })).response.status,400,'unsupported profile image formats are rejected');
     const freeSubscription=await responseJson(`${base}/api/assinatura`,{headers:{Cookie:cookie}});
     assert.equal(freeSubscription.response.status,200); assert.equal(freeSubscription.body.assinatura.plan,'Free'); assert.equal(freeSubscription.body.limites.computers,10);
     assert.equal((await responseJson(`${base}/api/assinatura`,{method:'PUT',headers:{Cookie:cookie,'Content-Type':'application/json'},body:JSON.stringify({plan:'Pro',billingCycle:'annual'})})).response.status,409,'paid plans require the simulated checkout');
