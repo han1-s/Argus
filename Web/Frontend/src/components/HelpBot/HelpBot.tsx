@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Bot, MessageCircle, Send, X } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import './HelpBot.css';
@@ -53,9 +54,12 @@ export const HelpBot: React.FC = () => {
     { id: 1, from: 'bot', text: 'Olá! Sou o assistente ARGUS. Pergunte sobre conta, instalação, agente, planos ou privacidade, ou escolha um atalho.' },
   ]);
   const nextId = useRef(2);
-  const endRef = useRef<HTMLDivElement>(null);
+  const messagesRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, [messages, open]);
+  useEffect(() => {
+    if (!open || !messagesRef.current) return;
+    messagesRef.current.scrollTo({ top: messagesRef.current.scrollHeight, behavior: 'smooth' });
+  }, [messages, open]);
 
   const ask = (question: string) => {
     const value = question.trim();
@@ -68,13 +72,12 @@ export const HelpBot: React.FC = () => {
     setDraft('');
   };
 
-  return (
+  return createPortal((
     <div className="argus-helpbot">
       {open && <section className="argus-helpbot-panel" role="dialog" aria-label="Ajuda do ARGUS">
         <header><span className="argus-helpbot-icon"><Bot size={19} /></span><div><strong>Assistente ARGUS</strong><small>Ajuda rápida · {location.pathname}</small></div><button type="button" onClick={() => setOpen(false)} aria-label="Fechar ajuda"><X size={18} /></button></header>
-        <div className="argus-helpbot-messages" aria-live="polite">
+        <div className="argus-helpbot-messages" aria-live="polite" ref={messagesRef}>
           {messages.map(message => <p key={message.id} className={'argus-helpbot-message ' + message.from}>{message.text}</p>)}
-          <div ref={endRef} />
         </div>
         <div className="argus-helpbot-shortcuts">
           <button type="button" onClick={() => ask('Como conectar um computador?')}>Conectar computador</button>
@@ -93,5 +96,5 @@ export const HelpBot: React.FC = () => {
         {open ? <X size={19} /> : <MessageCircle size={19} />}<span>{open ? 'Fechar' : 'Ajuda ARGUS'}</span>
       </button>
     </div>
-  );
+  ), document.body);
 };
